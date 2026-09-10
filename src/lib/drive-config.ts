@@ -28,7 +28,7 @@ export const SP_DRIVE = {
    * Until this is replaced, the Drive buttons say so instead of failing
    * oddly. Export and Import work regardless — they need no account at all.
    */
-  clientId: 'PASTE-YOUR-CLIENT-ID.apps.googleusercontent.com',
+  clientId: '334815807347-jdlm9qsvq86r744noadki1561837ssdk.apps.googleusercontent.com',
 
   /**
    * The folder the file is kept in, taken from its Drive URL — the part after

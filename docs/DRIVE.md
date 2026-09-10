@@ -15,10 +15,16 @@ setup and no internet. If you never want to do the setup below, use those.
 
 ---
 
-## Setup, once
+## Setup, once — **already done, 2026-09-10**
 
-You chose a **new Google Cloud project for SchedulePlan**, so the consent
-window says the app's own name. Roughly five minutes of clicking.
+Project `SchedulePlan`, client `334815807347-jdlm9qsvq86r744noadki1561837ssdk`,
+folder `1pM0q9zuGBdfNxWlcPsyfUTLxcN4dfDNB`. What follows is the record of how,
+in case it ever needs redoing or a second machine needs adding.
+
+Google has been renaming this part of the console: the consent screen now lives
+under **Google Auth Platform** (Branding / Audience / Clients) rather than
+**APIs & Services > OAuth consent screen**. Both paths lead to the same
+settings.
 
 ### 1. Make the project
 
@@ -108,8 +114,16 @@ written to storage. Closing the tab signs you out.
 | "Google Drive refused that" | The folder id is wrong, or the origin is not registered on the client |
 | "There is no SchedulePlan file in that folder yet" | Press Save to Drive first |
 
-An origin mismatch is the common one, and it is exact: `https://kaonhew02.github.io`
-is not the same entry as `https://kaonhew02.github.io/SchedulePlan/`. Host only.
+An origin mismatch is the common one, and it is exact in both directions:
+
+- `https://kaonhew02.github.io` is not the same entry as
+  `https://kaonhew02.github.io/SchedulePlan/`. Scheme and host only, no path.
+- **`http://localhost:5173` is not the same origin as `http://127.0.0.1:5173`.**
+  The dev server answers on both, Google only accepts the one you registered.
+  Use `localhost` locally or Drive will refuse before you even sign in.
+
+A brand-new client also takes a few minutes to go live. If the first attempt
+errors, wait before assuming it is misconfigured.
 
 ## The trap worth knowing
 
