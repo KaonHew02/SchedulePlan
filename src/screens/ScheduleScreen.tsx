@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { store } from '../lib/store'
-import { ChevronLeft, ChevronRight, Plus } from '../components/Icons'
+import Fab from '../components/Fab'
+import { ChevronLeft, ChevronRight } from '../components/Icons'
 import {
   addDays,
   addMonths,
@@ -105,7 +106,6 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-md">
           <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3">
             <h1 className="text-[19px] font-semibold tracking-tight truncate">{title}</h1>
             <div className="flex items-center gap-1 shrink-0 text-neutral-400">
@@ -141,10 +141,9 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
               ))}
             </div>
           </div>
-        </div>
       </header>
 
-      <main className="mx-auto max-w-md pb-28">
+      <main className="pb-28">
         {error && (
           <div className="mx-5 mt-4 flex items-center justify-between gap-3 rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
             <span>{error}</span>
@@ -181,17 +180,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
         )}
       </main>
 
-      <div className="fixed inset-x-0 bottom-[72px] z-30 pointer-events-none mb-safe">
-        <div className="mx-auto max-w-md px-5 flex justify-end">
-          <button
-            onClick={() => setForm({ item: null })}
-            aria-label="Add to schedule"
-            className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg active:scale-95 transition-transform"
-          >
-            <Plus />
-          </button>
-        </div>
-      </div>
+      <Fab label="Add to schedule" onClick={() => setForm({ item: null })} />
 
       {detail && (
         <ScheduleDetail

@@ -1,7 +1,14 @@
 import type { Tag } from '../types'
 
-/** Optional tags. Order matters: this is the order the chips appear in. */
-export const TAGS: { id: Tag; label: string; emoji: string }[] = [
+/**
+ * What a new install starts with. These are only defaults — every one can be
+ * renamed, re-emoji'd or deleted in More > Tags, and new ones added.
+ *
+ * The ids are words rather than numbers because they end up in exported
+ * backups, and because schedule items saved before tags became editable
+ * already point at exactly these strings.
+ */
+export const DEFAULT_TAGS: Tag[] = [
   { id: 'personal', label: 'Personal', emoji: '🙂' },
   { id: 'work', label: 'Work', emoji: '💼' },
   { id: 'travel', label: 'Travel', emoji: '✈️' },
@@ -11,8 +18,34 @@ export const TAGS: { id: Tag; label: string; emoji: string }[] = [
   { id: 'other', label: 'Other', emoji: '📌' },
 ]
 
-export const tagEmoji = (tag: Tag | null): string =>
-  TAGS.find((t) => t.id === tag)?.emoji ?? '•'
+/** Shown as one-tap choices when naming a tag. Any other emoji can be typed. */
+export const EMOJI_CHOICES = [
+  '🙂', '💼', '✈️', '🍽', '🏸', '🎫', '📌', '🏠',
+  '🚗', '💊', '🎓', '🎬', '🛒', '☕', '🏋️', '🎵',
+  '💰', '📞', '🐶', '🌙', '⚽', '🎂', '💡', '🧾',
+]
 
-export const tagLabel = (tag: Tag | null): string =>
-  TAGS.find((t) => t.id === tag)?.label ?? ''
+/** The dot used when an item has no tag, or points at a deleted one. */
+export const NO_TAG = '•'
+
+export const findTag = (tags: Tag[], id: string | null): Tag | undefined =>
+  id ? tags.find((tag) => tag.id === id) : undefined
+
+export const tagEmoji = (tags: Tag[], id: string | null): string =>
+  findTag(tags, id)?.emoji ?? NO_TAG
+
+export const tagLabel = (tags: Tag[], id: string | null): string =>
+  findTag(tags, id)?.label ?? ''
+
+/** A readable, unique id for a new tag, so backups stay legible. */
+export function makeTagId(label: string, taken: string[]): string {
+  const base =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'tag'
+  if (!taken.includes(base)) return base
+  let n = 2
+  while (taken.includes(`${base}-${n}`)) n += 1
+  return `${base}-${n}`
+}

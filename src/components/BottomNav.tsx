@@ -1,9 +1,10 @@
 import type { Screen } from '../types'
-import { CalendarIcon, MoreIcon, WalletIcon } from './Icons'
+import { BellIcon, CalendarIcon, MoreIcon, WalletIcon } from './Icons'
 
 const items = [
   { id: 'schedule' as const, label: 'Schedule', Icon: CalendarIcon },
   { id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon },
+  { id: 'reminders' as const, label: 'Reminders', Icon: BellIcon },
   { id: 'more' as const, label: 'More', Icon: MoreIcon },
 ]
 
@@ -15,8 +16,8 @@ export default function BottomNav({
   onChange: (screen: Screen) => void
 }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 bg-white/90 backdrop-blur border-t border-neutral-100 pb-safe">
-      <div className="mx-auto max-w-md grid grid-cols-3">
+    <nav className="fixed bottom-0 inset-x-0 z-30">
+      <div className="mx-auto grid max-w-md grid-cols-4 border-t border-neutral-100 bg-white/90 backdrop-blur pb-safe sm:border-x sm:border-neutral-200">
         {items.map(({ id, label, Icon }) => (
           <button
             key={id}

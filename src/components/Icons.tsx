@@ -68,3 +68,10 @@ export const PencilIcon = ({ className = 'w-4 h-4' }: Props) => (
     <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
   </svg>
 )
+
+export const BellIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 10a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6" />
+    <path d="M10.3 20a2 2 0 0 0 3.4 0" />
+  </svg>
+)

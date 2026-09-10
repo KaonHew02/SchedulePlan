@@ -1,4 +1,11 @@
-export type Tag = 'personal' | 'work' | 'travel' | 'food' | 'sports' | 'event' | 'other'
+/** A tag's id. The seven built-in ones keep readable ids so old backups still match. */
+export type TagId = string
+
+export interface Tag {
+  id: TagId
+  label: string
+  emoji: string
+}
 
 export interface ScheduleItem {
   id: number
@@ -11,7 +18,7 @@ export interface ScheduleItem {
   title: string
   location: string | null
   notes: string | null
-  tag: Tag | null
+  tag: TagId | null
 }
 
 /** What the form sends when creating or editing an item. */
@@ -22,8 +29,26 @@ export interface ScheduleDraft {
   title: string
   location: string | null
   notes: string | null
-  tag: Tag | null
+  tag: TagId | null
+}
+
+export interface Reminder {
+  id: number
+  title: string
+  /** YYYY-MM-DD */
+  date: string
+  /** HH:MM */
+  time: string
+  notes: string | null
+  done: boolean
+}
+
+export interface ReminderDraft {
+  title: string
+  date: string
+  time: string
+  notes: string | null
 }
 
 export type ViewMode = 'day' | 'week' | 'month'
-export type Screen = 'schedule' | 'expenses' | 'more'
+export type Screen = 'schedule' | 'expenses' | 'reminders' | 'more'

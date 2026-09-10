@@ -1,3 +1,4 @@
+import { useTags } from '../lib/store'
 import { tagEmoji } from '../lib/tags'
 import type { ScheduleItem } from '../types'
 
@@ -9,6 +10,8 @@ export default function ItemRow({
   item: ScheduleItem
   onOpen: (item: ScheduleItem) => void
 }) {
+  const tags = useTags()
+
   return (
     <button
       onClick={() => onOpen(item)}
@@ -20,7 +23,7 @@ export default function ItemRow({
           <div className="text-[12px] leading-4 text-neutral-400">{item.end_time}</div>
         )}
       </div>
-      <div className="w-5 shrink-0 text-[15px] leading-6 text-center">{tagEmoji(item.tag)}</div>
+      <div className="w-5 shrink-0 text-[15px] leading-6 text-center">{tagEmoji(tags, item.tag)}</div>
       <div className="min-w-0 flex-1">
         <div className="text-[15px] leading-6 font-medium truncate">{item.title}</div>
         {item.location && (

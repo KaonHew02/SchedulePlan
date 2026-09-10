@@ -1,8 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import Sheet from '../components/Sheet'
+import TagEditor from '../components/TagEditor'
 import { nextHalfHour } from '../lib/date'
-import { TAGS } from '../lib/tags'
-import type { ScheduleDraft, ScheduleItem, Tag } from '../types'
+import { createTag, useTags } from '../lib/store'
+import type { ScheduleDraft, ScheduleItem, TagId } from '../types'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -31,13 +32,15 @@ export default function ScheduleForm({
   const [date, setDate] = useState(item?.date ?? defaultDate)
   const [start, setStart] = useState(item?.start_time ?? nextHalfHour())
   const [end, setEnd] = useState(item?.end_time ?? '')
-  const [tag, setTag] = useState<Tag | null>(item?.tag ?? null)
+  const [tag, setTag] = useState<TagId | null>(item?.tag ?? null)
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
   // Location and notes stay out of the way until they are wanted.
   const [showDetails, setShowDetails] = useState(Boolean(item?.location || item?.notes))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [newTag, setNewTag] = useState(false)
+  const tags = useTags()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -103,13 +106,13 @@ export default function ScheduleForm({
           </Field>
         </div>
 
-        <div className="mt-4 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
-          {TAGS.map(({ id, label, emoji }) => (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tags.map(({ id, label, emoji }) => (
             <button
               key={id}
               type="button"
               onClick={() => setTag(tag === id ? null : id)}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
+              className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                 tag === id
                   ? 'border-neutral-900 bg-neutral-900 text-white'
                   : 'border-neutral-200 text-neutral-600'
@@ -119,7 +122,30 @@ export default function ScheduleForm({
               {label}
             </button>
           ))}
+          {!newTag && (
+            <button
+              type="button"
+              onClick={() => setNewTag(true)}
+              className="rounded-full border border-dashed border-neutral-300 px-3 py-1.5 text-[13px] text-neutral-400"
+            >
+              + New
+            </button>
+          )}
         </div>
+
+        {newTag && (
+          <div className="mt-2">
+            <TagEditor
+              submitLabel="Add"
+              onCancel={() => setNewTag(false)}
+              onSubmit={(label, emoji) => {
+                const created = createTag(label, emoji)
+                setTag(created.id)
+                setNewTag(false)
+              }}
+            />
+          </div>
+        )}
 
         {showDetails ? (
           <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">

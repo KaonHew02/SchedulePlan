@@ -40,7 +40,7 @@ export const SP_DRIVE = {
    * Keep this folder **Restricted** in Drive's Share settings. "Anyone with
    * the link" means anyone with the link can read your schedule.
    */
-  folderId: 'PASTE-YOUR-FOLDER-ID',
+  folderId: '1pM0q9zuGBdfNxWlcPsyfUTLxcN4dfDNB',
 
   /** The one file SchedulePlan writes. Renaming it in Drive starts a new one. */
   filename: 'scheduleplan-data.json',

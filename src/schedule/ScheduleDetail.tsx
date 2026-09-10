@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PencilIcon, PinIcon, TrashIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { longDate, relativeDay, timeRange } from '../lib/date'
+import { useTags } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { ScheduleItem } from '../types'
 
@@ -16,6 +17,7 @@ export default function ScheduleDetail({
   onEdit: () => void
   onDelete: () => Promise<void>
 }) {
+  const tags = useTags()
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export default function ScheduleDetail({
   return (
     <Sheet onClose={onClose} title={relativeDay(item.date)}>
       <div className="flex items-start gap-2.5">
-        <span className="text-[20px] leading-8">{tagEmoji(item.tag)}</span>
+        <span className="text-[20px] leading-8">{tagEmoji(tags, item.tag)}</span>
         <h3 className="text-[20px] leading-8 font-semibold tracking-tight">{item.title}</h3>
       </div>
 
@@ -57,7 +59,9 @@ export default function ScheduleDetail({
         </p>
       )}
 
-      {item.tag && <p className="mt-4 text-[13px] text-neutral-400">{tagLabel(item.tag)}</p>}
+      {tagLabel(tags, item.tag) && (
+        <p className="mt-4 text-[13px] text-neutral-400">{tagLabel(tags, item.tag)}</p>
+      )}
 
       {error && <p className="mt-4 text-[13px] text-red-600">{error}</p>}
 
