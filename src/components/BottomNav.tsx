@@ -16,8 +16,8 @@ export default function BottomNav({
   onChange: (screen: Screen) => void
 }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30">
-      <div className="mx-auto grid max-w-md grid-cols-4 border-t border-neutral-100 bg-white/90 backdrop-blur pb-safe sm:border-x sm:border-neutral-200">
+    <nav className="fixed bottom-0 inset-x-0 z-30 lg:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-4 border-t border-neutral-100 bg-white/90 backdrop-blur pb-safe sm:border-x sm:border-neutral-200 md:max-w-xl">
         {items.map(({ id, label, Icon }) => (
           <button
             key={id}

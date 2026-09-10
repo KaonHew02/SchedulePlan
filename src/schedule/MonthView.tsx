@@ -49,7 +49,7 @@ export default function MonthView({
             <button
               key={day}
               onClick={() => onSelect(day)}
-              className="h-11 flex flex-col items-center justify-center gap-[3px]"
+              className="flex h-11 flex-col items-center justify-center gap-[3px] md:h-14"
             >
               <span
                 className={[

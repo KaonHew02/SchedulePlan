@@ -3,8 +3,8 @@ import { Plus } from './Icons'
 /** The one add button, sitting just above the bottom nav. */
 export default function Fab({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <div className="fixed inset-x-0 bottom-[72px] z-30 pointer-events-none mb-safe">
-      <div className="mx-auto max-w-md px-5 flex justify-end">
+    <div className="fixed inset-x-0 bottom-[72px] z-30 pointer-events-none mb-safe lg:bottom-8">
+      <div className="mx-auto flex max-w-md justify-end px-5 md:max-w-xl lg:max-w-4xl">
         <button
           onClick={onClick}
           aria-label={label}

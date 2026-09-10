@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import BottomNav from './components/BottomNav'
+import SideNav from './components/SideNav'
 import Toast from './components/Toast'
 import RemindersScreen from './reminders/RemindersScreen'
 import ExpensesScreen from './screens/ExpensesScreen'
@@ -14,15 +15,19 @@ export default function App() {
   return (
     <>
       {/*
-        Phone-shaped on purpose. On a wide screen the column sits on a soft grey
-        page rather than floating in white, which reads as deliberate instead of
-        unfinished.
+        Three shapes, one tree. Phone: full bleed, bottom nav. Tablet: the same
+        column, wider, on a grey page. Laptop and up: the column moves beside a
+        sidebar and the bottom bar goes away.
       */}
-      <div className="mx-auto min-h-[100dvh] max-w-md bg-white sm:border-x sm:border-neutral-200">
-        {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
-        {screen === 'expenses' && <ExpensesScreen />}
-        {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
-        {screen === 'more' && <MoreScreen onToast={setToast} />}
+      <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-white sm:border-x sm:border-neutral-200 md:max-w-xl lg:max-w-4xl lg:flex-row">
+        <SideNav current={screen} onChange={setScreen} />
+
+        <div className="min-w-0 flex-1">
+          {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
+          {screen === 'expenses' && <ExpensesScreen />}
+          {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
+          {screen === 'more' && <MoreScreen onToast={setToast} />}
+        </div>
       </div>
 
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}

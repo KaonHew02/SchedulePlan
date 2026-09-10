@@ -69,7 +69,8 @@ SchedulePlan/
   docs/                         DEPLOY, DRIVE, RUNNING
   public/                       favicon.svg, logo-mark.svg
   src/
-    App.tsx                     Three screens + bottom nav + toast
+    App.tsx                     The responsive shell: four screens, and the
+                                nav that swaps sides with the viewport
     types.ts                    Shared types
     lib/
       store.ts                  THE data layer - localStorage, the only file
@@ -77,14 +78,26 @@ SchedulePlan/
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
       date.ts                   Date maths and formatting (no date library)
-      tags.ts                   The seven optional tags and their emoji
-    components/                 BottomNav, Sheet, Toast, EmptyState, Fab,
-                                Icons, Logo, TagEditor
+      tags.ts                   The default tags and the emoji choices
+    components/                 BottomNav, SideNav, Sheet, Toast, EmptyState,
+                                Fab, Icons, Logo, TagEditor
     screens/                    ScheduleScreen, ExpensesScreen, MoreScreen
     schedule/                   DayView, WeekView, MonthView, ItemRow,
                                 ScheduleForm, ScheduleDetail
     reminders/                  RemindersScreen, ReminderForm
 ```
+
+### Three layouts, one tree
+
+| Width | Shape |
+| --- | --- |
+| under 640px — phone | Full-bleed column, bottom nav, floating add button |
+| 640–1023px — tablet | Same column, wider (`max-w-xl`), on a grey page |
+| 1024px and up — laptop, desktop | Sidebar with the logo and nav on the left, content beside it, no bottom bar |
+
+The whole frame is capped at `max-w-4xl` and centred. A personal notebook
+stretched across a 1900px monitor is harder to read, not easier — the extra
+room goes into margin rather than into line length.
 
 React + TypeScript + Tailwind, built by Vite. No runtime dependencies beyond
 React itself.
