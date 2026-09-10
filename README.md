@@ -5,8 +5,12 @@ Short form **S.P**. A clean digital notebook for your schedule and spending.
 **Live at [kaonhew02.github.io/SchedulePlan](https://kaonhew02.github.io/SchedulePlan/)**
 
 **Phase 1 (done): Schedule.** Day / week / month views, add, edit, delete,
-details, Export / Import, Drive backup. Expenses, currency, receipts, bill
-split and the itinerary scanner come in later phases.
+details, your own tags, Reminders, Export / Import and a Drive backup.
+Expenses, currency, receipts, bill split and the itinerary scanner come in
+later phases.
+
+Four tabs, not the three the original spec asked for: **Reminders** was added
+alongside Expenses on request.
 
 ---
 
@@ -74,10 +78,12 @@ SchedulePlan/
       drive-config.ts           Client ID and folder ID (both safe to publish)
       date.ts                   Date maths and formatting (no date library)
       tags.ts                   The seven optional tags and their emoji
-    components/                 BottomNav, Sheet, Toast, EmptyState, Icons, Logo
+    components/                 BottomNav, Sheet, Toast, EmptyState, Fab,
+                                Icons, Logo, TagEditor
     screens/                    ScheduleScreen, ExpensesScreen, MoreScreen
     schedule/                   DayView, WeekView, MonthView, ItemRow,
                                 ScheduleForm, ScheduleDetail
+    reminders/                  RemindersScreen, ReminderForm
 ```
 
 React + TypeScript + Tailwind, built by Vite. No runtime dependencies beyond
@@ -104,12 +110,32 @@ and the same shape is what Export writes and Drive holds.
       "notes": "With friends",
       "tag": "sports"
     }
+  ],
+  "tags": [{ "id": "sports", "label": "Sports", "emoji": "🏸" }],
+  "reminders": [
+    {
+      "id": 1,
+      "title": "Renew passport",
+      "date": "2026-10-01",
+      "time": "09:00",
+      "notes": null,
+      "done": false
+    }
   ]
 }
 ```
 
-`end_time`, `location`, `notes` and `tag` are nullable. `tag` is one of
-`personal`, `work`, `travel`, `food`, `sports`, `event`, `other`.
+`end_time`, `location`, `notes` and `tag` are nullable. `tag` holds a tag's
+`id`, and every tag is editable in **More → Tags** — the seven that ship are
+only defaults. Deleting a tag untags the items using it; it never deletes them.
+
+A backup written before tags were editable has no `tags` array, and one written
+before Reminders has no `reminders`. Both read back fine: missing arrays fall
+back to the defaults and to empty.
+
+**Reminder alerts only fire while a tab is open.** There is no server and no
+service worker to wake the app, and the Reminders screen says so rather than
+letting you assume otherwise.
 
 Later phases add `expenses`, `attachments`, `people`, `bill_splits` and
 `exchange_rates` as sibling arrays in the same envelope, and `version` goes up
