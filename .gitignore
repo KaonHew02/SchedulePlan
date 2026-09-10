@@ -1,14 +1,8 @@
-# Python
-__pycache__/
-*.pyc
-backend/.venv/
-
-# The database is yours, not the repo's. Never commit it.
-backend/data/
-
-# Node
 node_modules/
-frontend/dist/
+dist/
+
+# Vite's incremental type-check cache
+tsconfig.tsbuildinfo
 
 # OS
 Thumbs.db
