@@ -2,161 +2,130 @@
 
 Short form **S.P**. A clean digital notebook for your schedule and spending.
 
-**Phase 1 (done): Schedule.** Day / week / month views, add, edit, delete, details.
-Expenses, currency, receipts, bill split and the itinerary scanner come in later phases.
+**Live at [kaonhew02.github.io/SchedulePlan](https://kaonhew02.github.io/SchedulePlan/)**
+
+**Phase 1 (done): Schedule.** Day / week / month views, add, edit, delete,
+details, Export / Import, Drive backup. Expenses, currency, receipts, bill
+split and the itinerary scanner come in later phases.
 
 ---
 
 ## Running it
 
-You need two terminals: one for the API, one for the app.
-These commands work in both PowerShell and Git Bash.
-
-**1. Backend** — first time only, creates the virtual environment and installs:
+One command — see [docs/RUNNING.md](docs/RUNNING.md).
 
 ```
-cd C:/Users/MIS/Documents/SchedulePlan/backend
-python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r requirements.txt
-```
-
-Then every time:
-
-```
-cd C:/Users/MIS/Documents/SchedulePlan/backend
-.venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000
-```
-
-**2. Frontend** — first time only:
-
-```
-cd C:/Users/MIS/Documents/SchedulePlan/frontend
 npm install
-```
-
-Then every time:
-
-```
-cd C:/Users/MIS/Documents/SchedulePlan/frontend
 npm run dev
 ```
 
-Open **http://localhost:5173**.
+Then open **http://localhost:5173/SchedulePlan/** (the base path matters).
 
-The dev server also prints a `Network:` address (e.g. `http://192.168.x.x:5173`) — open that
-on your phone while it is on the same wifi to use the app the way it is meant to be used.
+## Where the data lives
 
-The database file is created automatically at `backend/data/scheduleplan.db`. Deleting that file
-resets everything.
+**In your browser, and nowhere else** unless you put it somewhere. There is no
+server and no account.
+
+That is a deliberate trade and it has teeth: clearing site data clears the
+schedule, and `localhost` and the live site keep separate copies. **More →
+Backup** is what makes it survivable:
+
+- **Export / Import** — one JSON file. No account, no internet, no setup.
+- **Save to Drive / Load from Drive** — one file in one Drive folder. Needs a
+  few minutes of Google Cloud setup, once: [docs/DRIVE.md](docs/DRIVE.md).
+
+Both replace rather than merge, and both say what they are about to overwrite
+before they do it.
+
+The reasoning behind all of this, and what it costs later, is in
+[docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Name and logo
 
-Short form **S.P**, but the mark deliberately does not use the letters. It is a day's
-timeline: three rows falling back into the distance, with the first one picked out by the
-same blue dot the month grid puts under a day that has something on it. Everything is
-rectangles and circles, so the mark needs no font and renders identically everywhere.
+The mark deliberately does not use the letters. It is a day's timeline: three
+rows falling back into the distance, with the first picked out by the same blue
+dot the month grid puts under a day that has something on it. Rectangles and
+circles only, so it needs no font.
 
 | | |
 | --- | --- |
 | Ink | `#171717` |
 | Accent (the leading dot) | `#2563eb` |
 | Row fade | 100% / 75% / 45% white |
-| Tile corner | `rx 58` on a 256 grid (about 23%) |
+| Tile corner | `rx 58` on a 256 grid |
 
-- `frontend/public/favicon.svg` - the browser-tab icon, dark tile
-- `frontend/public/logo-mark.svg` - the mark alone in ink, for light backgrounds
-- `frontend/src/components/Logo.tsx` - the in-app version, used on the More screen
-
-`favicon.svg` and `Logo.tsx` hold the same shapes; change them together.
+`public/favicon.svg`, `public/logo-mark.svg` (ink, for light backgrounds) and
+`src/components/Logo.tsx` hold the same shapes. Change them together.
 
 ## How it fits together
 
 ```
 SchedulePlan/
-  backend/                     Python FastAPI + SQLite
-    app/
-      main.py                  App setup, CORS, human-readable error handling
-      database.py              Engine, session, Base, init_db()
-      models.py                SQLAlchemy tables (+ the tag list)
-      schemas.py               Request/response validation
-      routers/
-        schedule.py            /api/schedule CRUD
-    data/scheduleplan.db     Created on first run (gitignored)
-    requirements.txt
-
-  frontend/                    React + TypeScript + Tailwind (Vite)
-    public/                    favicon.svg, logo-mark.svg
-    src/
-      App.tsx                  Three screens + bottom nav + toast
-      api.ts                   Fetch wrapper; turns API errors into plain messages
-      types.ts                 Shared types
-      lib/date.ts              Date maths and formatting (no date library)
-      lib/tags.ts              The seven optional tags and their emoji
-      components/              BottomNav, Sheet, Toast, EmptyState, Icons, Logo
-      screens/                 ScheduleScreen (the real one), Expenses, More
-      schedule/                DayView, WeekView, MonthView, ItemRow,
-                               ScheduleForm, ScheduleDetail
+  .github/workflows/pages.yml   Builds and publishes on every push to main
+  docs/                         DEPLOY, DRIVE, RUNNING
+  public/                       favicon.svg, logo-mark.svg
+  src/
+    App.tsx                     Three screens + bottom nav + toast
+    types.ts                    Shared types
+    lib/
+      store.ts                  THE data layer - localStorage, the only file
+                                that knows where records live
+      drive.ts                  Google sign-in and the Drive read/write
+      drive-config.ts           Client ID and folder ID (both safe to publish)
+      date.ts                   Date maths and formatting (no date library)
+      tags.ts                   The seven optional tags and their emoji
+    components/                 BottomNav, Sheet, Toast, EmptyState, Icons, Logo
+    screens/                    ScheduleScreen, ExpensesScreen, MoreScreen
+    schedule/                   DayView, WeekView, MonthView, ItemRow,
+                                ScheduleForm, ScheduleDetail
 ```
 
-Vite proxies `/api` to `http://127.0.0.1:8000`, so the frontend has no API URL to configure.
+React + TypeScript + Tailwind, built by Vite. No runtime dependencies beyond
+React itself.
 
-## Database
+## The data shape
 
-One table so far.
+One record type so far. It is stored as JSON under the `scheduleplan:v1` key,
+and the same shape is what Export writes and Drive holds.
 
-**schedule_items**
+```json
+{
+  "format": "scheduleplan.backup",
+  "version": 1,
+  "savedAt": "2026-09-10T12:00:00.000Z",
+  "schedule": [
+    {
+      "id": 1,
+      "date": "2026-09-10",
+      "start_time": "18:00",
+      "end_time": "20:00",
+      "title": "Badminton",
+      "location": "PJ Sports Centre",
+      "notes": "With friends",
+      "tag": "sports"
+    }
+  ]
+}
+```
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| id | integer | primary key |
-| date | date | indexed; the day the item sits on |
-| start_time | time | required |
-| end_time | time | optional; must be after the start |
-| title | text | required |
-| location | text | optional |
-| notes | text | optional |
-| tag | text | optional: personal, work, travel, food, sports, event, other |
-| created_at | datetime | set on insert |
-| updated_at | datetime | set on update |
+`end_time`, `location`, `notes` and `tag` are nullable. `tag` is one of
+`personal`, `work`, `travel`, `food`, `sports`, `event`, `other`.
 
-Plus a `(date, start_time)` index, since every view reads a date range in time order.
-
-Tables are created on startup by `init_db()`. Later phases add `expenses`, `expense_items`,
-`people`, `bill_splits`, `bill_split_participants`, `attachments` and `exchange_rates`.
-
-## API
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| GET | `/api/schedule?start=&end=` | Items in a date range, ordered by date then time |
-| GET | `/api/schedule/{id}` | One item |
-| POST | `/api/schedule` | Create |
-| PATCH | `/api/schedule/{id}` | Partial update |
-| DELETE | `/api/schedule/{id}` | Delete |
-| GET | `/api/health` | Health check |
-
-Errors always come back as `{"message": "..."}` in plain English, and the UI shows that
-message as-is. Interactive docs while the backend is running: http://localhost:8000/docs
-
-## Files created in Phase 1
-
-Backend: `requirements.txt`, `.gitignore`, `app/__init__.py`, `app/main.py`,
-`app/database.py`, `app/models.py`, `app/schemas.py`, `app/routers/__init__.py`,
-`app/routers/schedule.py`
-
-Frontend: `package.json`, `vite.config.ts`, `tsconfig.json`, `tailwind.config.js`,
-`postcss.config.js`, `index.html`, `.gitignore`, `src/main.tsx`, `src/App.tsx`,
-`src/index.css`, `src/api.ts`, `src/types.ts`, `src/lib/date.ts`, `src/lib/tags.ts`,
-`src/components/{BottomNav,Sheet,Toast,EmptyState,Icons,Logo}.tsx`,
-`public/{favicon,logo-mark}.svg`,
-`src/screens/{ScheduleScreen,ExpensesScreen,MoreScreen}.tsx`,
-`src/schedule/{DayView,WeekView,MonthView,ItemRow,ScheduleForm,ScheduleDetail}.tsx`
+Later phases add `expenses`, `attachments`, `people`, `bill_splits` and
+`exchange_rates` as sibling arrays in the same envelope, and `version` goes up
+if an old file ever needs migrating on import.
 
 ## Notes for later phases
 
-- Dates travel as `YYYY-MM-DD` strings and times as `HH:MM` strings, end to end, so nothing
-  ever shifts across a timezone.
-- `Sheet` is the one modal pattern — the expense form, receipt review and bill split should
-  all use it rather than new full screens.
-- Expenses attach to a schedule item through `schedule_item_id`; the schedule item itself
-  does not need to change.
+- Dates travel as `YYYY-MM-DD` strings and times as `HH:MM` strings, end to
+  end, so nothing ever shifts across a timezone.
+- **`store.ts` is the seam.** It was an HTTP client until 2026-09-10 and no
+  screen noticed the swap. Anything that changes where data lives changes that
+  file and nothing else.
+- `Sheet` is the one modal pattern — the expense form, receipt review and bill
+  split should use it rather than new full screens.
+- Expenses attach to a schedule item by `schedule_item_id`; the schedule item
+  itself does not change.
+- Phases 4 and 6 need an AI/OCR provider, and a static site has nowhere safe
+  for an API key. The three honest routes are written up in
+  [docs/DEPLOY.md](docs/DEPLOY.md).

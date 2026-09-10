@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../api'
+import { store } from '../lib/store'
 import { ChevronLeft, ChevronRight, Plus } from '../components/Icons'
 import {
   addDays,
@@ -51,7 +51,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
     const request = ++latestRequest.current
     setLoading(true)
     try {
-      const data = await api.listSchedule(range.start, range.end)
+      const data = await store.listSchedule(range.start, range.end)
       if (request !== latestRequest.current) return // a newer range won the race
       setItems(data)
       setError(null)
@@ -79,8 +79,8 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   }
 
   async function save(draft: ScheduleDraft) {
-    if (form?.item) await api.updateSchedule(form.item.id, draft)
-    else await api.createSchedule(draft)
+    if (form?.item) await store.updateSchedule(form.item.id, draft)
+    else await store.createSchedule(draft)
     // Land on the saved date so the item is visible straight away.
     setAnchor(draft.date)
     setReloadToken((token) => token + 1)
@@ -89,7 +89,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   }
 
   async function remove(id: number) {
-    await api.deleteSchedule(id)
+    await store.deleteSchedule(id)
     setReloadToken((token) => token + 1)
     setDetail(null)
     onToast('Deleted')

@@ -14,7 +14,7 @@ export default function App() {
     <div className="min-h-[100dvh]">
       {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
       {screen === 'expenses' && <ExpensesScreen />}
-      {screen === 'more' && <MoreScreen />}
+      {screen === 'more' && <MoreScreen onToast={setToast} />}
 
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       <BottomNav current={screen} onChange={setScreen} />
