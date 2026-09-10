@@ -1,0 +1,6 @@
+# Tested on Python 3.14. These versions ship prebuilt wheels for 3.14,
+# older pydantic pins try to compile Rust from source.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sqlalchemy==2.0.52
+pydantic==2.13.5
