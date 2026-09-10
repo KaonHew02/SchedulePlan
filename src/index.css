@@ -43,6 +43,10 @@
     padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 
+  .pb-safe-7 {
+    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .mb-safe {
     margin-bottom: env(safe-area-inset-bottom, 0px);
   }

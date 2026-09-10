@@ -45,7 +45,7 @@ export default function Sheet({ onClose, title, children, footer }: Props) {
         </div>
         <div className={`overflow-y-auto px-5 ${footer ? 'pb-4' : 'pb-safe-5'}`}>{children}</div>
         {footer && (
-          <div className="shrink-0 border-t border-neutral-100 bg-white px-5 pt-3 pb-safe-5 sm:rounded-b-3xl">
+          <div className="shrink-0 border-t border-neutral-100 bg-white px-5 pt-4 pb-safe-7 sm:rounded-b-3xl">
             {footer}
           </div>
         )}
