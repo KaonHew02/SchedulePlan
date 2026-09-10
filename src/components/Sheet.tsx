@@ -5,10 +5,12 @@ interface Props {
   onClose: () => void
   title: string
   children: ReactNode
+  /** Pinned below the scroll area, so the primary action never scrolls away. */
+  footer?: ReactNode
 }
 
 /** A bottom sheet: the app's one modal pattern. Mounted only while open. */
-export default function Sheet({ onClose, title, children }: Props) {
+export default function Sheet({ onClose, title, children, footer }: Props) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -41,7 +43,12 @@ export default function Sheet({ onClose, title, children }: Props) {
             <Close />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 pb-5 pb-safe">{children}</div>
+        <div className={`overflow-y-auto px-5 ${footer ? 'pb-4' : 'pb-safe-5'}`}>{children}</div>
+        {footer && (
+          <div className="shrink-0 border-t border-neutral-100 bg-white px-5 pt-3 pb-safe-5 sm:rounded-b-3xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )

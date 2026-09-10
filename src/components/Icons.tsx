@@ -75,3 +75,10 @@ export const BellIcon = ({ className = 'w-6 h-6' }: Props) => (
     <path d="M10.3 20a2 2 0 0 0 3.4 0" />
   </svg>
 )
+
+export const ClockIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5V12l3 1.8" />
+  </svg>
+)

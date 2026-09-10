@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
+import { DateField, Field, TimeField } from '../components/FormFields'
 import Sheet from '../components/Sheet'
 import { nextHalfHour, todayISO } from '../lib/date'
 import { createReminder, deleteReminder, updateReminder } from '../lib/store'
 import type { Reminder } from '../types'
 
-const input = 'text-[15px] bg-transparent outline-none tabular-nums'
+const FORM_ID = 'reminder-form'
 
 export default function ReminderForm({
   reminder,
@@ -37,8 +38,44 @@ export default function ReminderForm({
   }
 
   return (
-    <Sheet onClose={onClose} title={reminder ? 'Edit reminder' : 'New reminder'}>
-      <form onSubmit={submit}>
+    <Sheet
+      onClose={onClose}
+      title={reminder ? 'Edit reminder' : 'New reminder'}
+      footer={
+        <>
+          {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
+          <button
+            type="submit"
+            form={FORM_ID}
+            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
+          >
+            Save
+          </button>
+          {reminder &&
+            (confirming ? (
+              <button
+                type="button"
+                onClick={() => {
+                  deleteReminder(reminder.id)
+                  onSaved('Deleted')
+                }}
+                className="mt-2 w-full rounded-full bg-red-600 py-3 text-[15px] font-medium text-white"
+              >
+                Tap to confirm
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
+              >
+                Delete
+              </button>
+            ))}
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={submit}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -48,24 +85,12 @@ export default function ReminderForm({
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
-          <label className="flex items-center justify-between gap-3 py-3">
-            <span className="text-[14px] text-neutral-500">Date</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={input}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 py-3">
-            <span className="text-[14px] text-neutral-500">Time</span>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className={input}
-            />
-          </label>
+          <Field label="Date">
+            <DateField value={date} onChange={setDate} />
+          </Field>
+          <Field label="Time">
+            <TimeField label="Time" value={time} onChange={setTime} />
+          </Field>
         </div>
 
         {showNotes ? (
@@ -86,36 +111,6 @@ export default function ReminderForm({
           </button>
         )}
 
-        {error && <p className="mt-4 text-[13px] text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          className="mt-6 w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
-        >
-          Save
-        </button>
-
-        {reminder &&
-          (confirming ? (
-            <button
-              type="button"
-              onClick={() => {
-                deleteReminder(reminder.id)
-                onSaved('Deleted')
-              }}
-              className="mt-2 w-full rounded-full bg-red-600 py-3 text-[15px] font-medium text-white"
-            >
-              Tap to confirm
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
-            >
-              Delete
-            </button>
-          ))}
       </form>
     </Sheet>
   )

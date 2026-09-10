@@ -1,20 +1,12 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
+import { DateField, Field, TimeField } from '../components/FormFields'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { nextHalfHour } from '../lib/date'
 import { createTag, useTags } from '../lib/store'
 import type { ScheduleDraft, ScheduleItem, TagId } from '../types'
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex items-center justify-between gap-3 py-3">
-      <span className="text-[14px] text-neutral-500">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-const input = 'text-[15px] bg-transparent outline-none tabular-nums'
+const FORM_ID = 'schedule-form'
 
 export default function ScheduleForm({
   item,
@@ -69,8 +61,24 @@ export default function ScheduleForm({
   }
 
   return (
-    <Sheet onClose={onClose} title={item ? 'Edit' : 'Add to schedule'}>
-      <form onSubmit={submit}>
+    <Sheet
+      onClose={onClose}
+      title={item ? 'Edit' : 'Add to schedule'}
+      footer={
+        <>
+          {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
+          <button
+            type="submit"
+            form={FORM_ID}
+            disabled={saving}
+            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white disabled:opacity-40"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={submit}>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -81,27 +89,18 @@ export default function ScheduleForm({
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
           <Field label="Date">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={input}
-            />
+            <DateField value={date} onChange={setDate} />
           </Field>
           <Field label="Start">
-            <input
-              type="time"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className={input}
-            />
+            <TimeField label="Start" value={start} onChange={setStart} />
           </Field>
           <Field label="End">
-            <input
-              type="time"
+            <TimeField
+              label="End"
               value={end}
-              onChange={(e) => setEnd(e.target.value)}
-              className={input + (end ? '' : ' text-neutral-300')}
+              onChange={setEnd}
+              placeholder="Optional"
+              clearable
             />
           </Field>
         </div>
@@ -154,7 +153,7 @@ export default function ScheduleForm({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Optional"
-                className={input + ' text-right placeholder:text-neutral-300'}
+                className="text-[15px] text-right bg-transparent outline-none placeholder:text-neutral-300"
               />
             </Field>
             <div className="py-3">
@@ -177,15 +176,6 @@ export default function ScheduleForm({
           </button>
         )}
 
-        {error && <p className="mt-4 text-[13px] text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="mt-6 w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white disabled:opacity-40"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
       </form>
     </Sheet>
   )

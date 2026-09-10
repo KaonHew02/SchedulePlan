@@ -37,6 +37,12 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  /* Like pb-5, but clearing the home indicator too. Plain `pb-5 pb-safe`
+     would not stack: the later rule simply wins and the padding goes. */
+  .pb-safe-5 {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .mb-safe {
     margin-bottom: env(safe-area-inset-bottom, 0px);
   }
