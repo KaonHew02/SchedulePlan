@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import EmptyState from '../components/EmptyState'
 import Fab from '../components/Fab'
+import { Segmented } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, PaperclipIcon } from '../components/Icons'
 import { addMonths, monthTitle, relativeDay, shortDate, todayISO } from '../lib/date'
 import { money, plain } from '../lib/currency'
@@ -12,11 +13,13 @@ import {
   useCategories,
   useExpenses,
   useSettings,
+  useSplits,
 } from '../lib/store'
 import { tagEmoji } from '../lib/tags'
-import type { Expense, ExpenseDraft } from '../types'
+import type { Expense, ExpenseDraft, ExpensesTab } from '../types'
 import ExpenseDetail from './ExpenseDetail'
 import ExpenseForm, { conversionNote } from './ExpenseForm'
+import { SplitEditor, SplitsList, createSplit } from './SplitsScreen'
 
 /** The bar under the total: where a month's money actually went. */
 const BAR_COLOURS = [
@@ -30,13 +33,24 @@ const BAR_COLOURS = [
   'bg-neutral-400',
 ]
 
+/**
+ * Spending, and the bill splits that feed it.
+ *
+ * Splitting used to be a tool behind More, which made it a calculator you
+ * emptied by hand: it told you what a dinner cost you and then you typed that
+ * number into the expense list yourself. It is a tab here instead, and a
+ * finished split can put your own share straight into the month.
+ */
 export default function ExpensesScreen({ onToast }: { onToast: (message: string) => void }) {
   const expenses = useExpenses()
   const categories = useCategories()
   const settings = useSettings()
+  const splits = useSplits()
+  const [tab, setTab] = useState<ExpensesTab>('spending')
   const [month, setMonth] = useState(todayISO())
   const [detail, setDetail] = useState<Expense | null>(null)
   const [form, setForm] = useState<{ expense: Expense | null } | null>(null)
+  const [openSplit, setOpenSplit] = useState<number | null>(null)
 
   const key = month.slice(0, 7)
 
@@ -86,32 +100,63 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
     onToast('Deleted')
   }
 
+  // The editor is a screen of its own, not a panel: it has its own back arrow
+  // and nothing from the month view applies while it is open.
+  const editing = splits.find((split) => split.id === openSplit)
+  if (editing) {
+    return (
+      <SplitEditor
+        initial={editing}
+        onClose={() => setOpenSplit(null)}
+        onToast={onToast}
+      />
+    )
+  }
+
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
         <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
           <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
-            {monthTitle(month)}
+            {tab === 'spending' ? monthTitle(month) : 'Bill splits'}
           </h1>
-          <div className="flex shrink-0 items-center gap-1 text-neutral-400">
-            {key !== todayISO().slice(0, 7) && (
-              <button
-                onClick={() => setMonth(todayISO())}
-                className="mr-1 text-[13px] font-medium text-brand-500"
-              >
-                This month
+          {/* A month only means something to the spending list. */}
+          {tab === 'spending' && (
+            <div className="flex shrink-0 items-center gap-1 text-neutral-400">
+              {key !== todayISO().slice(0, 7) && (
+                <button
+                  onClick={() => setMonth(todayISO())}
+                  className="mr-1 text-[13px] font-medium text-brand-500"
+                >
+                  This month
+                </button>
+              )}
+              <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month" className="p-1">
+                <ChevronLeft />
               </button>
-            )}
-            <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month" className="p-1">
-              <ChevronLeft />
-            </button>
-            <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Next month" className="p-1">
-              <ChevronRight />
-            </button>
+              <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Next month" className="p-1">
+                <ChevronRight />
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="px-5 pb-3 lg:px-8">
+          <div className="max-w-[260px]">
+            <Segmented
+              value={tab}
+              options={[
+                { value: 'spending' as ExpensesTab, label: 'Spending' },
+                { value: 'splits' as ExpensesTab, label: 'Splits' },
+              ]}
+              onChange={setTab}
+            />
           </div>
         </div>
       </header>
 
+      {tab === 'splits' && <SplitsList onOpen={setOpenSplit} />}
+
+      {tab === 'spending' && (
       <main className="pb-28 lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-10 lg:px-8 lg:pb-10">
         <div className="px-5 pb-5 lg:sticky lg:top-4 lg:px-0">
           <p className="text-[32px] font-semibold tabular-nums tracking-tight">
@@ -204,8 +249,15 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
         )}
         </div>
       </main>
+      )}
 
-      <Fab label="Add an expense" onClick={() => setForm({ expense: null })} />
+      <Fab
+        label={tab === 'spending' ? 'Add an expense' : 'New split'}
+        onClick={() => {
+          if (tab === 'spending') return setForm({ expense: null })
+          setOpenSplit(createSplit(settings.currency).id)
+        }}
+      />
 
       {detail && (
         <ExpenseDetail

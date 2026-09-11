@@ -6,15 +6,18 @@ import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
 import {
+  deleteWish,
   lastDay,
   occupies,
+  store,
   updateSettings,
   useExpenses,
   useSchedule,
   useSettings,
   useWishlist,
 } from '../lib/store'
-import type { ScheduleItem, WishPlace } from '../types'
+import ScheduleForm from '../schedule/ScheduleForm'
+import type { ScheduleDraft, ScheduleItem, WishPlace } from '../types'
 import Globe from './Globe'
 import WishForm from './WishForm'
 
@@ -106,6 +109,8 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
   const settings = useSettings()
   const wishlist = useWishlist()
   const [form, setForm] = useState<{ wish: WishPlace | null } | null>(null)
+  // A wish on its way to becoming a trip: the schedule form is open on it.
+  const [visiting, setVisiting] = useState<WishPlace | null>(null)
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalDraft, setGoalDraft] = useState(String(settings.travelGoal))
 
@@ -364,6 +369,38 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           onSaved={(message) => {
             setForm(null)
             onToast(message)
+          }}
+          onBeenThere={(wish) => {
+            setForm(null)
+            setVisiting(wish)
+          }}
+        />
+      )}
+
+      {/*
+        Marking a wish as visited is one form, not a flag: where you went and
+        when is a schedule item, and only saving one actually moves a counter.
+        The wish is dropped afterwards — keeping both would show the same
+        place as somewhere you have been and somewhere you mean to go.
+      */}
+      {visiting && (
+        <ScheduleForm
+          item={null}
+          defaultDate={today}
+          prefill={{
+            title: visiting.name,
+            notes: visiting.note,
+            place: { country: visiting.country, city: null },
+            allDay: true,
+            attachments: visiting.photo ? [visiting.photo] : [],
+          }}
+          onClose={() => setVisiting(null)}
+          onSave={async (draft: ScheduleDraft) => {
+            await store.createSchedule(draft)
+            // The photo is on the schedule item now, so its bytes stay.
+            await deleteWish(visiting.id, true)
+            setVisiting(null)
+            onToast(`${visiting.name} added to your trips`)
           }}
         />
       )}

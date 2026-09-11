@@ -10,8 +10,8 @@ currency, a converter, a bill split that works out who owes whom, a scanner
 that reads a receipt or a booking with no account and no API key, and a Travel
 screen that counts where you have been.
 
-Five tabs — Schedule, Travel, Expenses, Reminders, More. Everything else lives
-behind **More**.
+Six tabs — Schedule, Travel, Expenses, Reminders, Currency, More. Everything
+else lives behind **More**.
 
 ---
 
@@ -44,18 +44,26 @@ the original amount, the currency and the rate **frozen at the moment you saved
 it**, so a rate that moves next week never restates what last week's dinner
 cost. An expense can hang off a schedule item, which is how a trip adds up.
 
-**Currency** — a converter over a keyless public rate feed, cached for the day
-so it still works on a plane. The rate can be overridden by hand, because the
-money changer's rate is the one that actually applied and it is rarely the
-market's.
+**Currency** — a tab of its own: a converter over a keyless public rate feed,
+cached for the day so it still works on a plane. The rate can be overridden by
+hand, because the money changer's rate is the one that actually applied and it
+is rarely the market's.
 
-**Bill split** — who is in, what each person paid for, split evenly or by
-exact amounts, and then the fewest payments that settle everybody up.
+**Bill split** — the second tab inside Expenses. Who is in, what each person
+paid for, split evenly or by exact amounts, and then the fewest payments that
+settle everybody up. Your own share can be pushed into the spending list as a
+real expense, converted and frozen the same way a foreign receipt is; the
+expense is **linked**, so a split that grows updates it instead of adding a
+second copy of the same dinner.
 
 **Travel** — countries, destinations and continents counted off the schedule,
 a goal to aim at, a globe you can spin with a dot on everywhere you have been,
-every trip with what it cost, and a wishlist of where to go next. Nothing is
-entered twice: see below.
+every trip with what it cost, and a wishlist of where to go next. Been to one
+of them? Open it and tap **I have been here**: it fills in the schedule form
+with the country and the picture already on it, and comes off the wishlist when
+you save. There is no "visited" flag, because having been somewhere is a
+schedule item — which is what the counters read. Nothing is entered twice: see
+below.
 
 **Scanner** — photograph a receipt or a booking. The lighting is flattened out
 of the photo, the text is read, and the fields are *offered* in a form you
@@ -191,7 +199,7 @@ SchedulePlan/
   docs/                         DEPLOY, DRIVE, RUNNING
   public/                       favicon.svg, logo-mark.svg
   src/
-    App.tsx                     The responsive shell: four screens, and the
+    App.tsx                     The responsive shell: the six screens, and the
                                 nav that swaps sides with the viewport
     types.ts                    Shared types
     lib/
@@ -214,19 +222,19 @@ SchedulePlan/
       tags.ts                   Default tags, categories, emoji choices
     components/                 Popover, DatePicker, TimePicker, CurrencySelect,
                                 CountrySelect, CountryBadge, Attachments,
-                                BackupBar, DataSheet, Sheet, BottomNav,
-                                SideNav, Toast, Fab, Icons, Logo, TagEditor,
-                                FormFields
+                                BackupBar, DataSheet, Sheet, Confirm,
+                                BottomNav, SideNav, navItems, Toast, Fab,
+                                Icons, Logo, TagEditor, FormFields
     screens/                    ScheduleScreen, MoreScreen
     schedule/                   DayStrip, DayView, WeekView, MonthView,
                                 MonthGrid, ItemCard, ScheduleForm,
                                 ScheduleDetail
     travel/                     TravelScreen, Globe, WishForm
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
-                                ReceiptScan
+                                ReceiptScan, SplitsScreen
+    currency/                   CurrencyScreen
     reminders/                  RemindersScreen, ReminderForm
-    tools/                      CurrencyScreen, SplitScreen, ScanScreen,
-                                LabelsScreen
+    tools/                      ScanScreen, LabelsScreen
 ```
 
 ### The pickers are ours, not the browser's

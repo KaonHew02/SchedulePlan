@@ -175,6 +175,14 @@ export interface BillSplit {
   currency: string
   people: SplitPerson[]
   entries: SplitEntry[]
+  /**
+   * The expense this split's own share was pushed into, once it has been.
+   * Held so a second tap updates that expense instead of adding a duplicate —
+   * a split grows an item at a time, and its share with it.
+   */
+  expense_id: number | null
+  /** Whose share gets pushed. A person id; null until one has been chosen. */
+  expense_person: string | null
 }
 
 /** A day's rates, cached so the converter works offline and expenses stay put. */
@@ -200,6 +208,8 @@ export interface Settings {
 }
 
 export type ViewMode = 'day' | 'week' | 'month'
-export type Screen = 'schedule' | 'travel' | 'expenses' | 'reminders' | 'more'
-/** The tools that live behind More rather than in the nav. */
-export type Tool = 'currency' | 'split' | 'scan' | 'tags' | 'data'
+export type Screen = 'schedule' | 'travel' | 'expenses' | 'reminders' | 'currency' | 'more'
+/** Which half of the Expenses module is showing. */
+export type ExpensesTab = 'spending' | 'splits'
+/** The tools that still live behind More rather than in the nav. */
+export type Tool = 'scan' | 'tags' | 'data'

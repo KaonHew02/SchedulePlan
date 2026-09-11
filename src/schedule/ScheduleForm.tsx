@@ -6,34 +6,53 @@ import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
 import { createTag, useSchedule, useTags } from '../lib/store'
-import type { Attachment, ScheduleDraft, ScheduleItem, TagId } from '../types'
+import type { Attachment, Place, ScheduleDraft, ScheduleItem, TagId } from '../types'
 
 const FORM_ID = 'schedule-form'
+
+/**
+ * A new item that starts part-filled rather than blank. Marking a wishlist
+ * place as visited is the one user of it: the country, the name and the
+ * picture are already known, and retyping them would be the whole point of
+ * the wishlist thrown away. Ignored when editing — an existing item's own
+ * values always win.
+ */
+export interface SchedulePrefill {
+  title?: string
+  notes?: string | null
+  place?: Place | null
+  allDay?: boolean
+  attachments?: Attachment[]
+}
 
 export default function ScheduleForm({
   item,
   defaultDate,
+  prefill,
   onClose,
   onSave,
 }: {
   /** null when adding something new. */
   item: ScheduleItem | null
   defaultDate: string
+  prefill?: SchedulePrefill
   onClose: () => void
   onSave: (draft: ScheduleDraft) => Promise<void>
 }) {
-  const [title, setTitle] = useState(item?.title ?? '')
+  const [title, setTitle] = useState(item?.title ?? prefill?.title ?? '')
   const [date, setDate] = useState(item?.date ?? defaultDate)
   const [endDate, setEndDate] = useState(item?.end_date ?? '')
-  const [allDay, setAllDay] = useState(item?.all_day ?? false)
+  const [allDay, setAllDay] = useState(item?.all_day ?? prefill?.allDay ?? false)
   const [start, setStart] = useState(item?.start_time ?? nextHalfHour())
   const [end, setEnd] = useState(item?.end_time ?? '')
   const [tag, setTag] = useState<TagId | null>(item?.tag ?? null)
   const [location, setLocation] = useState(item?.location ?? '')
-  const [notes, setNotes] = useState(item?.notes ?? '')
-  const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? [])
-  const [country, setCountry] = useState<string | null>(item?.place?.country ?? null)
-  const [city, setCity] = useState(item?.place?.city ?? '')
+  const [notes, setNotes] = useState(item?.notes ?? prefill?.notes ?? '')
+  const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? prefill?.attachments ?? [])
+  const [country, setCountry] = useState<string | null>(
+    item?.place?.country ?? prefill?.place?.country ?? null,
+  )
+  const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
   const schedule = useSchedule()
   // Countries already in the notebook go to the top of the picker.
   const recentCountries = useMemo(() => {
@@ -45,7 +64,14 @@ export default function ScheduleForm({
   }, [schedule])
   // Location, notes and files stay out of the way until they are wanted.
   const [showDetails, setShowDetails] = useState(
-    Boolean(item?.location || item?.notes || item?.attachments?.length || item?.place),
+    Boolean(
+      item?.location ||
+        item?.notes ||
+        item?.attachments?.length ||
+        item?.place ||
+        prefill?.place ||
+        prefill?.attachments?.length,
+    ),
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)

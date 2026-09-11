@@ -1,14 +1,6 @@
 import type { Screen } from '../types'
-import { BellIcon, CalendarIcon, GlobeIcon, MoreIcon, WalletIcon } from './Icons'
 import Logo from './Logo'
-
-const items = [
-  { id: 'schedule' as const, label: 'Schedule', Icon: CalendarIcon },
-  { id: 'travel' as const, label: 'Travel', Icon: GlobeIcon },
-  { id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon },
-  { id: 'reminders' as const, label: 'Reminders', Icon: BellIcon },
-  { id: 'more' as const, label: 'More', Icon: MoreIcon },
-]
+import { NAV } from './navItems'
 
 /**
  * The laptop and desktop version of the bottom nav. A bar pinned to the bottom
@@ -29,7 +21,7 @@ export default function SideNav({
       </div>
 
       <nav className="px-3">
-        {items.map(({ id, label, Icon }) => (
+        {NAV.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => onChange(id)}

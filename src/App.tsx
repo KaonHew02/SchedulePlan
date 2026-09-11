@@ -4,6 +4,7 @@ import BottomNav from './components/BottomNav'
 import DataSheet from './components/DataSheet'
 import SideNav from './components/SideNav'
 import Toast from './components/Toast'
+import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import RemindersScreen from './reminders/RemindersScreen'
 import MoreScreen from './screens/MoreScreen'
@@ -69,6 +70,7 @@ export default function App() {
             {screen === 'travel' && <TravelScreen onToast={setToast} />}
             {screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
             {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
+            {screen === 'currency' && <CurrencyScreen />}
             {screen === 'more' && <MoreScreen onToast={setToast} />}
           </div>
         </div>

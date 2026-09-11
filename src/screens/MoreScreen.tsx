@@ -2,22 +2,20 @@ import { useState, type ComponentType } from 'react'
 import BackupBar from '../components/BackupBar'
 import CurrencySelect from '../components/CurrencySelect'
 import DataSheet from '../components/DataSheet'
-import {
-  ChevronRight,
-  ScanIcon,
-  SwapIcon,
-  TagIcon,
-  UsersIcon,
-  WalletIcon,
-} from '../components/Icons'
+import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
-import CurrencyScreen from '../tools/CurrencyScreen'
 import LabelsScreen from '../tools/LabelsScreen'
 import ScanScreen from '../tools/ScanScreen'
-import SplitScreen from '../tools/SplitScreen'
 import { updateSettings, useSettings } from '../lib/store'
 
-type Page = 'currency' | 'split' | 'scan' | 'tags' | 'categories'
+/**
+ * What is left behind More.
+ *
+ * Currency is in the nav now and Bill split is a tab inside Expenses, which
+ * is the point of this screen working: things graduate out of it when they
+ * turn out to be used every day.
+ */
+type Page = 'scan' | 'tags' | 'categories'
 
 function Row({
   icon: Icon,
@@ -52,8 +50,6 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
 
   const back = () => setPage(null)
 
-  if (page === 'currency') return <CurrencyScreen onBack={back} />
-  if (page === 'split') return <SplitScreen onBack={back} onToast={onToast} />
   if (page === 'scan') return <ScanScreen onBack={back} onToast={onToast} />
   if (page === 'tags') return <LabelsScreen kind="tags" onBack={back} onToast={onToast} />
   if (page === 'categories') {
@@ -80,18 +76,6 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
         <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Tools</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
-            icon={SwapIcon}
-            label="Currency"
-            hint="Convert, and set the rate you actually got"
-            onClick={() => setPage('currency')}
-          />
-          <Row
-            icon={UsersIcon}
-            label="Bill split"
-            hint="Who paid what, and who owes whom"
-            onClick={() => setPage('split')}
-          />
-          <Row
             icon={ScanIcon}
             label="Document scanner"
             hint="Read a booking or a page into the schedule"
@@ -99,10 +83,7 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
           />
         </div>
 
-        </div>
-
-        <div>
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Labels</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Labels</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
             icon={TagIcon}
@@ -118,7 +99,10 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
           />
         </div>
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Money</h2>
+        </div>
+
+        <div>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Money</h2>
         <div className="border-y border-neutral-100">
           <div className="flex items-center justify-between gap-3 py-3.5">
             <span className="min-w-0">
@@ -134,6 +118,9 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
             />
           </div>
         </div>
+        <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
+          The same setting as the one at the bottom of Currency, where the rates are.
+        </p>
 
         </div>
         </div>

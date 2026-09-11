@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import CurrencySelect from '../components/CurrencySelect'
-import { ChevronLeft, RefreshIcon, Spinner, SwapIcon } from '../components/Icons'
+import { RefreshIcon, Spinner, SwapIcon } from '../components/Icons'
 import { longDate } from '../lib/date'
 import {
   COMMON,
@@ -18,7 +18,11 @@ import { updateSettings, useSettings } from '../lib/store'
 import type { RateTable } from '../types'
 
 /**
- * The converter.
+ * The converter — a module of its own since it left More.
+ *
+ * It was a tool behind a menu, which is the right place for something used
+ * twice a year and the wrong place for something opened at every till on a
+ * trip. It is in the nav now, next to the money half of the app.
  *
  * Rates come from a public feed with no key and no account — there is nowhere
  * on a static site to hide a key, so the only safe kind is one that does not
@@ -30,7 +34,7 @@ import type { RateTable } from '../types'
  * notebook is the one you actually got. Type it here and it sticks, for the
  * converter and for every expense entered afterwards.
  */
-export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
+export default function CurrencyScreen() {
   const settings = useSettings()
   const [table, setTable] = useState<RateTable | null>(() => readCache())
   const [loading, setLoading] = useState(false)
@@ -104,23 +108,26 @@ export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
-          <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
-            <ChevronLeft />
-          </button>
-          <h1 className="text-[19px] font-semibold tracking-tight">Currency</h1>
+        <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Currency</h1>
           <button
             onClick={() => void load(true)}
             disabled={loading}
             aria-label="Refresh rates"
-            className="ml-auto mr-2 p-1.5 text-neutral-400 disabled:opacity-40"
+            className="-mr-1.5 p-1.5 text-neutral-400 disabled:opacity-40"
           >
             {loading ? <Spinner className="h-[18px] w-[18px]" /> : <RefreshIcon className="h-[18px] w-[18px]" />}
           </button>
         </div>
       </header>
 
-      <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
+      {/*
+        Two columns from a laptop up, like every other screen: the converter
+        and its rate on the left, the at-a-glance table on the right. Stacked,
+        the table sat a screen and a half below the thing it belongs to.
+      */}
+      <main className="px-5 pb-28 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:px-8 lg:pb-10">
+        <div>
         <div className="rounded-2xl border border-neutral-200 p-4">
           <div className="flex items-center gap-3">
             <input
@@ -235,7 +242,10 @@ export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
           </p>
         )}
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+        </div>
+
+        <div>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-0">
           1 {settings.currency} buys
         </h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
@@ -277,6 +287,7 @@ export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
           Changing this changes what new expenses are recorded in. Expenses already saved keep the
           currency and the rate they were entered at.
         </p>
+        </div>
       </main>
     </>
   )

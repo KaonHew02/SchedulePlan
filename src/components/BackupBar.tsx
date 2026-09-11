@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
+import Confirm from './Confirm'
 import {
   CloudDownIcon,
   CloudIcon,
@@ -233,31 +234,26 @@ export default function BackupBar({
         </p>
       )}
 
+      {/*
+        A dialog, not a card in the flow. Inline, this question appeared
+        between the backup bar and the screen's own header and pushed the
+        whole notebook down the page — it read as a glitch rather than as a
+        question worth stopping for.
+      */}
       {pending && (
-        <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-4">
-          <p className="text-[14px] leading-6">
-            Replace the {itemCount()} items on this device with {countIn(pending.data)} from{' '}
-            {pending.source}?
-          </p>
-          <p className="mt-1 text-[13px] text-neutral-400">
-            This cannot be undone. Export first if you are unsure.
-          </p>
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setPending(null)}
-              className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmReplace}
-              disabled={busy === 'restore'}
-              className="flex-1 rounded-full bg-brand-500 py-2.5 text-[14px] font-medium text-white disabled:opacity-40"
-            >
-              {busy === 'restore' ? 'Restoring...' : 'Replace'}
-            </button>
-          </div>
-        </div>
+        <Confirm
+          title={
+            <>
+              Replace the {itemCount()} items on this device with {countIn(pending.data)} from{' '}
+              {pending.source}?
+            </>
+          }
+          detail="This cannot be undone. Export first if you are unsure."
+          confirmLabel={busy === 'restore' ? 'Restoring...' : 'Replace'}
+          busy={busy === 'restore'}
+          onConfirm={confirmReplace}
+          onCancel={() => setPending(null)}
+        />
       )}
 
       <input

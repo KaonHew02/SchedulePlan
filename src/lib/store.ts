@@ -189,6 +189,24 @@ function fillExpense(raw: Partial<Expense>, index = 0): Expense {
   }
 }
 
+/**
+ * Splits saved before one could push a share into the spending list have
+ * neither of the two fields that link them there. Filling the gap once, here,
+ * keeps every screen downstream free of a null-check it would carry forever.
+ */
+function fillSplit(raw: Partial<BillSplit>, index = 0): BillSplit {
+  return {
+    id: typeof raw.id === 'number' ? raw.id : index + 1,
+    title: String(raw.title ?? ''),
+    date: String(raw.date ?? ''),
+    currency: typeof raw.currency === 'string' ? raw.currency : DEFAULT_SETTINGS.currency,
+    people: Array.isArray(raw.people) ? raw.people : [],
+    entries: Array.isArray(raw.entries) ? raw.entries : [],
+    expense_id: typeof raw.expense_id === 'number' ? raw.expense_id : null,
+    expense_person: typeof raw.expense_person === 'string' ? raw.expense_person : null,
+  }
+}
+
 function coerce(parsed: Partial<Snapshot> | null): DB {
   return {
     schedule: Array.isArray(parsed?.schedule) ? parsed.schedule.map(fillItem) : [],
@@ -199,7 +217,7 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
         ? parsed.categories
         : DEFAULT_CATEGORIES,
     reminders: Array.isArray(parsed?.reminders) ? parsed.reminders.map(fillReminder) : [],
-    splits: Array.isArray(parsed?.splits) ? parsed.splits : [],
+    splits: Array.isArray(parsed?.splits) ? parsed.splits.map(fillSplit) : [],
     wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist : [],
     settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
   }
@@ -724,12 +742,19 @@ export async function saveWish(
   return saved
 }
 
-export async function deleteWish(id: number): Promise<void> {
+/**
+ * Take a place off the wishlist.
+ *
+ * `keepPhoto` is for the one case where the picture is not going anywhere:
+ * marking a wish as visited hands the photo to the schedule item it becomes,
+ * so letting the bytes go here would leave that item pointing at nothing.
+ */
+export async function deleteWish(id: number, keepPhoto = false): Promise<void> {
   const db = readDb()
   const existing = db.wishlist.find((row) => row.id === id)
   if (!existing) return
   await writeDb({ ...db, wishlist: db.wishlist.filter((row) => row.id !== id) })
-  if (existing.photo) void deleteFiles([existing.photo.id])
+  if (existing.photo && !keepPhoto) void deleteFiles([existing.photo.id])
 }
 
 // ----------------------------------------------------------------- settings

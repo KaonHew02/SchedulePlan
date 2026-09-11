@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useFileUrl } from '../components/Attachments'
 import CountrySelect from '../components/CountrySelect'
 import { Field, TextField } from '../components/FormFields'
-import { CameraIcon, Spinner, TrashIcon } from '../components/Icons'
+import { CameraIcon, CheckIcon, Spinner, TrashIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { saveFile } from '../lib/files'
 import { deleteWish, saveWish } from '../lib/store'
@@ -15,10 +15,18 @@ export default function WishForm({
   wish,
   onClose,
   onSaved,
+  onBeenThere,
 }: {
   wish: WishPlace | null
   onClose: () => void
   onSaved: (message: string) => void
+  /**
+   * Hand this place over to the schedule, where having been somewhere is
+   * recorded. There is no "visited" flag on a wish, and adding one would
+   * invent a second kind of place record — the counters, the globe and the
+   * trip list all read schedule items, so a visited wish has to become one.
+   */
+  onBeenThere?: (wish: WishPlace) => void
 }) {
   const photoInput = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(wish?.name ?? '')
@@ -129,6 +137,23 @@ export default function WishForm({
             </button>
           )}
         </div>
+
+        {wish && onBeenThere && (
+          <>
+            <button
+              type="button"
+              onClick={() => onBeenThere(wish)}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 py-3 text-[14px] font-medium text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-700"
+            >
+              <CheckIcon className="h-4 w-4" />
+              I have been here
+            </button>
+            <p className="pt-2 text-[12px] leading-5 text-neutral-400">
+              Puts it in the schedule as a trip — with the country, so it counts — and takes it
+              off the wishlist. The picture goes with it.
+            </p>
+          </>
+        )}
 
         <input
           ref={photoInput}
