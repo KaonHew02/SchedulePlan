@@ -87,47 +87,65 @@ export function useFileUrl(id: string | null): string | null {
 }
 
 /**
- * One attachment, 64px square. The only one — the detail sheets each grew a
- * cut-down copy that drew a bare page icon for everything, so eleven files
- * looked like eleven identical blanks with nothing to tell them apart.
+ * One attachment: the tile, and its name under it.
+ *
+ * The only one — the detail sheets each grew a cut-down copy that drew a bare
+ * page icon for everything, so eleven files looked like eleven identical
+ * blanks with nothing to tell them apart.
+ *
+ * The name is on the page rather than in a `title`, because a tooltip needs a
+ * pointer to hover and a phone has no pointer: on mobile a grid of thumbnails
+ * was eleven squares and no way to tell which one you wanted. It wraps to two
+ * lines and breaks mid-word — file names have no spaces to break at, and a
+ * name that overflows its tile drags the whole row out of line.
  */
 export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
   const { url, state } = useStoredFile(file.id)
-  const extension = file.name.split('.').pop()?.slice(0, 5).toUpperCase()
 
   return (
     <button
       type="button"
       onClick={onOpen}
       title={state === 'missing' ? `${file.name} — not in this browser` : file.name}
-      className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border transition-colors ${
-        state === 'missing'
-          ? 'border-amber-300 bg-amber-50'
-          : 'border-neutral-200 bg-neutral-50 hover:border-neutral-300'
-      }`}
+      className="flex w-[72px] shrink-0 flex-col gap-1 text-left"
     >
-      {state === 'loading' ? (
-        <span className="flex h-full w-full items-center justify-center">
-          <Spinner className="h-4 w-4 text-neutral-300" />
-        </span>
-      ) : state === 'missing' ? (
-        <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-amber-700">
-          <FileIcon className="h-5 w-5" />
-          <span className="w-full truncate text-[9px] leading-none">missing</span>
-        </span>
-      ) : url && isImage(file.type) ? (
-        <img src={url} alt={file.name} className="h-full w-full object-cover" />
-      ) : (
-        <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-neutral-400">
-          <FileIcon className="h-5 w-5" />
-          <span className="w-full truncate text-[9px] leading-none">{extension}</span>
-        </span>
-      )}
-      {file.kind === 'scan' && state === 'ready' && (
-        <span className="absolute bottom-0 inset-x-0 bg-neutral-900/70 py-0.5 text-center text-[9px] font-medium text-white">
-          SCAN
-        </span>
-      )}
+      <span
+        className={`relative block h-16 w-[72px] overflow-hidden rounded-xl border transition-colors ${
+          state === 'missing'
+            ? 'border-amber-300 bg-amber-50'
+            : 'border-neutral-200 bg-neutral-50 hover:border-neutral-300'
+        }`}
+      >
+        {state === 'loading' ? (
+          <span className="flex h-full w-full items-center justify-center">
+            <Spinner className="h-4 w-4 text-neutral-300" />
+          </span>
+        ) : state === 'missing' ? (
+          <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-amber-700">
+            <FileIcon className="h-5 w-5" />
+            <span className="w-full truncate text-[9px] leading-none">missing</span>
+          </span>
+        ) : url && isImage(file.type) ? (
+          <img src={url} alt={file.name} className="h-full w-full object-cover" />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-neutral-400">
+            <FileIcon className="h-6 w-6" />
+          </span>
+        )}
+        {file.kind === 'scan' && state === 'ready' && (
+          <span className="absolute bottom-0 inset-x-0 bg-neutral-900/70 py-0.5 text-center text-[9px] font-medium text-white">
+            SCAN
+          </span>
+        )}
+      </span>
+
+      <span
+        className={`line-clamp-2 w-full break-all text-[10px] leading-[1.3] ${
+          state === 'missing' ? 'text-amber-700' : 'text-neutral-500'
+        }`}
+      >
+        {file.name}
+      </span>
     </button>
   )
 }
