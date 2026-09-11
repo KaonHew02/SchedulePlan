@@ -239,6 +239,31 @@ export const COUNTRIES: Country[] = TABLE.trim()
 
 const BY_CODE = new Map(COUNTRIES.map((country) => [country.code, country]))
 
+/**
+ * ISO 3166-1 numeric to alpha-2, for the countries the map file carries.
+ *
+ * The world map keys its shapes by the numeric code and everything else in
+ * this app keys by alpha-2, so one of them has to translate. Kept here rather
+ * than in the map loader because it is data about countries, and it is a
+ * kilobyte — the map file it belongs to is a hundred times that and loads only
+ * when the Travel screen asks for it.
+ *
+ * Three shapes in the file have no code at all (N. Cyprus, Somaliland,
+ * Kosovo). They are drawn as land nobody has been to, which is the honest
+ * answer for a country this app has no code for.
+ */
+const NUMERIC = `242FJ 834TZ 732EH 124CA 840US 398KZ 860UZ 598PG 360ID 032AR 152CL 180CD 706SO 404KE 729SD 148TD 332HT 214DO 643RU 044BS 238FK 578NO 304GL 260TF 626TL 710ZA 426LS 484MX 858UY 076BR 068BO 604PE 170CO 591PA 188CR 558NI 340HN 222SV 320GT 084BZ 862VE 328GY 740SR 250FR 218EC 630PR 388JM 192CU 716ZW 072BW 516NA 686SN 466ML 478MR 204BJ 562NE 566NG 120CM 768TG 288GH 384CI 324GN 624GW 430LR 694SL 854BF 140CF 178CG 266GA 226GQ 894ZM 454MW 508MZ 748SZ 024AO 108BI 376IL 422LB 450MG 275PS 270GM 788TN 012DZ 400JO 784AE 634QA 414KW 368IQ 512OM 548VU 116KH 764TH 418LA 104MM 704VN 408KP 410KR 496MN 356IN 050BD 064BT 524NP 586PK 004AF 762TJ 417KG 795TM 364IR 760SY 051AM 752SE 112BY 804UA 616PL 040AT 348HU 498MD 642RO 440LT 428LV 233EE 276DE 100BG 300GR 792TR 008AL 191HR 756CH 442LU 056BE 528NL 620PT 724ES 372IE 540NC 090SB 554NZ 036AU 144LK 156CN 158TW 380IT 208DK 826GB 352IS 031AZ 268GE 608PH 458MY 096BN 705SI 246FI 703SK 203CZ 232ER 392JP 600PY 887YE 682SA 010AQ 196CY 504MA 818EG 434LY 231ET 262DJ 800UG 646RW 070BA 807MK 688RS 499ME 780TT 728SS`
+
+const BY_NUMERIC = new Map<string, string>(
+  NUMERIC.trim()
+    .split(/\s+/)
+    .map((pair) => [pair.slice(0, -2), pair.slice(-2)] as const),
+)
+
+/** The alpha-2 code for a map shape's numeric id, if this app knows the country. */
+export const alpha2Of = (numeric: string | number | null | undefined): string | undefined =>
+  numeric === null || numeric === undefined ? undefined : BY_NUMERIC.get(String(numeric))
+
 export const countryOf = (code: string | null | undefined): Country | undefined =>
   code ? BY_CODE.get(code.toUpperCase()) : undefined
 

@@ -1,23 +1,34 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CountryBadge from '../components/CountryBadge'
 import { countryOf, graticule, project, type Country } from '../lib/places'
+import { loadWorldMap, type WorldMap } from './worldmap'
 
 /**
- * A wireframe globe with a dot on every country you have been to.
+ * A globe with every country you have been to filled in.
  *
- * It is a globe rather than a flat map on purpose. A world map with borders is
- * hundreds of kilobytes of geometry and would be the largest thing in the
- * bundle by a distance; a sphere with a graticule needs only trigonometry, and
- * a dot at a country's centroid says "been there" just as well as a filled
- * outline does.
+ * It was a wireframe with a dot per country until 2026-09-11, on the
+ * reasoning that border geometry would be the largest thing in the bundle.
+ * K wanted the map. The geometry is still not in the bundle — `worldmap.ts`
+ * fetches it when this screen first mounts — so the cost lands on Travel and
+ * nowhere else, and until it arrives the wireframe is what is on screen.
  *
- * Drag it. Points on the far side are dropped rather than drawn flat, which is
- * what stops Peru appearing over the top of Mongolia.
+ * Drag it. Clipping to the near side is d3's: the far half of a polygon is
+ * cut at the horizon and closed along it, which is what stops Brazil being
+ * drawn flat across the Pacific.
+ *
+ * Eighteen countries are too small for the 110m file to carry at all, and
+ * Singapore is one of them. Those get a dot, because a globe that looks
+ * untouched after a trip is worse than one with a mark in the wrong style.
  */
 
 const SIZE = 268
 const RADIUS = 112
 const CENTRE = SIZE / 2
+
+const OCEAN = '#F1F0FA'
+const LAND = '#CBC7DD'
+const BEEN = '#A3E635'
+const EDGE = '#B8B2DE'
 
 export default function Globe({
   codes,
@@ -35,8 +46,8 @@ export default function Globe({
     [codes],
   )
 
-  // Open looking at the middle of wherever you have been, so the dots are on
-  // the near side rather than round the back waiting to be found.
+  // Open looking at the middle of wherever you have been, so the countries
+  // are on the near side rather than round the back waiting to be found.
   const [view, setView] = useState(() => {
     if (visited.length === 0) return { lat: 20, lon: 100 }
     const lat = visited.reduce((sum, c) => sum + c.lat, 0) / visited.length
@@ -47,16 +58,57 @@ export default function Globe({
     return { lat: Math.max(-60, Math.min(60, lat)), lon: (Math.atan2(y, x) * 180) / Math.PI }
   })
 
+  const [world, setWorld] = useState<WorldMap | null>(null)
+  useEffect(() => {
+    let alive = true
+    // A map that will not load leaves the wireframe up rather than an error:
+    // the counters, the goal and the country chips are all still right, and
+    // this is the decoration on top of them.
+    loadWorldMap().then(
+      (map) => alive && setWorld(map),
+      () => undefined,
+    )
+    return () => {
+      alive = false
+    }
+  }, [])
+
   const drag = useRef<{ x: number; y: number; lat: number; lon: number } | null>(null)
-  const lines = useMemo(() => graticule(view.lat, view.lon, RADIUS), [view])
+
+  const been = useMemo(() => new Set(codes), [codes])
+
+  const land = useMemo(() => {
+    if (!world) return null
+    const projection = world
+      .geoOrthographic()
+      .translate([CENTRE, CENTRE])
+      .scale(RADIUS)
+      .rotate([-view.lon, -view.lat])
+    const draw = world.geoPath(projection)
+    return world.shapes
+      .map((shape) => ({
+        code: shape.code,
+        name: shape.code ? countryOf(shape.code)?.name : undefined,
+        been: shape.code !== null && been.has(shape.code),
+        d: draw(shape.feature) ?? '',
+      }))
+      .filter((shape) => shape.d)
+  }, [world, view, been])
+
+  // The wireframe: what is on screen until the map arrives, and what stays
+  // there if it never does.
+  const lines = useMemo(() => (world ? null : graticule(view.lat, view.lon, RADIUS)), [world, view])
 
   const dots = useMemo(
     () =>
-      visited.map((country) => ({
-        country,
-        point: project(country.lat, country.lon, view.lat, view.lon, RADIUS),
-      })),
-    [visited, view],
+      visited
+        .filter((country) => !world || world.needsDot.has(country.code))
+        .map((country) => ({
+          country,
+          point: project(country.lat, country.lon, view.lat, view.lon, RADIUS),
+        }))
+        .filter(({ point }) => point.visible),
+    [visited, view, world],
   )
 
   return (
@@ -85,34 +137,40 @@ export default function Globe({
           drag.current = null
         }}
       >
-        <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="#F1F0FA" />
+        <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill={OCEAN} />
+
+        {lines && (
+          <g transform={`translate(${CENTRE} ${CENTRE})`}>
+            {lines.map((path, index) => (
+              <path key={index} d={path} fill="none" stroke="#CFCBE8" strokeWidth="1" />
+            ))}
+          </g>
+        )}
+
+        {/* Borders are the ocean colour rather than white: a white hairline
+            between two greys reads as a crack, the sea colour reads as a
+            coastline. */}
+        {land && (
+          <g stroke={OCEAN} strokeWidth="0.5" strokeLinejoin="round">
+            {land.map((shape, index) => (
+              <path key={shape.code ?? `x${index}`} d={shape.d} fill={shape.been ? BEEN : LAND}>
+                {shape.been && shape.name && <title>{shape.name}</title>}
+              </path>
+            ))}
+          </g>
+        )}
+
+        <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="none" stroke={EDGE} strokeWidth="1.5" />
 
         <g transform={`translate(${CENTRE} ${CENTRE})`}>
-          {lines.map((path, index) => (
-            <path key={index} d={path} fill="none" stroke="#CFCBE8" strokeWidth="1" />
+          {dots.map(({ country, point }) => (
+            <g key={country.code}>
+              <circle cx={point.x} cy={point.y} r="4.5" fill="#FFFFFF" opacity="0.85" />
+              <circle cx={point.x} cy={point.y} r="2.8" fill="#84CC16">
+                <title>{country.name}</title>
+              </circle>
+            </g>
           ))}
-        </g>
-
-        <circle
-          cx={CENTRE}
-          cy={CENTRE}
-          r={RADIUS}
-          fill="none"
-          stroke="#B8B2DE"
-          strokeWidth="1.5"
-        />
-
-        <g transform={`translate(${CENTRE} ${CENTRE})`}>
-          {dots.map(({ country, point }) =>
-            point.visible ? (
-              <g key={country.code}>
-                <circle cx={point.x} cy={point.y} r="7" fill="#6C5CE7" opacity="0.18" />
-                <circle cx={point.x} cy={point.y} r="3.5" fill="#6C5CE7">
-                  <title>{country.name}</title>
-                </circle>
-              </g>
-            ) : null,
-          )}
         </g>
       </svg>
 
