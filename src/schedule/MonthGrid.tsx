@@ -8,7 +8,8 @@ import {
   weekDays,
   weekdayShort,
 } from '../lib/date'
-import { occupies } from '../lib/store'
+import { onDay, useTags } from '../lib/store'
+import { tintFor } from '../lib/tags'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
 import type { ScheduleItem } from '../types'
 
@@ -21,9 +22,12 @@ import type { ScheduleItem } from '../types'
  *
  * The dots were 4px of neutral-300 and effectively invisible — on a white cell
  * at arm's length they read as dirt on the screen rather than as information.
- * They are now 6px and the app's accent, and a day with more than three things
- * shows a count, because four identical dots is a number nobody can read at a
- * glance.
+ * They are 6px now, and each one is **the colour of the card it stands for**,
+ * so a month of orange down the middle reads as a trip without opening a
+ * single day. A day with more than three things shows a count instead, because
+ * four dots is a number nobody can read at a glance — and the count stays
+ * neutral on purpose, since a coloured number would claim a category the day
+ * does not have.
  */
 export default function MonthGrid({
   anchor,
@@ -41,12 +45,16 @@ export default function MonthGrid({
   onStepMonth?: (iso: string) => void
 }) {
   const today = todayISO()
+  const tags = useTags()
   const grid = monthGrid(anchor)
 
-  const counts = new Map<string, number>()
+  // The items themselves, not a tally: each dot needs to know which card it
+  // stands for to take its colour. Kept in timeline order so the dots run in
+  // the same order as the list under the grid.
+  const onDays = new Map<string, ScheduleItem[]>()
   for (const day of grid) {
-    const count = items.reduce((total, item) => total + (occupies(item, day) ? 1 : 0), 0)
-    if (count) counts.set(day, count)
+    const list = onDay(items, day)
+    if (list.length) onDays.set(day, list)
   }
 
   return (
@@ -88,7 +96,8 @@ export default function MonthGrid({
 
       <div className={`grid grid-cols-7 ${compact ? '' : 'px-2'}`}>
         {grid.map((day) => {
-          const count = counts.get(day) ?? 0
+          const list = onDays.get(day) ?? []
+          const count = list.length
           const selected = day === anchor
           const thisMonth = isSameMonth(day, anchor)
 
@@ -118,18 +127,21 @@ export default function MonthGrid({
                 {count > 3 ? (
                   <span
                     className={`text-[10px] font-semibold leading-none tabular-nums ${
-                      thisMonth ? 'text-brand-500' : 'text-neutral-300'
+                      thisMonth ? 'text-neutral-500' : 'text-neutral-300'
                     }`}
                   >
                     {count}
                   </span>
                 ) : (
-                  Array.from({ length: count }, (_, index) => (
+                  list.map((item) => (
                     <span
-                      key={index}
+                      key={item.id}
+                      // Untagged takes neutral-400 rather than the card's own
+                      // neutral-300 bar: a bar has a whole card edge to be
+                      // seen along, a 6px dot on white has nothing.
                       className={`rounded-full ${compact ? 'h-1 w-1' : 'h-1.5 w-1.5'} ${
-                        thisMonth ? 'bg-brand-500' : 'bg-neutral-300'
-                      }`}
+                        item.tag ? tintFor(item.tag, tags).bar : 'bg-neutral-400'
+                      } ${thisMonth ? '' : 'opacity-30'}`}
                     />
                   ))
                 )}
