@@ -1,8 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="62 58 131 140">
-  <circle cx="80" cy="76" r="13" fill="#2563eb"/>
-  <rect x="108" y="67" width="80" height="18" rx="9" fill="#171717"/>
-  <circle cx="80" cy="128" r="13" fill="#171717" opacity="0.5"/>
-  <rect x="108" y="119" width="62" height="18" rx="9" fill="#171717" opacity="0.75"/>
-  <circle cx="80" cy="180" r="13" fill="#171717" opacity="0.5"/>
-  <rect x="108" y="171" width="72" height="18" rx="9" fill="#171717" opacity="0.45"/>
+<!-- The same mark in line form, for light backgrounds: no tile, brand strokes. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <mask id="sp-orbit-light">
+      <rect width="256" height="256" fill="#fff"/>
+      <path d="M62 140 A50 50 0 0 0 162 140 Z" fill="#000"/>
+    </mask>
+  </defs>
+  <g fill="none" stroke="#6C5CE7" stroke-linecap="round">
+    <ellipse cx="126" cy="132" rx="88" ry="30" stroke-width="11" transform="rotate(-22 126 132)" mask="url(#sp-orbit-light)"/>
+    <circle cx="112" cy="134" r="50" stroke-width="11"/>
+    <ellipse cx="112" cy="134" rx="20" ry="50" stroke-width="8"/>
+    <path d="M62 134 H162" stroke-width="8"/>
+  </g>
+  <g transform="translate(200 80) rotate(-28) scale(0.62)">
+    <path d="M30 0 2 6l-18 20h-6l14-20h-16l-8 8h-4l4-10-4-10h4l8 8h16l-14-20h6l18 20z"
+          fill="#6C5CE7" stroke="#fff" stroke-width="13" stroke-linejoin="round" paint-order="stroke"/>
+  </g>
 </svg>

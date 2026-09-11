@@ -288,7 +288,7 @@ export function FileViewer({
       )}
 
       {reading && (
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5 text-[13px] text-blue-700">
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-[13px] text-brand-700">
           <Spinner className="h-4 w-4" />
           <span>{reading.status}…</span>
           <span className="ml-auto tabular-nums">{Math.round(reading.progress * 100)}%</span>

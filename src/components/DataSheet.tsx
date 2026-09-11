@@ -92,7 +92,7 @@ export default function DataSheet({
 
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-neutral-100">
           <div
-            className="h-full rounded-full bg-blue-600 transition-all"
+            className="h-full rounded-full bg-brand-500 transition-all"
             style={{ width: `${Math.max(0.6, share * 100)}%` }}
           />
         </div>

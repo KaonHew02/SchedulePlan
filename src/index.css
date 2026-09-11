@@ -12,10 +12,11 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* The app column is phone width. On anything wider, put it on a page. */
+  /* The app column is phone width. On anything wider, put it on a page —
+     lavender rather than grey, so the accent has something to sit against. */
   @media (min-width: 640px) {
     body {
-      @apply bg-neutral-100;
+      @apply bg-canvas;
     }
   }
 

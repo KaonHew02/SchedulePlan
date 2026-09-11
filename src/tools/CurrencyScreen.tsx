@@ -173,7 +173,7 @@ export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
                 <span className="shrink-0 text-[13px] text-neutral-500">{to}</span>
                 <button
                   onClick={saveManual}
-                  className="ml-auto rounded-full bg-neutral-900 px-3 py-1.5 text-[13px] font-medium text-white"
+                  className="ml-auto rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
                 >
                   Set
                 </button>
@@ -198,7 +198,7 @@ export default function CurrencyScreen({ onBack }: { onBack: () => void }) {
                       setManualDraft(rate.toFixed(rate < 1 ? 4 : 3))
                       setEditingRate(true)
                     }}
-                    className="ml-auto text-[13px] font-medium text-blue-600"
+                    className="ml-auto text-[13px] font-medium text-brand-500"
                   >
                     {overridden ? 'Change' : 'Use my rate'}
                   </button>

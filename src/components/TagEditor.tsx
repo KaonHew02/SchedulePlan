@@ -90,7 +90,7 @@ export default function TagEditor({
         <button
           type="button"
           onClick={submit}
-          className="flex-1 rounded-full bg-neutral-900 py-2 text-[14px] font-medium text-white"
+          className="flex-1 rounded-full bg-brand-500 py-2 text-[14px] font-medium text-white"
         >
           {submitLabel}
         </button>

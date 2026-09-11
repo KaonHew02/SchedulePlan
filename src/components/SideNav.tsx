@@ -1,9 +1,10 @@
 import type { Screen } from '../types'
-import { BellIcon, CalendarIcon, MoreIcon, WalletIcon } from './Icons'
+import { BellIcon, CalendarIcon, GlobeIcon, MoreIcon, WalletIcon } from './Icons'
 import Logo from './Logo'
 
 const items = [
   { id: 'schedule' as const, label: 'Schedule', Icon: CalendarIcon },
+  { id: 'travel' as const, label: 'Travel', Icon: GlobeIcon },
   { id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon },
   { id: 'reminders' as const, label: 'Reminders', Icon: BellIcon },
   { id: 'more' as const, label: 'More', Icon: MoreIcon },

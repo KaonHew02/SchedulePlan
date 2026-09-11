@@ -115,7 +115,7 @@ export default function ReceiptScan({
                 attachment: attachment as Attachment,
               })
             }
-            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
+            className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
           >
             Use this
           </button>
@@ -149,7 +149,7 @@ export default function ReceiptScan({
           <p className="mt-3 text-[14px] text-neutral-600">{progress.status}…</p>
           <div className="mx-auto mt-3 h-1 w-40 overflow-hidden rounded-full bg-neutral-100">
             <div
-              className="h-full rounded-full bg-blue-600 transition-all"
+              className="h-full rounded-full bg-brand-500 transition-all"
               style={{ width: `${Math.max(4, Math.round(progress.progress * 100))}%` }}
             />
           </div>
@@ -221,7 +221,7 @@ export default function ReceiptScan({
                     onClick={() => setAmount(String(value))}
                     className={`rounded-full border px-3 py-1 text-[13px] tabular-nums transition-colors ${
                       amount === String(value)
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
                         : 'border-neutral-200 text-neutral-600'
                     }`}
                   >

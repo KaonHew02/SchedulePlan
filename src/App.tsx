@@ -6,6 +6,7 @@ import ExpensesScreen from './expenses/ExpensesScreen'
 import RemindersScreen from './reminders/RemindersScreen'
 import MoreScreen from './screens/MoreScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
+import TravelScreen from './travel/TravelScreen'
 import type { Screen } from './types'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
 
         <div className="min-w-0 flex-1">
           {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
+          {screen === 'travel' && <TravelScreen onToast={setToast} />}
           {screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
           {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
           {screen === 'more' && <MoreScreen onToast={setToast} />}

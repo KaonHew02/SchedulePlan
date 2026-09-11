@@ -8,7 +8,7 @@ export default function Fab({ label, onClick }: { label: string; onClick: () => 
         <button
           onClick={onClick}
           aria-label={label}
-          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg active:scale-95 transition-transform"
+          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg active:scale-95 transition-transform"
         >
           <Plus />
         </button>

@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import AttachmentStrip from '../components/Attachments'
+import CountrySelect from '../components/CountrySelect'
 import { DateField, Field, TextField, TimeField, Toggle } from '../components/FormFields'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
-import { createTag, useTags } from '../lib/store'
+import { createTag, useSchedule, useTags } from '../lib/store'
 import type { Attachment, ScheduleDraft, ScheduleItem, TagId } from '../types'
 
 const FORM_ID = 'schedule-form'
@@ -31,9 +32,20 @@ export default function ScheduleForm({
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
   const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? [])
+  const [country, setCountry] = useState<string | null>(item?.place?.country ?? null)
+  const [city, setCity] = useState(item?.place?.city ?? '')
+  const schedule = useSchedule()
+  // Countries already in the notebook go to the top of the picker.
+  const recentCountries = useMemo(() => {
+    const seen: string[] = []
+    for (const row of schedule) {
+      if (row.place?.country && !seen.includes(row.place.country)) seen.push(row.place.country)
+    }
+    return seen.slice(0, 8)
+  }, [schedule])
   // Location, notes and files stay out of the way until they are wanted.
   const [showDetails, setShowDetails] = useState(
-    Boolean(item?.location || item?.notes || item?.attachments?.length),
+    Boolean(item?.location || item?.notes || item?.attachments?.length || item?.place),
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -71,6 +83,7 @@ export default function ScheduleForm({
         location: location.trim() || null,
         notes: notes.trim() || null,
         tag,
+        place: country ? { country, city: city.trim() || null } : null,
         attachments: files,
       })
       // On success the parent closes this sheet.
@@ -91,7 +104,7 @@ export default function ScheduleForm({
             type="submit"
             form={FORM_ID}
             disabled={saving}
-            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white disabled:opacity-40"
+            className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
           >
             {saving ? 'Saving...' : 'Save'}
           </button>
@@ -196,6 +209,21 @@ export default function ScheduleForm({
               <Field label="Location">
                 <TextField label="Location" value={location} onChange={setLocation} />
               </Field>
+              {/* Country is what Travel counts; city is only ever a label. */}
+              <Field label="Country" hint="For Travel">
+                <CountrySelect
+                  value={country}
+                  onChange={setCountry}
+                  recent={recentCountries}
+                  placeholder="Not set"
+                  clearable
+                />
+              </Field>
+              {country && (
+                <Field label="City">
+                  <TextField label="City" value={city} onChange={setCity} />
+                </Field>
+              )}
               <div className="py-3">
                 <textarea
                   value={notes}

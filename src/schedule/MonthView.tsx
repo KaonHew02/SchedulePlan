@@ -11,7 +11,7 @@ import {
 } from '../lib/date'
 import { occupies } from '../lib/store'
 import type { ScheduleItem } from '../types'
-import ItemRow from './ItemRow'
+import ItemCard from './ItemCard'
 
 /**
  * The month grid, and the chosen day's list under it.
@@ -76,8 +76,8 @@ export default function MonthView({
               <span
                 className={[
                   'flex h-7 w-7 items-center justify-center rounded-full text-[13px] tabular-nums',
-                  selected ? 'bg-neutral-900 font-medium text-white' : '',
-                  !selected && day === today ? 'font-semibold text-blue-600' : '',
+                  selected ? 'bg-brand-500 font-medium text-white' : '',
+                  !selected && day === today ? 'font-semibold text-brand-500' : '',
                   !selected && day !== today && thisMonth ? 'text-neutral-900' : '',
                   !selected && !thisMonth ? 'text-neutral-300' : '',
                 ].join(' ')}
@@ -89,7 +89,7 @@ export default function MonthView({
                 {count > 3 ? (
                   <span
                     className={`text-[10px] font-semibold leading-none tabular-nums ${
-                      thisMonth ? 'text-blue-600' : 'text-neutral-300'
+                      thisMonth ? 'text-brand-500' : 'text-neutral-300'
                     }`}
                   >
                     {count}
@@ -99,7 +99,7 @@ export default function MonthView({
                     <span
                       key={index}
                       className={`h-1.5 w-1.5 rounded-full ${
-                        thisMonth ? 'bg-blue-600' : 'bg-neutral-300'
+                        thisMonth ? 'bg-brand-500' : 'bg-neutral-300'
                       }`}
                     />
                   ))
@@ -122,9 +122,9 @@ export default function MonthView({
       {selectedItems.length === 0 ? (
         <p className="px-5 pb-6 text-[13px] text-neutral-300">Nothing scheduled</p>
       ) : (
-        <div className="border-t border-neutral-100">
+        <div className="space-y-2 px-4 pb-4">
           {selectedItems.map((item) => (
-            <ItemRow key={item.id} item={item} day={anchor} onOpen={onOpen} />
+            <ItemCard key={item.id} item={item} day={anchor} onOpen={onOpen} />
           ))}
         </div>
       )}

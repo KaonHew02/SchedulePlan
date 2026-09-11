@@ -4,13 +4,14 @@ Short form **S.P**. A clean digital notebook for your schedule and spending.
 
 **Live at [kaonhew02.github.io/SchedulePlan](https://kaonhew02.github.io/SchedulePlan/)**
 
-All seven phases are in. Schedule with whole-day and multi-day items,
-Reminders that can run from one date until another, Expenses in any currency,
-a converter, a bill split that works out who owes whom, and a scanner that
-reads a receipt or a booking with no account and no API key.
+All seven phases are in, plus Travel. Schedule with whole-day and multi-day
+items, Reminders that can run from one date until another, Expenses in any
+currency, a converter, a bill split that works out who owes whom, a scanner
+that reads a receipt or a booking with no account and no API key, and a Travel
+screen that counts where you have been.
 
-Four tabs, not the three the original spec asked for: **Reminders** was added
-alongside Expenses on request. Everything else lives behind **More**.
+Five tabs — Schedule, Travel, Expenses, Reminders, More. Everything else lives
+behind **More**.
 
 ---
 
@@ -51,6 +52,11 @@ market's.
 **Bill split** — who is in, what each person paid for, split evenly or by
 exact amounts, and then the fewest payments that settle everybody up.
 
+**Travel** — countries, destinations and continents counted off the schedule,
+a goal to aim at, a globe you can spin with a dot on everywhere you have been,
+every trip with what it cost, and a wishlist of where to go next. Nothing is
+entered twice: see below.
+
 **Scanner** — photograph a receipt or a booking. The lighting is flattened out
 of the photo, the text is read, and the fields are *offered* in a form you
 correct before anything is saved. See below for why that matters.
@@ -80,6 +86,36 @@ fills in a form you check; a scanned itinerary produces a list with a tick
 beside each line and nothing is added until you say so. The other amounts it
 saw on the slip are offered as one-tap alternatives, because the total is the
 field it is most likely to get wrong and most costly to get wrong quietly.
+
+## Travel has no Trip record, and that is the point
+
+The rule the whole app is built on is that **the schedule item is the only
+top-level object**. Work, travel, badminton and lunch are all schedule items;
+expenses, receipts, attachments and splits hang off them. Travel does not break
+that.
+
+A trip is a schedule item that runs across days and has a **country** on it —
+one more optional field beside location and notes. Everything on the Travel
+screen is derived from that: the counters, the goal, the globe, the trip list,
+and the spend, which comes free because expenses already link to schedule
+items. Adding a country to something already in the diary is all it takes to
+appear there.
+
+The one thing Travel stores of its own is the **wishlist**, because somewhere
+you have *not* been is not a schedule item at all.
+
+The globe is a wireframe, not a map. A world map with borders would be the
+largest thing in the bundle by a distance, and a dot at a country's centroid
+says "been there" just as well as a filled outline. `lib/places.ts` holds one
+compact table — code, name, continent, latitude, longitude — and the
+orthographic projection that puts it on a sphere. Points on the far side are
+dropped rather than drawn flat, which is what stops Peru appearing over the top
+of Mongolia.
+
+Countries show as **two-letter badges rather than flag emoji**. Flag emoji are
+regional-indicator pairs and Windows ships no font that draws them, so every
+flag there comes out as two bare letters — a design leaning on them looks
+broken on one platform and fine on the rest.
 
 ## Where the data lives
 
@@ -113,19 +149,36 @@ room it is using and when Drive last saw a copy.
 
 The reasoning behind all of this is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
-## Name and logo
+## Name, logo and colour
 
-The mark deliberately does not use the letters. It is a day's timeline: three
-rows falling back into the distance, with the first picked out by the same blue
-dot the month grid puts under a day that has something on it. Rectangles and
-circles only, so it needs no font.
+The mark deliberately does not use the letters. It is a globe with a plane
+going round it — the day-timeline mark it replaced stopped describing the app
+once Travel became a module of its own. Circles, an ellipse and one polygon, so
+it needs no font.
+
+Two details carry it. The orbit is a single ellipse drawn through a **mask that
+hides it where it crosses the top of the globe**, which is what makes the line
+read as passing behind the planet and back out in front; without the mask it
+sits flat on top and the whole thing reads as a circle with a line through it.
+The plane is stroked in the tile colour *underneath* its own white fill
+(`paint-order: stroke`), cutting a clean gap where it crosses the orbit —
+drawn without that, the two merge into one unreadable squiggle.
 
 | | |
 | --- | --- |
-| Ink | `#171717` |
-| Accent (the leading dot) | `#2563eb` |
-| Row fade | 100% / 75% / 45% white |
+| Brand | `#6C5CE7` |
+| Page behind the column | `#DEDBF5` |
 | Tile corner | `rx 58` on a 256 grid |
+| Globe / orbit stroke | 11 on a 256 grid |
+
+The accent is defined once, as `brand` in `tailwind.config.js`. Nothing in
+`src/` should name a raw blue or purple — it moved from blue to purple in one
+pass precisely because it was never spelled out in more than one place.
+
+Card tints are a separate palette (`tintFor` in `lib/tags.ts`), assigned by a
+tag's **position in the tag list** rather than by hashing its id: with seven
+tags and seven tints, a hash collision is more likely than not, and a scheme
+where Sports and Personal come out the same green is doing nothing for anybody.
 
 `public/favicon.svg`, `public/logo-mark.svg` (ink, for light backgrounds) and
 `src/components/Logo.tsx` hold the same shapes. Change them together.
@@ -156,15 +209,18 @@ SchedulePlan/
       autosave.ts               The Drive Auto switch, and its one honest limit
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
+      places.ts                 The country table, and the globe projection
       date.ts                   Date maths and formatting (no date library)
       tags.ts                   Default tags, categories, emoji choices
     components/                 Popover, DatePicker, TimePicker, CurrencySelect,
-                                Attachments, BackupBar, DataSheet, Sheet,
-                                BottomNav, SideNav, Toast, Fab, Icons, Logo,
-                                TagEditor, FormFields
+                                CountrySelect, CountryBadge, Attachments,
+                                BackupBar, DataSheet, Sheet, BottomNav,
+                                SideNav, Toast, Fab, Icons, Logo, TagEditor,
+                                FormFields
     screens/                    ScheduleScreen, MoreScreen
-    schedule/                   DayView, WeekView, MonthView, ItemRow,
-                                ScheduleForm, ScheduleDetail
+    schedule/                   DayStrip, DayView, WeekView, MonthView,
+                                ItemCard, ScheduleForm, ScheduleDetail
+    travel/                     TravelScreen, Globe, WishForm
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
                                 ReceiptScan
     reminders/                  RemindersScreen, ReminderForm
@@ -225,6 +281,7 @@ holds. `version` is 2; a version 1 file still imports.
       "location": null,
       "notes": null,
       "tag": "travel",
+      "place": { "country": "VN", "city": "Da Nang" },
       "attachments": []
     }
   ],
@@ -270,7 +327,11 @@ holds. `version` is 2; a version 1 file still imports.
   "tags": [{ "id": "travel", "label": "Travel", "emoji": "✈️" }],
   "categories": [{ "id": "food-drink", "label": "Food & drink", "emoji": "🍽" }],
   "splits": [],
-  "settings": { "currency": "MYR", "autoDrive": false, "lastDriveSync": null, "manualRates": {} },
+  "wishlist": [{ "id": 1, "name": "Lofoten", "country": "NO", "note": null, "photo": null }],
+  "settings": {
+    "currency": "MYR", "autoDrive": false, "lastDriveSync": null,
+    "manualRates": {}, "travelGoal": 50
+  },
   "files": [{ "id": "1f2e…", "dataUrl": "data:image/jpeg;base64,…" }]
 }
 ```
@@ -282,7 +343,8 @@ inlining the bytes is what keeps the promise that one file is the whole
 notebook.
 
 Older files read back fine: missing fields are filled in once, on read —
-`end_date` becomes null, `all_day` becomes false, missing arrays become empty.
+`end_date` and `place` become null, `all_day` becomes false, missing arrays
+become empty.
 
 `end_time`, `end_date`, `location`, `notes` and `tag` are nullable. `tag` and
 `category` hold an id, and every one is editable in **More → Labels** — the

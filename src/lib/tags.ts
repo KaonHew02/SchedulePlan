@@ -64,3 +64,53 @@ export function makeTagId(label: string, taken: string[]): string {
   while (taken.includes(`${base}-${n}`)) n += 1
   return `${base}-${n}`
 }
+
+/**
+ * The pastel a tagged card is painted in.
+ *
+ * Colour here is decoration, not data — nothing depends on which tint a tag
+ * lands on — so it is derived from the tag's id rather than stored. That way a
+ * tag keeps its colour when tags are reordered, renamed or restored from a
+ * backup, and a brand new tag gets one without anybody having to choose.
+ */
+export interface Tint {
+  /** The card fill. */
+  bg: string
+  /** The bar down its left edge. */
+  bar: string
+  /** Readable on `bg`. */
+  text: string
+}
+
+const TINTS: Tint[] = [
+  { bg: 'bg-[#E9F1FE]', bar: 'bg-[#3B82F6]', text: 'text-[#1D4ED8]' },
+  { bg: 'bg-[#FDECEF]', bar: 'bg-[#F43F5E]', text: 'text-[#BE123C]' },
+  { bg: 'bg-[#FDF2E0]', bar: 'bg-[#F59E0B]', text: 'text-[#B45309]' },
+  { bg: 'bg-[#E5F7EE]', bar: 'bg-[#10B981]', text: 'text-[#047857]' },
+  { bg: 'bg-[#EEEBFD]', bar: 'bg-[#6C5CE7]', text: 'text-[#4A3BB8]' },
+  { bg: 'bg-[#E3F5F9]', bar: 'bg-[#06B6D4]', text: 'text-[#0E7490]' },
+  { bg: 'bg-[#FDEBE3]', bar: 'bg-[#FB7185]', text: 'text-[#9F1239]' },
+]
+
+/** Untagged things stay grey rather than borrowing somebody else's colour. */
+const PLAIN: Tint = { bg: 'bg-neutral-50', bar: 'bg-neutral-300', text: 'text-neutral-500' }
+
+export function tintFor(id: string | null, order?: readonly { id: string }[]): Tint {
+  if (!id) return PLAIN
+
+  // Position in the tag list first. Hashing alone gave two of the seven
+  // built-in tags the same green — with seven tags and seven tints a
+  // collision is more likely than not — and a colour scheme where Sports and
+  // Personal look identical is doing nothing for anybody.
+  const index = order?.findIndex((tag) => tag.id === id) ?? -1
+  if (index >= 0) return TINTS[index % TINTS.length]
+
+  // A tag the caller did not hand us still needs a stable colour. djb2, which
+  // spreads short similar strings ('work' / 'walk') far better than summing
+  // their character codes does.
+  let hash = 5381
+  for (let at = 0; at < id.length; at += 1) {
+    hash = ((hash << 5) + hash + id.charCodeAt(at)) >>> 0
+  }
+  return TINTS[hash % TINTS.length]
+}

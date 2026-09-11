@@ -15,7 +15,7 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
         onClick={() => toggleReminder(reminder.id)}
         aria-label={reminder.done ? 'Mark as not done' : 'Mark as done'}
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-          reminder.done ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-300'
+          reminder.done ? 'border-brand-500 bg-brand-500' : 'border-neutral-300'
         }`}
       >
         {reminder.done && (
@@ -34,7 +34,7 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
             {reminder.title}
           </span>
           {active && (
-            <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+            <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
               On now
             </span>
           )}
@@ -113,7 +113,7 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
           {canAsk && (
             <button
               onClick={() => void Notification.requestPermission().then(() => setCanAsk(false))}
-              className="text-[13px] font-medium text-blue-600"
+              className="text-[13px] font-medium text-brand-500"
             >
               Turn on alerts
             </button>

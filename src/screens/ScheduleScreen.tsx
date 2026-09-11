@@ -14,6 +14,7 @@ import {
   weekTitle,
 } from '../lib/date'
 import { createExpense, inRange, onDay, store, useSchedule } from '../lib/store'
+import DayStrip from '../schedule/DayStrip'
 import DayView from '../schedule/DayView'
 import MonthView from '../schedule/MonthView'
 import ScheduleDetail from '../schedule/ScheduleDetail'
@@ -50,6 +51,12 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
     [schedule, range.start, range.end],
   )
   const dayItems = useMemo(() => onDay(schedule, anchor), [schedule, anchor])
+  // The strip marks every day of the week that has something on it, so it
+  // needs the week regardless of which view is showing.
+  const weekItems = useMemo(() => {
+    const start = startOfWeek(anchor)
+    return inRange(schedule, start, addDays(start, 6))
+  }, [schedule, anchor])
 
   function step(direction: 1 | -1) {
     if (view === 'day') setAnchor(addDays(anchor, direction))
@@ -99,7 +106,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
             {anchor !== todayISO() && (
               <button
                 onClick={() => setAnchor(todayISO())}
-                className="mr-1 text-[13px] font-medium text-blue-600"
+                className="mr-1 text-[13px] font-medium text-brand-500"
               >
                 Today
               </button>
@@ -128,6 +135,8 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
             ))}
           </div>
         </div>
+
+        {view === 'day' && <DayStrip anchor={anchor} items={weekItems} onPick={setAnchor} />}
       </header>
 
       <main className="pb-28">

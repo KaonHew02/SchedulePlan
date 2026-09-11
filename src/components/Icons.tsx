@@ -214,3 +214,12 @@ export const Spinner = ({ className = 'w-4 h-4' }: Props) => (
     <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
   </svg>
 )
+
+/** A globe with a plane going round it — the Travel tab, echoing the app mark. */
+export const GlobeIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="12" r="7.5" />
+    <ellipse cx="11" cy="12" rx="3.2" ry="7.5" />
+    <path d="M3.8 9.5h14.4M3.8 14.5h14.4" />
+  </svg>
+)

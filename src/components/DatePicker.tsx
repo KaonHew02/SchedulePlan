@@ -95,12 +95,12 @@ export function CalendarPanel({
               aria-current={selected ? 'date' : undefined}
               className={[
                 CELL,
-                selected ? 'bg-blue-600 font-semibold text-white' : '',
-                !selected && isStart ? 'bg-blue-100 font-medium text-blue-700' : '',
-                !selected && !isStart && inRange ? 'bg-blue-50 text-blue-700' : '',
+                selected ? 'bg-brand-500 font-semibold text-white' : '',
+                !selected && isStart ? 'bg-brand-100 font-medium text-brand-700' : '',
+                !selected && !isStart && inRange ? 'bg-brand-50 text-brand-700' : '',
                 !selected && !isStart && !inRange && blocked ? 'text-neutral-200' : '',
                 !selected && !isStart && !inRange && !blocked && day === today
-                  ? 'font-semibold text-blue-600 hover:bg-neutral-100'
+                  ? 'font-semibold text-brand-500 hover:bg-neutral-100'
                   : '',
                 !selected && !isStart && !inRange && !blocked && day !== today
                   ? `${isSameMonth(day, month) ? 'text-neutral-900' : 'text-neutral-300'} hover:bg-neutral-100`

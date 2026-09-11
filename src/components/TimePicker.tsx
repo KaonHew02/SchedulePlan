@@ -71,7 +71,7 @@ function Column({
             onClick={() => onPick(value)}
             className={`mb-0.5 w-full rounded-lg py-2 text-center text-[15px] tabular-nums transition-colors ${
               isSelected
-                ? 'bg-blue-600 font-semibold text-white'
+                ? 'bg-brand-500 font-semibold text-white'
                 : 'text-neutral-700 hover:bg-neutral-100'
             }`}
           >

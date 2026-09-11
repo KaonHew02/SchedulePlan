@@ -97,7 +97,7 @@ function EntrySheet({
           <button
             type="button"
             onClick={submit}
-            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
+            className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
           >
             Save
           </button>
@@ -616,7 +616,7 @@ export default function SplitScreen({
 
         <button
           onClick={create}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
         >
           <Plus className="h-4 w-4" />
           New split

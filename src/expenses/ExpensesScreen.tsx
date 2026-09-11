@@ -20,7 +20,7 @@ import ExpenseForm, { conversionNote } from './ExpenseForm'
 
 /** The bar under the total: where a month's money actually went. */
 const BAR_COLOURS = [
-  'bg-blue-600',
+  'bg-brand-500',
   'bg-emerald-500',
   'bg-amber-500',
   'bg-violet-500',
@@ -97,7 +97,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
             {key !== todayISO().slice(0, 7) && (
               <button
                 onClick={() => setMonth(todayISO())}
-                className="mr-1 text-[13px] font-medium text-blue-600"
+                className="mr-1 text-[13px] font-medium text-brand-500"
               >
                 This month
               </button>

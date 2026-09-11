@@ -25,6 +25,31 @@ export interface Attachment {
   text: string | null
 }
 
+/**
+ * Where on earth something happened.
+ *
+ * This hangs off a schedule item exactly the way a location or an attachment
+ * does — it is deliberately NOT a Trip object. A trip in SchedulePlan is still
+ * just a schedule item that runs across several days; giving it a place is
+ * what lets the Travel screen count countries without inventing a second kind
+ * of record for the whole app to know about.
+ */
+export interface Place {
+  /** ISO 3166-1 alpha-2. The flag, the continent and the globe all key off it. */
+  country: string
+  /** Free text: 'Da Nang', 'Kyoto'. Null when only the country is known. */
+  city: string | null
+}
+
+/** Somewhere you have not been yet. */
+export interface WishPlace {
+  id: number
+  name: string
+  country: string
+  note: string | null
+  photo: Attachment | null
+}
+
 export interface ScheduleItem {
   id: number
   /** YYYY-MM-DD — the first day. */
@@ -41,6 +66,7 @@ export interface ScheduleItem {
   location: string | null
   notes: string | null
   tag: TagId | null
+  place: Place | null
   attachments: Attachment[]
 }
 
@@ -55,6 +81,7 @@ export interface ScheduleDraft {
   location: string | null
   notes: string | null
   tag: TagId | null
+  place: Place | null
   attachments: Attachment[]
 }
 
@@ -168,9 +195,11 @@ export interface Settings {
   lastDriveSync: string | null
   /** Rates the user typed in by hand, which beat any fetched table. */
   manualRates: Record<string, number>
+  /** How many countries you are aiming for. Drives the Travel progress bar. */
+  travelGoal: number
 }
 
 export type ViewMode = 'day' | 'week' | 'month'
-export type Screen = 'schedule' | 'expenses' | 'reminders' | 'more'
+export type Screen = 'schedule' | 'travel' | 'expenses' | 'reminders' | 'more'
 /** The tools that live behind More rather than in the nav. */
 export type Tool = 'currency' | 'split' | 'scan' | 'tags' | 'data'

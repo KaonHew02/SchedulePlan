@@ -58,7 +58,7 @@ export default function CurrencySelect({
           setOpen((was) => !was)
         }}
         className={`flex shrink-0 items-center gap-1 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium tabular-nums transition-colors hover:bg-neutral-200/70 ${
-          open ? 'bg-neutral-200/70 ring-2 ring-blue-500/40' : ''
+          open ? 'bg-neutral-200/70 ring-2 ring-brand-500/40' : ''
         }`}
       >
         {value}
@@ -91,12 +91,12 @@ export default function CurrencySelect({
                     setOpen(false)
                   }}
                   className={`flex w-full items-baseline gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
-                    code === value ? 'bg-blue-50' : 'hover:bg-neutral-100'
+                    code === value ? 'bg-brand-50' : 'hover:bg-neutral-100'
                   }`}
                 >
                   <span
                     className={`w-10 shrink-0 text-[14px] font-medium ${
-                      code === value ? 'text-blue-700' : ''
+                      code === value ? 'text-brand-700' : ''
                     }`}
                   >
                     {code}

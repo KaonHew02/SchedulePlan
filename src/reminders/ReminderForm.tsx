@@ -73,7 +73,7 @@ export default function ReminderForm({
           <button
             type="submit"
             form={FORM_ID}
-            className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white"
+            className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
           >
             Save
           </button>

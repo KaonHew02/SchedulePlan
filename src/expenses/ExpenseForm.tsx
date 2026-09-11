@@ -82,7 +82,7 @@ function ScheduleLink({
                       setOpen(false)
                     }}
                     className={`flex w-full items-baseline gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
-                      item.id === value ? 'bg-blue-50' : 'hover:bg-neutral-100'
+                      item.id === value ? 'bg-brand-50' : 'hover:bg-neutral-100'
                     }`}
                   >
                     <span className="w-12 shrink-0 text-[12px] text-neutral-400">
@@ -211,7 +211,7 @@ export default function ExpenseForm({
               type="submit"
               form={FORM_ID}
               disabled={saving}
-              className="w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white disabled:opacity-40"
+              className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>

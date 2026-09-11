@@ -29,6 +29,7 @@ import type {
   ScheduleItem,
   Settings,
   Tag,
+  WishPlace,
 } from '../types'
 
 /** The old home. Read once, on first run after the move, then left alone. */
@@ -53,6 +54,7 @@ export interface Snapshot {
   categories: Tag[]
   reminders: Reminder[]
   splits: BillSplit[]
+  wishlist: WishPlace[]
   settings: Settings
   /** Present in a full export; absent when only the records were wanted. */
   files?: FilePayload[]
@@ -65,6 +67,7 @@ interface DB {
   categories: Tag[]
   reminders: Reminder[]
   splits: BillSplit[]
+  wishlist: WishPlace[]
   settings: Settings
 }
 
@@ -73,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoDrive: false,
   lastDriveSync: null,
   manualRates: {},
+  travelGoal: 50,
 }
 
 const EMPTY: DB = {
@@ -82,6 +86,7 @@ const EMPTY: DB = {
   categories: DEFAULT_CATEGORIES,
   reminders: [],
   splits: [],
+  wishlist: [],
   settings: DEFAULT_SETTINGS,
 }
 
@@ -144,6 +149,11 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
     location: typeof raw.location === 'string' ? raw.location : null,
     notes: typeof raw.notes === 'string' ? raw.notes : null,
     tag: typeof raw.tag === 'string' ? raw.tag : null,
+    // Backups from before Travel existed have no place at all.
+    place:
+      raw.place && typeof raw.place.country === 'string'
+        ? { country: raw.place.country, city: raw.place.city ?? null }
+        : null,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
   }
 }
@@ -190,6 +200,7 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
         : DEFAULT_CATEGORIES,
     reminders: Array.isArray(parsed?.reminders) ? parsed.reminders.map(fillReminder) : [],
     splits: Array.isArray(parsed?.splits) ? parsed.splits : [],
+    wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist : [],
     settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
   }
 }
@@ -245,6 +256,7 @@ function toDocument(db: DB): Snapshot {
     categories: db.categories,
     reminders: db.reminders,
     splits: db.splits,
+    wishlist: db.wishlist,
     settings: db.settings,
   }
 }
@@ -346,6 +358,9 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
     location: draft.location?.trim() || null,
     notes: draft.notes?.trim() || null,
     tag: draft.tag ?? null,
+    place: draft.place?.country
+      ? { country: draft.place.country.toUpperCase(), city: draft.place.city?.trim() || null }
+      : null,
     attachments: draft.attachments ?? [],
   }
 }
@@ -675,6 +690,48 @@ export function deleteSplit(id: number): void {
   void writeDb({ ...db, splits: db.splits.filter((split) => split.id !== id) })
 }
 
+// ----------------------------------------------------------------- wishlist
+
+export function useWishlist(): WishPlace[] {
+  return useSyncExternalStore(subscribe, () => readDb().wishlist)
+}
+
+export async function saveWish(
+  wish: Omit<WishPlace, 'id'> & { id?: number },
+): Promise<WishPlace> {
+  const db = readDb()
+  const name = wish.name.trim()
+  if (!name) throw new Error('Give the place a name.')
+  if (!wish.country) throw new Error('Pick a country.')
+
+  const existing = wish.id ? db.wishlist.find((row) => row.id === wish.id) : undefined
+  const saved: WishPlace = {
+    id: existing?.id ?? nextId(db.wishlist),
+    name,
+    country: wish.country.toUpperCase(),
+    note: wish.note?.trim() || null,
+    photo: wish.photo ?? null,
+  }
+  await writeDb({
+    ...db,
+    wishlist: existing
+      ? db.wishlist.map((row) => (row.id === saved.id ? saved : row))
+      : [...db.wishlist, saved],
+  })
+  if (existing?.photo && existing.photo.id !== saved.photo?.id) {
+    void deleteFiles([existing.photo.id])
+  }
+  return saved
+}
+
+export async function deleteWish(id: number): Promise<void> {
+  const db = readDb()
+  const existing = db.wishlist.find((row) => row.id === id)
+  if (!existing) return
+  await writeDb({ ...db, wishlist: db.wishlist.filter((row) => row.id !== id) })
+  if (existing.photo) void deleteFiles([existing.photo.id])
+}
+
 // ----------------------------------------------------------------- settings
 
 export function useSettings(): Settings {
@@ -702,13 +759,16 @@ export function snapshot(): Snapshot {
   }
 }
 
-function attachmentIds(data: Pick<Snapshot, 'schedule' | 'expenses'>): string[] {
+function attachmentIds(data: Pick<Snapshot, 'schedule' | 'expenses' | 'wishlist'>): string[] {
   const ids = new Set<string>()
   for (const item of data.schedule ?? []) {
     for (const file of item.attachments ?? []) ids.add(file.id)
   }
   for (const expense of data.expenses ?? []) {
     for (const file of expense.attachments ?? []) ids.add(file.id)
+  }
+  for (const wish of data.wishlist ?? []) {
+    if (wish.photo) ids.add(wish.photo.id)
   }
   return [...ids]
 }

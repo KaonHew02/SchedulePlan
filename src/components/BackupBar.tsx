@@ -179,7 +179,7 @@ export default function BackupBar({
             aria-pressed={settings.autoDrive}
             className={`ml-auto flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-35 ${
               settings.autoDrive
-                ? 'bg-blue-600 text-white'
+                ? 'bg-brand-500 text-white'
                 : 'text-neutral-300 hover:bg-white/10'
             }`}
           >
@@ -296,7 +296,7 @@ export default function BackupBar({
             <button
               onClick={confirmReplace}
               disabled={busy === 'restore'}
-              className="flex-1 rounded-full bg-neutral-900 py-2.5 text-[14px] font-medium text-white disabled:opacity-40"
+              className="flex-1 rounded-full bg-brand-500 py-2.5 text-[14px] font-medium text-white disabled:opacity-40"
             >
               {busy === 'restore' ? 'Restoring...' : 'Replace'}
             </button>

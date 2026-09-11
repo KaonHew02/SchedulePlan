@@ -100,6 +100,7 @@ export default function ScanScreen({
           location: row.location,
           notes: null,
           tag: null,
+          place: null,
           // The page itself goes with the first item only. Pointing several
           // records at one blob would mean deleting any of them takes the
           // scan away from the rest.
@@ -161,7 +162,7 @@ export default function ScanScreen({
             <p className="mt-3 text-[14px] text-neutral-600">{progress.status}…</p>
             <div className="mx-auto mt-3 h-1 w-40 overflow-hidden rounded-full bg-neutral-100">
               <div
-                className="h-full rounded-full bg-blue-600 transition-all"
+                className="h-full rounded-full bg-brand-500 transition-all"
                 style={{ width: `${Math.max(4, Math.round(progress.progress * 100))}%` }}
               />
             </div>
@@ -214,7 +215,7 @@ export default function ScanScreen({
                         return was.map((row) => ({ ...row, keep: !allOn }))
                       })
                     }
-                    className="text-[13px] font-medium text-blue-600"
+                    className="text-[13px] font-medium text-brand-500"
                   >
                     {rows.every((row) => row.keep) ? 'Untick all' : 'Tick all'}
                   </button>
@@ -228,7 +229,7 @@ export default function ScanScreen({
                         aria-label={row.keep ? 'Do not add this' : 'Add this'}
                         aria-pressed={row.keep}
                         className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
-                          row.keep ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-300'
+                          row.keep ? 'border-brand-500 bg-brand-500 text-white' : 'border-neutral-300'
                         }`}
                       >
                         {row.keep && <CheckIcon className="h-3 w-3" />}
@@ -268,7 +269,7 @@ export default function ScanScreen({
                 <button
                   onClick={addChosen}
                   disabled={chosenCount === 0 || saving}
-                  className="mt-5 w-full rounded-full bg-neutral-900 py-3 text-[15px] font-medium text-white disabled:opacity-40"
+                  className="mt-5 w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
                 >
                   {saving
                     ? 'Adding...'
