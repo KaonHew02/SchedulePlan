@@ -276,7 +276,7 @@ function Editor({
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-3 pb-3 pt-4">
+        <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onClose} aria-label="Back to splits" className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
@@ -290,7 +290,7 @@ function Editor({
         </div>
       </header>
 
-      <main className="px-5 pb-28">
+      <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Field label="Date">
             <DateField value={split.date} onChange={(date) => change({ ...split, date })} />
@@ -567,7 +567,7 @@ export default function SplitScreen({
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-3 pb-3 pt-4">
+        <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
@@ -575,7 +575,7 @@ export default function SplitScreen({
         </div>
       </header>
 
-      <main className="px-5 pb-28">
+      <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
         {splits.length === 0 ? (
           <div className="py-14 text-center">
             <UsersIcon className="mx-auto h-8 w-8 text-neutral-300" />

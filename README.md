@@ -219,7 +219,8 @@ SchedulePlan/
                                 FormFields
     screens/                    ScheduleScreen, MoreScreen
     schedule/                   DayStrip, DayView, WeekView, MonthView,
-                                ItemCard, ScheduleForm, ScheduleDetail
+                                MonthGrid, ItemCard, ScheduleForm,
+                                ScheduleDetail
     travel/                     TravelScreen, Globe, WishForm
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
                                 ReceiptScan
@@ -244,17 +245,30 @@ choose an hour and the minutes it already had come with it. They render through
 body scrolls, and a calendar positioned inside a scrolling box loses its bottom
 two rows to it.
 
-### Three layouts, one tree
+### Four layouts, one tree
 
 | Width | Shape |
 | --- | --- |
 | under 640px — phone | Full-bleed column, bottom nav, floating add button |
-| 640–1023px — tablet | Same column, wider (`max-w-xl`), on a grey page |
-| 1024px and up — laptop, desktop | Sidebar with the logo and nav on the left, content beside it, no bottom bar |
+| 640–1023px — tablet | Same column, wider (`max-w-xl`), on a lavender page |
+| 1024px and up — laptop | Sidebar on the left, backup bar across the top, content filling the rest, screens in two columns |
+| 1280px and up — desktop | Schedule and Travel add a third column: a calendar to jump with and what is coming next |
 
-The whole frame is capped at `max-w-4xl` and centred. A personal notebook
-stretched across a 1900px monitor is harder to read, not easier — the extra
-room goes into margin rather than into line length.
+Content is capped at **1500px and centred**, which is a deliberate middle. The
+frame used to be capped at `max-w-4xl` — 896px — on the theory that a notebook
+stretched across a 1900px monitor reads worse. That was true of the *text* and
+wrong about everything else: it left a third of the screen as margin and looked
+like a bug rather than a decision. Uncapped is no better, putting a single
+schedule card 1300px wide with six words in it.
+
+So the width is filled with **more content, not wider content**. Every screen
+grows a second column past 1024px, and the two widest — Schedule and Travel —
+wait until 1280px before adding their rail, because a 300px rail beside a
+1024px window leaves the timeline narrower than the phone column it replaced.
+
+The backup bar moves with the layout too: a dark card inside More on a phone, a
+light row across the top of every screen on a laptop. `BackupBar` takes a
+`variant` for the two; it is one component because it is one set of controls.
 
 React + TypeScript + Tailwind, built by Vite. One runtime dependency beyond
 React: `tesseract.js`, and it is only fetched when you scan something.

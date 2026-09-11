@@ -89,8 +89,8 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4">
-          <h1 className="truncate text-[19px] font-semibold tracking-tight">
+        <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
+          <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
             {monthTitle(month)}
           </h1>
           <div className="flex shrink-0 items-center gap-1 text-neutral-400">
@@ -112,8 +112,8 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
         </div>
       </header>
 
-      <main className="pb-28">
-        <div className="px-5 pb-5">
+      <main className="pb-28 lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-10 lg:px-8 lg:pb-10">
+        <div className="px-5 pb-5 lg:sticky lg:top-4 lg:px-0">
           <p className="text-[32px] font-semibold tabular-nums tracking-tight">
             {money(total, settings.currency)}
           </p>
@@ -152,6 +152,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
           )}
         </div>
 
+        <div className="min-w-0">
         {rows.length === 0 ? (
           <EmptyState title="Nothing spent yet" hint="Tap + to record something" />
         ) : (
@@ -201,6 +202,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
             </section>
           ))
         )}
+        </div>
       </main>
 
       <Fab label="Add an expense" onClick={() => setForm({ expense: null })} />

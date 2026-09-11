@@ -63,15 +63,21 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="px-5 pb-3 pt-4">
-          <h1 className="text-[19px] font-semibold tracking-tight">More</h1>
+        <div className="px-5 pb-3 pt-4 lg:px-8">
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">More</h1>
         </div>
       </header>
 
-      <main className="px-5 pb-28">
-        <BackupBar onToast={onToast} onOpenData={() => setShowData(true)} />
+      <main className="px-5 pb-28 lg:px-8 lg:pb-10">
+        {/* On a laptop the backup controls are already across the top of every
+            screen, so repeating them here would be two of the same thing. */}
+        <div className="lg:hidden">
+          <BackupBar onToast={onToast} onOpenData={() => setShowData(true)} />
+        </div>
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Tools</h2>
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
+        <div>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Tools</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
             icon={SwapIcon}
@@ -93,7 +99,10 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
           />
         </div>
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Labels</h2>
+        </div>
+
+        <div>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Labels</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
             icon={TagIcon}
@@ -126,9 +135,12 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
           </div>
         </div>
 
+        </div>
+        </div>
+
         <p className="pt-8 text-[13px] leading-5 text-neutral-500">
-          Your notebook is kept in this browser only. Tap the saved time above to see exactly
-          where, and how much room it is using.
+          Your notebook is kept in this browser only. Tap the saved time in the bar to see
+          exactly where it lives, and how much room it is using.
         </p>
 
         <div className="flex flex-col items-center gap-2 pb-8 pt-10">

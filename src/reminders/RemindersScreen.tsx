@@ -108,8 +108,8 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-baseline justify-between px-5 pb-3 pt-4">
-          <h1 className="text-[19px] font-semibold tracking-tight">Reminders</h1>
+        <div className="flex items-baseline justify-between px-5 pb-3 pt-4 lg:px-8">
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Reminders</h1>
           {canAsk && (
             <button
               onClick={() => void Notification.requestPermission().then(() => setCanAsk(false))}
@@ -121,11 +121,14 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
         </div>
       </header>
 
-      <main className="pb-28">
+      <main className="pb-28 lg:px-8 lg:pb-10">
         {reminders.length === 0 ? (
           <EmptyState title="Nothing to remember" hint="Tap + to add something" />
         ) : (
-          sections.map(([name, rows]) =>
+          // Four sections down one column leaves a laptop mostly empty, and
+          // they are independent lists, so they pair up side by side.
+          <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
+          {sections.map(([name, rows]) =>
             rows.length === 0 ? null : (
               <section key={name}>
                 <h2
@@ -144,10 +147,11 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
                 ))}
               </section>
             ),
-          )
+          )}
+          </div>
         )}
 
-        <p className="px-5 pt-6 text-[12px] leading-5 text-neutral-300">
+        <p className="px-5 pt-6 text-[12px] leading-5 text-neutral-300 lg:px-0">
           Alerts only appear while SchedulePlan is open in a tab. There is no server to send them
           when it is closed.
         </p>

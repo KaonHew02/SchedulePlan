@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import {
   CloudDownIcon,
   CloudIcon,
@@ -31,6 +31,11 @@ import {
  * that actually matters first — *when did this last get saved, and is there a
  * copy anywhere else* — and makes the four actions one tap rather than a row
  * to read and then choose.
+ *
+ * Two shapes, because it lives in two places. On a phone it is a dark card
+ * inside More, where it has a column's width and needs to hold together as a
+ * block. On a laptop it is a light row pinned across the top of every screen,
+ * where a black slab would shout over the content underneath it.
  */
 
 /** A pending replace, held until the user has seen what it would do. */
@@ -59,37 +64,23 @@ function autoNote(state: AutoState): string | null {
   }
 }
 
-function Action({
-  icon,
-  label,
-  onClick,
-  disabled,
-  busy,
-}: {
-  icon: ReactNode
+interface ActionSpec {
+  key: string
+  icon: ComponentType<{ className?: string }>
   label: string
   onClick: () => void
   disabled?: boolean
-  busy?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled || busy}
-      className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[13px] font-medium text-neutral-200 transition-colors hover:bg-white/10 disabled:opacity-35 disabled:hover:bg-transparent"
-    >
-      {busy ? <Spinner className="h-3.5 w-3.5" /> : icon}
-      <span className="truncate">{label}</span>
-    </button>
-  )
 }
 
 export default function BackupBar({
   onToast,
   onOpenData,
+  variant = 'card',
 }: {
   onToast: (message: string) => void
   onOpenData: () => void
+  /** 'card' is the dark block in More; 'bar' is the light desktop top row. */
+  variant?: 'card' | 'bar'
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const settings = useSettings()
@@ -99,6 +90,7 @@ export default function BackupBar({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<Pending | null>(null)
   const configured = driveIsConfigured()
+  const dark = variant === 'card'
 
   useEffect(preloadDrive, [])
 
@@ -146,94 +138,70 @@ export default function BackupBar({
     })
   }
 
+  const actions: ActionSpec[] = [
+    {
+      key: 'save',
+      icon: CloudUpIcon,
+      label: 'To Drive',
+      disabled: !configured,
+      onClick: () =>
+        run('save', async () => {
+          const count = await saveToDrive()
+          onToast(`Saved ${count} items to Drive`)
+        }),
+    },
+    {
+      key: 'load',
+      icon: CloudDownIcon,
+      label: 'From Drive',
+      disabled: !configured,
+      onClick: () =>
+        run('load', async () => {
+          setPending({ source: 'Drive', data: await peekDrive() })
+        }),
+    },
+    { key: 'export', icon: DownloadIcon, label: 'Export', onClick: () => run('export', exportFile) },
+    { key: 'import', icon: UploadIcon, label: 'Import', onClick: () => fileInput.current?.click() },
+  ]
+
   const note = autoNote(auto)
 
-  return (
+  const savedLabel = save.saving ? (
     <>
-      <div className="rounded-2xl bg-neutral-900 p-2">
-        <div className="flex items-center gap-2 px-1.5 pb-1.5 pt-1">
-          <button
-            onClick={onOpenData}
-            className="flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13px] text-neutral-400 transition-colors hover:text-neutral-200"
-          >
-            {save.saving ? (
-              <>
-                <Spinner className="h-3.5 w-3.5" />
-                Saving
-              </>
-            ) : save.error ? (
-              <span className="text-red-400">Not saved — tap to see why</span>
-            ) : save.savedAt ? (
-              <>
-                Saved {timeOf(save.savedAt)}
-                <CloudIcon className="h-3.5 w-3.5 text-neutral-500" />
-              </>
-            ) : (
-              'Your data'
-            )}
-          </button>
+      <Spinner className="h-3.5 w-3.5" />
+      Saving
+    </>
+  ) : save.error ? (
+    <span className={dark ? 'text-red-400' : 'text-red-600'}>Not saved — tap to see why</span>
+  ) : save.savedAt ? (
+    <>
+      Saved {timeOf(save.savedAt)}
+      <CloudIcon className={`h-3.5 w-3.5 ${dark ? 'text-neutral-500' : 'text-brand-400'}`} />
+    </>
+  ) : (
+    'Your data'
+  )
 
-          <button
-            onClick={() => updateSettings({ autoDrive: !settings.autoDrive })}
-            disabled={!configured}
-            aria-pressed={settings.autoDrive}
-            className={`ml-auto flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-35 ${
-              settings.autoDrive
-                ? 'bg-brand-500 text-white'
-                : 'text-neutral-300 hover:bg-white/10'
-            }`}
-          >
-            <RefreshIcon className="h-3.5 w-3.5" />
-            Auto
-          </button>
-        </div>
+  const autoButton = (
+    <button
+      onClick={() => updateSettings({ autoDrive: !settings.autoDrive })}
+      disabled={!configured}
+      aria-pressed={settings.autoDrive}
+      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-35 ${
+        settings.autoDrive
+          ? 'bg-brand-500 text-white'
+          : dark
+            ? 'text-neutral-300 hover:bg-white/10'
+            : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+      } ${dark ? '' : 'rounded-full'}`}
+    >
+      <RefreshIcon className="h-3.5 w-3.5" />
+      Auto
+    </button>
+  )
 
-        {/*
-          Two by two on a phone, four across from 380px up. Four in a row is
-          361px of buttons, which on a 320px screen pushed the whole page into
-          scrolling sideways — and a notebook that slides left when you touch
-          it feels broken long before you work out why.
-        */}
-        <div className="grid grid-cols-2 gap-0.5 border-t border-white/10 pt-1.5 min-[380px]:grid-cols-4">
-          <Action
-            icon={<CloudUpIcon className="h-3.5 w-3.5" />}
-            label="To Drive"
-            disabled={!configured || busy !== null}
-            busy={busy === 'save'}
-            onClick={() =>
-              run('save', async () => {
-                const count = await saveToDrive()
-                onToast(`Saved ${count} items to Drive`)
-              })
-            }
-          />
-          <Action
-            icon={<CloudDownIcon className="h-3.5 w-3.5" />}
-            label="From Drive"
-            disabled={!configured || busy !== null}
-            busy={busy === 'load'}
-            onClick={() =>
-              run('load', async () => {
-                setPending({ source: 'Drive', data: await peekDrive() })
-              })
-            }
-          />
-          <Action
-            icon={<DownloadIcon className="h-3.5 w-3.5" />}
-            label="Export"
-            busy={busy === 'export'}
-            disabled={busy !== null}
-            onClick={() => run('export', exportFile)}
-          />
-          <Action
-            icon={<UploadIcon className="h-3.5 w-3.5" />}
-            label="Import"
-            disabled={busy !== null}
-            onClick={() => fileInput.current?.click()}
-          />
-        </div>
-      </div>
-
+  const notices = (
+    <>
       {!configured && (
         <p className="px-1 pt-2 text-[12px] leading-5 text-neutral-400">
           Drive is not set up in this build, so Export and Import are the second copy. See
@@ -259,18 +227,6 @@ export default function BackupBar({
         </p>
       )}
 
-      <input
-        ref={fileInput}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          event.target.value = '' // so choosing the same file twice still fires
-          if (file) run('import', () => readChosenFile(file))
-        }}
-      />
-
       {error && (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-[13px] leading-5 text-red-700">
           {error}
@@ -278,7 +234,7 @@ export default function BackupBar({
       )}
 
       {pending && (
-        <div className="mt-3 rounded-xl border border-neutral-200 p-4">
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-4">
           <p className="text-[14px] leading-6">
             Replace the {itemCount()} items on this device with {countIn(pending.data)} from{' '}
             {pending.source}?
@@ -303,6 +259,85 @@ export default function BackupBar({
           </div>
         </div>
       )}
+
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          event.target.value = '' // so choosing the same file twice still fires
+          if (file) run('import', () => readChosenFile(file))
+        }}
+      />
+    </>
+  )
+
+  if (!dark) {
+    return (
+      <>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            onClick={onOpenData}
+            className="mr-auto flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900"
+          >
+            {savedLabel}
+          </button>
+
+          {autoButton}
+
+          {actions.map(({ key, icon: Icon, label, onClick, disabled }) => (
+            <button
+              key={key}
+              onClick={onClick}
+              disabled={disabled || busy !== null}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-35"
+            >
+              {busy === key ? <Spinner className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+              {label}
+            </button>
+          ))}
+        </div>
+        {notices}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className="rounded-2xl bg-neutral-900 p-2">
+        <div className="flex items-center gap-2 px-1.5 pb-1.5 pt-1">
+          <button
+            onClick={onOpenData}
+            className="flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13px] text-neutral-400 transition-colors hover:text-neutral-200"
+          >
+            {savedLabel}
+          </button>
+          <span className="ml-auto">{autoButton}</span>
+        </div>
+
+        {/*
+          Two by two on a phone, four across from 380px up. Four in a row is
+          361px of buttons, which on a 320px screen pushed the whole page into
+          scrolling sideways — and a notebook that slides left when you touch
+          it feels broken long before you work out why.
+        */}
+        <div className="grid grid-cols-2 gap-0.5 border-t border-white/10 pt-1.5 min-[380px]:grid-cols-4">
+          {actions.map(({ key, icon: Icon, label, onClick, disabled }) => (
+            <button
+              key={key}
+              onClick={onClick}
+              disabled={disabled || busy !== null}
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[13px] font-medium text-neutral-200 transition-colors hover:bg-white/10 disabled:opacity-35 disabled:hover:bg-transparent"
+            >
+              {busy === key ? <Spinner className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {notices}
     </>
   )
 }

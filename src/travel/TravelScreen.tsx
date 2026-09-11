@@ -158,8 +158,8 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="px-5 pb-2 pt-4">
-          <h1 className="text-[19px] font-semibold tracking-tight">Travel</h1>
+        <div className="px-5 pb-2 pt-4 lg:px-8">
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Travel</h1>
           <p className="flex items-center gap-1.5 pt-0.5 text-[13px] text-neutral-500">
             <PinIcon className="h-3.5 w-3.5 text-neutral-400" />
             {here ? (
@@ -180,7 +180,11 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         </div>
       </header>
 
-      <main className="px-5 pb-28">
+      {/* Stats and the globe on the left, the lists on the right. Two
+          columns rather than one long scroll is the whole reason the width
+          cap could go. */}
+      <main className="px-5 pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[360px_minmax(0,1fr)] xl:items-start xl:gap-10">
+        <div className="xl:sticky xl:top-4">
         <p className="pb-3 pt-2 text-[13px] text-neutral-500">So far you have been to</p>
 
         <div className="flex justify-between gap-2">
@@ -262,7 +266,10 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           </p>
         </div>
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Trips</h2>
+        </div>
+
+        <div className="min-w-0">
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 xl:pt-2">Trips</h2>
         {trips.length === 0 ? (
           <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center">
             <p className="text-[14px] text-neutral-600">No trips recorded yet.</p>
@@ -347,6 +354,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             </div>
           </>
         )}
+        </div>
       </main>
 
       {form && (

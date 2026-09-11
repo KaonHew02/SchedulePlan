@@ -54,7 +54,7 @@ export default function LabelsScreen({
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-3 pb-3 pt-4">
+        <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
@@ -64,7 +64,7 @@ export default function LabelsScreen({
         </div>
       </header>
 
-      <main className="px-5 pb-28">
+      <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
         <p className="pb-4 pt-1 text-[13px] leading-5 text-neutral-500">
           These are yours. Rename them, change the emoji, delete the ones you never use, add the
           ones you do.

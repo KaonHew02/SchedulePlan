@@ -128,7 +128,7 @@ export default function ScanScreen({
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-3 pb-3 pt-4">
+        <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
@@ -136,7 +136,7 @@ export default function ScanScreen({
         </div>
       </header>
 
-      <main className="px-5 pb-28">
+      <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
         {!attachment && !progress && (
           <>
             <p className="pb-4 pt-1 text-[14px] leading-6 text-neutral-500">
