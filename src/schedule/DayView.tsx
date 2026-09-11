@@ -4,9 +4,11 @@ import ItemRow from './ItemRow'
 
 export default function DayView({
   items,
+  day,
   onOpen,
 }: {
   items: ScheduleItem[]
+  day: string
   onOpen: (item: ScheduleItem) => void
 }) {
   if (items.length === 0) {
@@ -16,7 +18,7 @@ export default function DayView({
   return (
     <div className="border-t border-neutral-100">
       {items.map((item) => (
-        <ItemRow key={item.id} item={item} onOpen={onOpen} />
+        <ItemRow key={item.id} item={item} day={day} onOpen={onOpen} />
       ))}
     </div>
   )

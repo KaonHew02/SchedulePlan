@@ -126,3 +126,57 @@ export function nextHalfHour(): string {
   now.setMinutes(now.getMinutes() > 30 ? 60 : 30)
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
+
+/** Whole days from a to b, counting both ends. Same day is 1. */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((fromISO(b).getTime() - fromISO(a).getTime()) / 86_400_000) + 1
+}
+
+/** '10 – 14 Sep' within a month, '28 Sep – 2 Oct' across two. */
+export function rangeLabel(start: string, end: string): string {
+  if (start === end) return shortDate(start)
+  if (start.slice(0, 7) === end.slice(0, 7)) return `${dayNumber(start)} – ${shortDate(end)}`
+  return `${shortDate(start)} – ${shortDate(end)}`
+}
+
+/** Which day of a span this is, 1-based. */
+export const dayOfSpan = (start: string, day: string): number => daysBetween(start, day)
+
+/** 'HH:MM' shifted by some minutes, wrapping at midnight. */
+export function addMinutes(time: string, minutes: number): string {
+  const [hours, mins] = time.split(':').map(Number)
+  const total = ((hours * 60 + mins + minutes) % 1440 + 1440) % 1440
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
+/** Minutes since midnight, for sorting and for measuring a gap. */
+export function minutesOf(time: string): number {
+  const [hours, mins] = time.split(':').map(Number)
+  return hours * 60 + mins
+}
+
+/** '2h 30m', '45m' — how long something runs for. */
+export function durationLabel(start: string, end: string): string {
+  const total = minutesOf(end) - minutesOf(start)
+  if (total <= 0) return ''
+  const hours = Math.floor(total / 60)
+  const mins = total % 60
+  if (!hours) return `${mins}m`
+  return mins ? `${hours}h ${mins}m` : `${hours}h`
+}
+
+/** The current time, rounded down to the minute. */
+export function nowTime(): string {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+/** 'September' */
+export const monthName = (iso: string) => format(iso, { month: 'long' })
+
+/** 'Sep 2026', for an expense month heading. */
+export const monthShort = (iso: string) =>
+  `${format(iso, { month: 'short' }, 'en-US')} ${iso.slice(0, 4)}`
+
+/** The YYYY-MM this date sits in. */
+export const monthKey = (iso: string) => iso.slice(0, 7)

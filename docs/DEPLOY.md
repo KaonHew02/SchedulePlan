@@ -63,7 +63,10 @@ server in a static repo would only confuse. It is in git history at commit
   URL are separate stores. Your phone is a third.
 - **Clearing browsing data deletes everything** unless a copy is elsewhere.
   That is what Export and the Drive buttons in More are for.
-- **`localStorage` caps at about 5 MB** — thousands of items, not millions.
+- **Records and attachments live in IndexedDB**, which is measured in
+  gigabytes rather than the ~5 MB localStorage allowed. The app asks the
+  browser to mark the data as persistent, which is a request and not a
+  guarantee — **Your data** in More says whether it was granted.
 - Nothing syncs by itself, and nobody can recover it for you.
 
 **Export and the Drive sync are what make this survivable.** Export writes one
@@ -72,21 +75,39 @@ machine. Import *replaces* rather than merges — merging two schedules means
 guessing which entries are the same, and guessing wrong quietly duplicates a
 day — so it states what is in the file and what is about to go, and waits.
 
-## The one thing this decision costs later
+## The scanners, and the API key that is not there
 
-**Phases 4 and 6 are the receipt scanner and the itinerary scanner, and both
-need an AI/OCR provider.** A static site has nowhere safe to keep an API key —
-anything shipped in the bundle is readable by anyone who opens the page. When
-you reach those phases there are three honest routes:
+**Phases 4 and 6 — the receipt scanner and the itinerary scanner — were the
+one thing this decision looked like it would cost.** Both wanted an AI or OCR
+provider, and a static site has nowhere safe to keep a key: anything shipped in
+the bundle is readable by anyone who opens the page. Three routes were written
+down here as the honest options — paste your own key, proxy it through a small
+serverless function, or find a provider with origin-restricted browser keys.
 
-1. **You paste your own key**, kept in this browser's storage and never
-   committed. Fine for one person; the key is only as safe as the browser.
-2. **A small serverless function** (Cloudflare Workers or Netlify Functions,
-   both free at this size) holds the key and proxies the call.
-3. **A provider with browser-safe, origin-restricted keys.**
+**None of them was taken.** The recognition runs *in the browser*: Tesseract
+compiled to WebAssembly, pulled from a CDN the first time something is scanned
+and not before. No key exists, so no key can leak, and the app still needs no
+account and no server.
 
-Nothing needs deciding now. It is written down here so it is not a surprise in
-Phase 4.
+What that costs instead:
+
+- **Accuracy.** It is meaningfully worse than a paid cloud model, especially on
+  a crumpled thermal receipt.
+- **A ~12 MB download** the first time per session, which the screens warn
+  about before you start.
+- **A CDN dependency** — `cdn.jsdelivr.net` for the worker and
+  `tessdata.projectnaptha.com` for the English data. Offline, scanning fails
+  with a plain message; everything else keeps working.
+
+The rule that makes the accuracy affordable: **nothing a scanner reads is ever
+saved on its own.** A receipt fills in a form you correct, with the other
+amounts it saw offered as one-tap alternatives. An itinerary produces a list
+with a tick beside each row, and adds only what stays ticked. If the OCR is
+wrong, you see it wrong before it is anywhere.
+
+If accuracy ever matters more than independence, the seam is `lib/ocr.ts`:
+`readText` is the only function that knows what engine is behind it, and the
+three routes above are still there.
 
 ## Publishing
 

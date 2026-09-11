@@ -1,4 +1,5 @@
 import { dayNumber, todayISO, weekDays, weekdayShort } from '../lib/date'
+import { onDay } from '../lib/store'
 import type { ScheduleItem } from '../types'
 import ItemRow from './ItemRow'
 
@@ -18,12 +19,14 @@ export default function WeekView({
   return (
     <div className="border-t border-neutral-100">
       {weekDays(anchor).map((day) => {
-        const dayItems = items.filter((item) => item.date === day)
+        // onDay, not a date equality check: a trip belongs to every day it
+        // runs through, not only the one it started on.
+        const dayItems = onDay(items, day)
         return (
           <section key={day}>
             <button
               onClick={() => onPickDay(day)}
-              className="w-full flex items-baseline gap-2 px-5 pt-4 pb-1.5 text-left"
+              className="flex w-full items-baseline gap-2 px-5 pb-1.5 pt-4 text-left"
             >
               <span
                 className={`text-[13px] font-medium ${
@@ -37,7 +40,7 @@ export default function WeekView({
               )}
             </button>
             {dayItems.map((item) => (
-              <ItemRow key={item.id} item={item} onOpen={onOpen} />
+              <ItemRow key={item.id} item={item} day={day} onOpen={onOpen} />
             ))}
           </section>
         )

@@ -1,23 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from '../components/EmptyState'
 import Fab from '../components/Fab'
-import { relativeDay, shortDate, todayISO } from '../lib/date'
-import { byDue, toggleReminder, useReminders } from '../lib/store'
+import { dueAt, dueLabel, groupOf, isActive, isRange, occurrenceDays, at } from '../lib/reminders'
+import { toggleReminder, useReminders } from '../lib/store'
 import type { Reminder } from '../types'
 import ReminderForm from './ReminderForm'
 
-const dueAt = (reminder: Reminder) => new Date(`${reminder.date}T${reminder.time}`).getTime()
-
-/** 'Today 14:00', 'Tomorrow 09:00', '12 Sep 09:00'. */
-function dueLabel(reminder: Reminder): string {
-  const relative = relativeDay(reminder.date)
-  const day = ['Today', 'Tomorrow', 'Yesterday'].includes(relative)
-    ? relative
-    : shortDate(reminder.date)
-  return `${day} ${reminder.time}`
-}
-
 function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
+  const active = !reminder.done && isRange(reminder) && isActive(reminder)
+
   return (
     <div className="flex items-start gap-3 border-b border-neutral-100 px-5 py-3.5">
       <button
@@ -34,14 +25,21 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
         )}
       </button>
       <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-        <div
-          className={`text-[15px] leading-6 ${
-            reminder.done ? 'text-neutral-400 line-through' : 'font-medium'
-          }`}
-        >
-          {reminder.title}
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`truncate text-[15px] leading-6 ${
+              reminder.done ? 'text-neutral-400 line-through' : 'font-medium'
+            }`}
+          >
+            {reminder.title}
+          </span>
+          {active && (
+            <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+              On now
+            </span>
+          )}
         </div>
-        <div className="text-[13px] leading-5 text-neutral-500 tabular-nums">
+        <div className="text-[13px] leading-5 tabular-nums text-neutral-500">
           {dueLabel(reminder)}
           {reminder.notes && ` · ${reminder.notes}`}
         </div>
@@ -60,19 +58,25 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
   // everything already overdue at startup would be a wall of popups, and the
   // Overdue list says it better anyway.
   const openedAt = useRef(Date.now())
-  const alerted = useRef(new Set<number>())
+  const alerted = useRef(new Set<string>())
 
   useEffect(() => {
     const tick = () => {
       const now = Date.now()
       for (const reminder of reminders) {
-        if (reminder.done || alerted.current.has(reminder.id)) continue
-        const due = dueAt(reminder)
-        if (due > openedAt.current && due <= now) {
-          alerted.current.add(reminder.id)
-          onToast(reminder.title)
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification(reminder.title, { body: dueLabel(reminder) })
+        if (reminder.done) continue
+        // A repeat has a moment per day, and each is its own alert — so the
+        // key has to carry the day, not just the reminder.
+        for (const day of occurrenceDays(reminder)) {
+          const moment = at(day, reminder.time)
+          const key = `${reminder.id}@${day}`
+          if (alerted.current.has(key)) continue
+          if (moment > openedAt.current && moment <= now) {
+            alerted.current.add(key)
+            onToast(reminder.title)
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification(reminder.title, { body: dueLabel(reminder) })
+            }
           }
         }
       }
@@ -82,35 +86,33 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
     return () => clearInterval(timer)
   }, [reminders, onToast])
 
-  const groups = useMemo(() => {
-    const today = todayISO()
+  const sections = useMemo(() => {
     const now = Date.now()
-    const open = reminders.filter((reminder) => !reminder.done).sort(byDue)
-    return {
-      overdue: open.filter((reminder) => dueAt(reminder) < now && reminder.date !== today),
-      today: open.filter((reminder) => reminder.date === today),
-      upcoming: open.filter((reminder) => reminder.date > today),
-      done: reminders.filter((reminder) => reminder.done).sort(byDue).reverse(),
-    }
-  }, [reminders])
+    const open = reminders
+      .filter((reminder) => !reminder.done)
+      .sort((a, b) => dueAt(a, now) - dueAt(b, now))
 
-  const sections: [string, Reminder[]][] = [
-    ['Overdue', groups.overdue],
-    ['Today', groups.today],
-    ['Upcoming', groups.upcoming],
-    ['Done', groups.done],
-  ]
+    return [
+      ['Overdue', open.filter((reminder) => groupOf(reminder, now) === 'overdue')],
+      ['Today', open.filter((reminder) => groupOf(reminder, now) === 'today')],
+      ['Upcoming', open.filter((reminder) => groupOf(reminder, now) === 'upcoming')],
+      [
+        'Done',
+        reminders
+          .filter((reminder) => reminder.done)
+          .sort((a, b) => dueAt(b, now) - dueAt(a, now)),
+      ],
+    ] as [string, Reminder[]][]
+  }, [reminders])
 
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-baseline justify-between px-5 pt-4 pb-3">
+        <div className="flex items-baseline justify-between px-5 pb-3 pt-4">
           <h1 className="text-[19px] font-semibold tracking-tight">Reminders</h1>
           {canAsk && (
             <button
-              onClick={() =>
-                void Notification.requestPermission().then(() => setCanAsk(false))
-              }
+              onClick={() => void Notification.requestPermission().then(() => setCanAsk(false))}
               className="text-[13px] font-medium text-blue-600"
             >
               Turn on alerts
@@ -127,7 +129,7 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
             rows.length === 0 ? null : (
               <section key={name}>
                 <h2
-                  className={`px-5 pt-4 pb-1 text-[13px] font-medium ${
+                  className={`px-5 pb-1 pt-4 text-[13px] font-medium ${
                     name === 'Overdue' ? 'text-red-600' : 'text-neutral-400'
                   }`}
                 >
@@ -146,8 +148,8 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
         )}
 
         <p className="px-5 pt-6 text-[12px] leading-5 text-neutral-300">
-          Alerts only appear while SchedulePlan is open in a tab. There is no server to send
-          them when it is closed.
+          Alerts only appear while SchedulePlan is open in a tab. There is no server to send them
+          when it is closed.
         </p>
       </main>
 

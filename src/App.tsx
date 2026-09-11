@@ -2,8 +2,8 @@ import { useState } from 'react'
 import BottomNav from './components/BottomNav'
 import SideNav from './components/SideNav'
 import Toast from './components/Toast'
+import ExpensesScreen from './expenses/ExpensesScreen'
 import RemindersScreen from './reminders/RemindersScreen'
-import ExpensesScreen from './screens/ExpensesScreen'
 import MoreScreen from './screens/MoreScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
 import type { Screen } from './types'
@@ -24,7 +24,7 @@ export default function App() {
 
         <div className="min-w-0 flex-1">
           {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
-          {screen === 'expenses' && <ExpensesScreen />}
+          {screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
           {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
           {screen === 'more' && <MoreScreen onToast={setToast} />}
         </div>

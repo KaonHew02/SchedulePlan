@@ -10,7 +10,7 @@
  */
 
 import { SP_DRIVE, driveIsConfigured } from './drive-config'
-import { restore, snapshot, type Snapshot } from './store'
+import { fullSnapshot, restore, updateSettings, type Snapshot } from './store'
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const GIS_SCRIPT = 'https://accounts.google.com/gsi/client'
@@ -109,6 +109,19 @@ async function getToken(): Promise<string> {
   })
 }
 
+/**
+ * Is there a usable token right now?
+ *
+ * Autosave leans on this. Getting a token opens Google's popup, and a browser
+ * only allows that inside the click that asked for it — so a background save
+ * can ride an existing token but can never go and fetch a new one. When this
+ * is false the bar says to press To Drive once, rather than silently failing
+ * every few minutes.
+ */
+export function hasLiveToken(): boolean {
+  return Boolean(token) && Date.now() < tokenExpiresAt
+}
+
 async function call(url: string, init: RequestInit): Promise<Response> {
   const accessToken = await getToken()
   let response: Response
@@ -144,9 +157,15 @@ async function findFile(): Promise<string | null> {
   return body.files?.[0]?.id ?? null
 }
 
-/** Write the whole schedule to Drive, replacing whatever was there. */
+/**
+ * Write the whole notebook to Drive, replacing whatever was there.
+ *
+ * Attachments go too, inlined as data URLs, which is what makes the Drive copy
+ * a real second copy rather than a list of records pointing at photos that
+ * only ever existed on one device.
+ */
 export async function saveToDrive(): Promise<number> {
-  const data = snapshot()
+  const data = await fullSnapshot()
   const body = JSON.stringify(data, null, 2)
   const existing = await findFile()
 
@@ -169,7 +188,9 @@ export async function saveToDrive(): Promise<number> {
         `--${boundary}--`,
     })
   }
-  return data.schedule.length
+
+  updateSettings({ lastDriveSync: new Date().toISOString() })
+  return data.schedule.length + data.reminders.length + data.expenses.length
 }
 
 /** Read the Drive copy without applying it, so the user can be told what is in it. */
@@ -183,6 +204,6 @@ export async function peekDrive(): Promise<Snapshot> {
 }
 
 /** Replace everything on this device with the Drive copy. */
-export function applyDrive(data: Snapshot): number {
+export function applyDrive(data: Snapshot): Promise<number> {
   return restore(data)
 }

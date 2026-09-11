@@ -9,9 +9,20 @@ import {
   weekDays,
   weekdayShort,
 } from '../lib/date'
+import { occupies } from '../lib/store'
 import type { ScheduleItem } from '../types'
 import ItemRow from './ItemRow'
 
+/**
+ * The month grid, and the chosen day's list under it.
+ *
+ * The dots under each number were 4px of neutral-300 and effectively
+ * invisible — on a white cell at arm's length they read as dirt on the
+ * screen rather than as information. They are now 6px and the app's blue,
+ * which is the one colour the month grid already uses to mean *something is
+ * here*. A day with more than three things shows three dots and a count,
+ * because four identical dots is a number nobody can read at a glance.
+ */
 export default function MonthView({
   anchor,
   items,
@@ -27,9 +38,17 @@ export default function MonthView({
 }) {
   const today = todayISO()
   const grid = monthGrid(anchor)
+
+  // Counted per day rather than per record: a trip covers every day it runs
+  // for, and a month grid that only marked the day it started would be wrong
+  // about five days out of six.
   const counts = new Map<string, number>()
-  for (const item of items) counts.set(item.date, (counts.get(item.date) ?? 0) + 1)
-  const selectedItems = items.filter((item) => item.date === anchor)
+  for (const day of grid) {
+    const count = items.reduce((total, item) => total + (occupies(item, day) ? 1 : 0), 0)
+    if (count) counts.set(day, count)
+  }
+
+  const selectedItems = items.filter((item) => occupies(item, anchor))
 
   return (
     <div>
@@ -45,29 +64,46 @@ export default function MonthView({
         {grid.map((day) => {
           const count = counts.get(day) ?? 0
           const selected = day === anchor
+          const thisMonth = isSameMonth(day, anchor)
+
           return (
             <button
               key={day}
               onClick={() => onSelect(day)}
-              className="flex h-11 flex-col items-center justify-center gap-[3px] md:h-14"
+              aria-label={`${shortDate(day)}, ${count} scheduled`}
+              className="flex h-12 flex-col items-center justify-center gap-1 md:h-16"
             >
               <span
                 className={[
-                  'flex items-center justify-center w-7 h-7 rounded-full text-[13px] tabular-nums',
-                  selected ? 'bg-neutral-900 text-white font-medium' : '',
-                  !selected && day === today ? 'text-blue-600 font-semibold' : '',
-                  !selected && day !== today && isSameMonth(day, anchor)
-                    ? 'text-neutral-900'
-                    : '',
-                  !selected && !isSameMonth(day, anchor) ? 'text-neutral-300' : '',
+                  'flex h-7 w-7 items-center justify-center rounded-full text-[13px] tabular-nums',
+                  selected ? 'bg-neutral-900 font-medium text-white' : '',
+                  !selected && day === today ? 'font-semibold text-blue-600' : '',
+                  !selected && day !== today && thisMonth ? 'text-neutral-900' : '',
+                  !selected && !thisMonth ? 'text-neutral-300' : '',
                 ].join(' ')}
               >
                 {dayNumber(day)}
               </span>
-              <span className="flex gap-[3px] h-1">
-                {Array.from({ length: Math.min(count, 3) }, (_, i) => (
-                  <span key={i} className="w-1 h-1 rounded-full bg-neutral-300" />
-                ))}
+
+              <span className="flex h-1.5 items-center gap-[3px]">
+                {count > 3 ? (
+                  <span
+                    className={`text-[10px] font-semibold leading-none tabular-nums ${
+                      thisMonth ? 'text-blue-600' : 'text-neutral-300'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                ) : (
+                  Array.from({ length: count }, (_, index) => (
+                    <span
+                      key={index}
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        thisMonth ? 'bg-blue-600' : 'bg-neutral-300'
+                      }`}
+                    />
+                  ))
+                )}
               </span>
             </button>
           )
@@ -76,11 +112,11 @@ export default function MonthView({
 
       <button
         onClick={() => onPickDay(anchor)}
-        className="mt-4 w-full flex items-center gap-1 px-5 pb-2 text-left"
+        className="mt-4 flex w-full items-center gap-1 px-5 pb-2 text-left"
       >
         <span className="text-[13px] font-medium">{relativeDay(anchor)}</span>
         <span className="text-[13px] text-neutral-400">{shortDate(anchor)}</span>
-        <ChevronRight className="w-4 h-4 text-neutral-300" />
+        <ChevronRight className="h-4 w-4 text-neutral-300" />
       </button>
 
       {selectedItems.length === 0 ? (
@@ -88,7 +124,7 @@ export default function MonthView({
       ) : (
         <div className="border-t border-neutral-100">
           {selectedItems.map((item) => (
-            <ItemRow key={item.id} item={item} onOpen={onOpen} />
+            <ItemRow key={item.id} item={item} day={anchor} onOpen={onOpen} />
           ))}
         </div>
       )}

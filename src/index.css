@@ -19,12 +19,15 @@
     }
   }
 
-  /* Native date/time pickers look bulky by default on mobile. */
-  input[type='date'],
-  input[type='time'] {
+  /* Number fields keep their spinners out of a form that is all chips. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
-    appearance: none;
-    min-height: 1.5rem;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
   }
 
   button {
@@ -89,6 +92,28 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-up,
   .animate-fade-in {
+    animation: none;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.12s ease-out;
+  transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop-in {
     animation: none;
   }
 }

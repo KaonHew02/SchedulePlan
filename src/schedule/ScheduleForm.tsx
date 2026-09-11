@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { DateField, Field, TimeField } from '../components/FormFields'
+import AttachmentStrip from '../components/Attachments'
+import { DateField, Field, TextField, TimeField, Toggle } from '../components/FormFields'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
-import { nextHalfHour } from '../lib/date'
+import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
 import { createTag, useTags } from '../lib/store'
-import type { ScheduleDraft, ScheduleItem, TagId } from '../types'
+import type { Attachment, ScheduleDraft, ScheduleItem, TagId } from '../types'
 
 const FORM_ID = 'schedule-form'
 
@@ -22,36 +23,55 @@ export default function ScheduleForm({
 }) {
   const [title, setTitle] = useState(item?.title ?? '')
   const [date, setDate] = useState(item?.date ?? defaultDate)
+  const [endDate, setEndDate] = useState(item?.end_date ?? '')
+  const [allDay, setAllDay] = useState(item?.all_day ?? false)
   const [start, setStart] = useState(item?.start_time ?? nextHalfHour())
   const [end, setEnd] = useState(item?.end_time ?? '')
   const [tag, setTag] = useState<TagId | null>(item?.tag ?? null)
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? '')
-  // Location and notes stay out of the way until they are wanted.
-  const [showDetails, setShowDetails] = useState(Boolean(item?.location || item?.notes))
+  const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? [])
+  // Location, notes and files stay out of the way until they are wanted.
+  const [showDetails, setShowDetails] = useState(
+    Boolean(item?.location || item?.notes || item?.attachments?.length),
+  )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [newTag, setNewTag] = useState(false)
   const tags = useTags()
 
+  const spans = Boolean(endDate && endDate > date)
+  const nights = spans ? daysBetween(date, endDate) : 1
+
+  /** Dragging the start past the end would otherwise leave an invalid range. */
+  function moveStart(next: string) {
+    setDate(next)
+    if (endDate && endDate < next) setEndDate('')
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!title.trim()) return setError('Please give this a title.')
     if (!date) return setError('Please pick a date.')
-    if (!start) return setError('Please pick a start time.')
-    if (end && end <= start) return setError('End time must be after the start time.')
+    if (!allDay && !start) return setError('Please pick a start time.')
+    if (!allDay && end && !spans && end <= start) {
+      return setError('End time must be after the start time.')
+    }
 
     setError(null)
     setSaving(true)
     try {
       await onSave({
         date,
-        start_time: start,
-        end_time: end || null,
+        end_date: endDate || null,
+        all_day: allDay,
+        start_time: allDay ? '00:00' : start,
+        end_time: allDay ? null : end || null,
         title: title.trim(),
         location: location.trim() || null,
         notes: notes.trim() || null,
         tag,
+        attachments: files,
       })
       // On success the parent closes this sheet.
     } catch (err) {
@@ -84,25 +104,49 @@ export default function ScheduleForm({
           onChange={(e) => setTitle(e.target.value)}
           autoFocus={!item}
           placeholder="What are you doing?"
-          className="w-full text-[17px] py-1 bg-transparent outline-none placeholder:text-neutral-300"
+          className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
+          <Field label="All day">
+            <Toggle checked={allDay} onChange={setAllDay} label="All day" />
+          </Field>
+
           <Field label="Date">
-            <DateField value={date} onChange={setDate} />
+            <DateField value={date} onChange={moveStart} />
           </Field>
-          <Field label="Start">
-            <TimeField label="Start" value={start} onChange={setStart} />
-          </Field>
-          <Field label="End">
-            <TimeField
-              label="End"
-              value={end}
-              onChange={setEnd}
-              placeholder="Optional"
+
+          <Field label="Ends" hint={spans ? `${nights} days` : undefined}>
+            <DateField
+              label="End date"
+              value={endDate}
+              onChange={setEndDate}
+              placeholder="Same day"
               clearable
+              rangeStart={date}
+              min={date}
             />
           </Field>
+
+          {/* A whole-day thing has no clock, so the clock rows go away rather
+              than sitting there greyed out asking to be filled in. */}
+          {!allDay && (
+            <>
+              <Field label="Start" hint={spans ? shortDate(date) : undefined}>
+                <TimeField label="Start" value={start} onChange={setStart} />
+              </Field>
+              <Field label="End" hint={spans ? shortDate(endDate) : undefined}>
+                <TimeField
+                  label="End"
+                  value={end}
+                  onChange={setEnd}
+                  placeholder="Optional"
+                  clearable
+                  relativeTo={spans ? null : start}
+                />
+              </Field>
+            </>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -147,35 +191,36 @@ export default function ScheduleForm({
         )}
 
         {showDetails ? (
-          <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">
-            <Field label="Location">
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Optional"
-                className="text-[15px] text-right bg-transparent outline-none placeholder:text-neutral-300"
-              />
-            </Field>
-            <div className="py-3">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Notes"
-                className="w-full text-[15px] bg-transparent outline-none resize-none placeholder:text-neutral-300"
-              />
+          <>
+            <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">
+              <Field label="Location">
+                <TextField label="Location" value={location} onChange={setLocation} />
+              </Field>
+              <div className="py-3">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Notes"
+                  className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-neutral-300"
+                />
+              </div>
             </div>
-          </div>
+
+            <div className="mt-4">
+              <p className="pb-2 text-[13px] text-neutral-400">Attachments</p>
+              <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
+            </div>
+          </>
         ) : (
           <button
             type="button"
             onClick={() => setShowDetails(true)}
             className="mt-4 text-[14px] text-neutral-400"
           >
-            + Add location or notes
+            + Add location, notes or files
           </button>
         )}
-
       </form>
     </Sheet>
   )

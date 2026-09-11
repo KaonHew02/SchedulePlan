@@ -18,6 +18,21 @@ export const DEFAULT_TAGS: Tag[] = [
   { id: 'other', label: 'Other', emoji: '📌' },
 ]
 
+/**
+ * What the Expenses screen starts with. Same shape as tags, same rules — every
+ * one can be renamed, re-emoji'd or deleted in More > Categories.
+ */
+export const DEFAULT_CATEGORIES: Tag[] = [
+  { id: 'food-drink', label: 'Food & drink', emoji: '🍽' },
+  { id: 'transport', label: 'Transport', emoji: '🚕' },
+  { id: 'stay', label: 'Stay', emoji: '🏨' },
+  { id: 'shopping', label: 'Shopping', emoji: '🛍' },
+  { id: 'tickets', label: 'Tickets', emoji: '🎫' },
+  { id: 'groceries', label: 'Groceries', emoji: '🛒' },
+  { id: 'bills', label: 'Bills', emoji: '🧾' },
+  { id: 'other-spend', label: 'Other', emoji: '📌' },
+]
+
 /** Shown as one-tap choices when naming a tag. Any other emoji can be typed. */
 export const EMOJI_CHOICES = [
   '🙂', '💼', '✈️', '🍽', '🏸', '🎫', '📌', '🏠',
