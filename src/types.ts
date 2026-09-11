@@ -156,16 +156,22 @@ export interface SplitPerson {
   name: string
 }
 
-export interface SplitEntry {
+/**
+ * One thing somebody had.
+ *
+ * The line sits **under the person who had it**, which is the whole model:
+ * a bill is not a list of items to be divided, it is a list of what each
+ * person ate. That is why there is no split-method anywhere and no total
+ * field on the form — an even split is the same figure on every row, a lump
+ * per person is one unlabelled line each, and the total is the sum of these.
+ */
+export interface SplitLine {
   id: string
+  /** Optional. Somebody who will not itemise their meal is one bare figure. */
   label: string
   amount: number
-  /** Person id who actually paid. */
-  paidBy: string
-  /** Person ids sharing it. Empty means everyone. */
-  shares: string[]
-  /** Exact per-person amounts, when it is not split evenly. */
-  custom: Record<string, number> | null
+  /** Whose it was. Null means the Shared by everyone card. */
+  person: string | null
 }
 
 export interface BillSplit {
@@ -173,8 +179,11 @@ export interface BillSplit {
   title: string
   date: string
   currency: string
+  /** The first one is you: the hero figures and the expense are measured off it. */
   people: SplitPerson[]
-  entries: SplitEntry[]
+  lines: SplitLine[]
+  /** Who put the money down for the whole bill. */
+  paidBy: string
   /**
    * The expense this split's own share was pushed into, once it has been.
    * Held so a second tap updates that expense instead of adding a duplicate —

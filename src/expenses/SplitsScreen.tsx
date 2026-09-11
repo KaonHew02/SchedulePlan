@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react'
-import Confirm from '../components/Confirm'
 import CurrencySelect from '../components/CurrencySelect'
 import EmptyState from '../components/EmptyState'
-import { DateField, Field, Segmented } from '../components/FormFields'
-import { ChevronLeft, ChevronRight, Plus, TrashIcon } from '../components/Icons'
-import Sheet from '../components/Sheet'
+import { DateField, Field } from '../components/FormFields'
+import { ChevronLeft, ChevronRight, Close, Plus, TrashIcon } from '../components/Icons'
 import { shortDate, todayISO } from '../lib/date'
 import { effectiveRates, money, plain, rateBetween, rateLine, readCache } from '../lib/currency'
 import {
-  customMismatch,
-  newEntryId,
+  newLineId,
   newPersonId,
+  ownLines,
   positions,
   settle,
+  sharedEach,
+  sharedLines,
   splitTotal,
 } from '../lib/split'
 import {
@@ -25,24 +25,28 @@ import {
   useSettings,
   useSplits,
 } from '../lib/store'
-import type { BillSplit, SplitEntry } from '../types'
+import type { BillSplit, SplitLine } from '../types'
 
 /**
- * Splitting a bill between people who all paid for bits of it.
+ * Splitting a bill between people.
  *
- * It lives inside Expenses now rather than behind More, because the answer it
- * produces — *what did this cost me* — is an expense, and it used to stop one
- * step short of saying so. The share can be pushed into the spending list from
- * the bottom of the editor; see `ShareCard` for why that is a link rather than
- * a copy.
+ * The model is **what each person had**, not how to divide each item. A line
+ * sits under the person who ate it, anything the table shared goes on its own
+ * card, and the bill total is the sum of the lines — which is why there is no
+ * total field on this screen and no split-method picker. An even split is the
+ * same figure on every row; a lump per person is one unlabelled line each.
  *
- * The screen is built around the question that actually gets asked at the end
- * of a trip — *who owes whom* — rather than the one a spreadsheet answers,
- * which is what everything cost. See lib/split.ts for the arithmetic and for
- * why the settlement is greedy.
+ * It was rebuilt on that shape on 2026-09-11. The version before it asked
+ * "here is an item — who paid for it, and who shares it?", which needed
+ * *Evenly / By amount* modes and a chip row on every item, and still could not
+ * say what a bill came to for one person without adding it up in your head.
+ *
+ * It lives inside Expenses rather than behind More because the answer it
+ * produces — what did this cost me — is an expense, and `ShareCard` is where
+ * it stops being a calculation and becomes one.
  */
 
-/** A fresh split, saved immediately so the editor has something to open. */
+/** A fresh bill, saved immediately so the editor has something to open. */
 export function createSplit(currency: string): BillSplit {
   const split: BillSplit = {
     id: newSplitId(),
@@ -50,7 +54,8 @@ export function createSplit(currency: string): BillSplit {
     date: todayISO(),
     currency,
     people: [{ id: 'p1', name: 'Me' }],
-    entries: [],
+    lines: [],
+    paidBy: 'p1',
     expense_id: null,
     expense_person: null,
   }
@@ -58,210 +63,163 @@ export function createSplit(currency: string): BillSplit {
   return split
 }
 
-function EntrySheet({
-  split,
-  entry,
-  onClose,
-  onSave,
-  onDelete,
+/**
+ * The first person on a bill is the reader, and a sentence has to say so.
+ * Left alone, the default name produces "Me had RM 50" and "ME'S SHARE".
+ */
+const sayName = (name: string): string => (name === 'Me' ? 'You' : name)
+
+/**
+ * One line, edited in place.
+ *
+ * The amount is held as the text that was typed rather than re-rendered from
+ * the number: `10.` parses to 10, and a field that erases your decimal point
+ * the moment you type it cannot be used.
+ */
+function LineRow({
+  line,
+  currency,
+  each,
+  onChange,
+  onRemove,
 }: {
-  split: BillSplit
-  entry: SplitEntry | null
-  onClose: () => void
-  onSave: (entry: SplitEntry) => void
-  onDelete?: () => void
+  line: SplitLine
+  currency: string
+  /** What each person pays for this line — the shared card only. */
+  each: number | null
+  onChange: (line: SplitLine) => void
+  onRemove: () => void
 }) {
-  const [label, setLabel] = useState(entry?.label ?? '')
-  const [amount, setAmount] = useState(entry ? String(entry.amount) : '')
-  const [paidBy, setPaidBy] = useState(entry?.paidBy ?? split.people[0]?.id ?? '')
-  const [shares, setShares] = useState<string[]>(
-    entry?.shares.length ? entry.shares : split.people.map((person) => person.id),
-  )
-  const [mode, setMode] = useState<'even' | 'exact'>(entry?.custom ? 'exact' : 'even')
-  const [custom, setCustom] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      split.people.map((person) => [person.id, entry?.custom?.[person.id]?.toString() ?? '']),
-    ),
-  )
-  const [error, setError] = useState<string | null>(null)
-
-  const total = Number(amount) || 0
-  const exactSum = Object.values(custom).reduce((sum, value) => sum + (Number(value) || 0), 0)
-
-  function submit() {
-    if (!label.trim()) return setError('What was this for?')
-    if (total <= 0) return setError('Enter an amount above zero.')
-    if (mode === 'even' && shares.length === 0) return setError('Pick at least one person.')
-    if (mode === 'exact' && Math.abs(exactSum - total) > 0.005) {
-      return setError(
-        `Those add up to ${plain(exactSum, split.currency)}, not ${plain(total, split.currency)}.`,
-      )
-    }
-
-    onSave({
-      id: entry?.id ?? newEntryId(split.entries.map((row) => row.id)),
-      label: label.trim(),
-      amount: total,
-      paidBy,
-      shares: mode === 'even' ? shares : split.people.map((person) => person.id),
-      custom:
-        mode === 'exact'
-          ? Object.fromEntries(
-              Object.entries(custom)
-                .map(([id, value]) => [id, Number(value) || 0] as const)
-                .filter(([, value]) => value !== 0),
-            )
-          : null,
-    })
-  }
-
-  const chip = (active: boolean) =>
-    `rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-      active ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 text-neutral-600'
-    }`
+  const [amount, setAmount] = useState(line.amount ? String(line.amount) : '')
 
   return (
-    <Sheet
-      onClose={onClose}
-      title={entry ? 'Edit item' : 'Add an item'}
-      footer={
-        <>
-          {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
-          <button
-            type="button"
-            onClick={submit}
-            className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
-          >
-            Save
-          </button>
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
-            >
-              Remove
-            </button>
-          )}
-        </>
-      }
-    >
+    <div className="flex items-center gap-2 border-t border-neutral-100 py-1.5">
       <input
-        value={label}
-        onChange={(event) => setLabel(event.target.value)}
-        autoFocus={!entry}
+        value={line.label}
+        onChange={(event) => onChange({ ...line, label: event.target.value })}
         placeholder="What was it?"
-        className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
+        aria-label="What this line was"
+        className="min-w-0 flex-1 bg-transparent py-1 text-[14px] outline-none placeholder:text-neutral-300"
       />
-
-      <div className="mt-2 flex items-center gap-2 border-y border-neutral-100 py-3">
-        <input
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          inputMode="decimal"
-          aria-label="Amount"
-          placeholder="0.00"
-          className="min-w-0 flex-1 bg-transparent text-[26px] font-semibold tabular-nums tracking-tight outline-none placeholder:text-neutral-200"
-        />
-        <span className="text-[15px] font-medium text-neutral-400">{split.currency}</span>
-      </div>
-
-      <p className="pb-2 pt-4 text-[13px] text-neutral-400">Paid by</p>
-      <div className="flex flex-wrap gap-2">
-        {split.people.map((person) => (
-          <button
-            key={person.id}
-            type="button"
-            onClick={() => setPaidBy(person.id)}
-            className={chip(paidBy === person.id)}
-          >
-            {person.name}
-          </button>
-        ))}
-      </div>
-
-      <p className="pb-2 pt-4 text-[13px] text-neutral-400">Split</p>
-      <Segmented
-        value={mode}
-        options={[
-          { value: 'even', label: 'Evenly' },
-          { value: 'exact', label: 'By amount' },
-        ]}
-        onChange={setMode}
-      />
-
-      {mode === 'even' ? (
-        <>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {split.people.map((person) => (
-              <button
-                key={person.id}
-                type="button"
-                onClick={() =>
-                  setShares((was) =>
-                    was.includes(person.id)
-                      ? was.filter((id) => id !== person.id)
-                      : [...was, person.id],
-                  )
-                }
-                className={chip(shares.includes(person.id))}
-              >
-                {person.name}
-              </button>
-            ))}
-          </div>
-          {shares.length > 0 && total > 0 && (
-            <p className="pt-2 text-[13px] text-neutral-400">
-              {plain(total / shares.length, split.currency)} each, across {shares.length}{' '}
-              {shares.length === 1 ? 'person' : 'people'}
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
-            {split.people.map((person) => (
-              <Field key={person.id} label={person.name}>
-                <input
-                  value={custom[person.id] ?? ''}
-                  onChange={(event) =>
-                    setCustom((was) => ({ ...was, [person.id]: event.target.value }))
-                  }
-                  inputMode="decimal"
-                  aria-label={`${person.name}'s share`}
-                  placeholder="0.00"
-                  className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-none placeholder:text-neutral-300"
-                />
-              </Field>
-            ))}
-          </div>
-          <p
-            className={`pt-2 text-[13px] ${
-              Math.abs(exactSum - total) > 0.005 ? 'text-amber-600' : 'text-neutral-400'
-            }`}
-          >
-            {plain(exactSum, split.currency)} of {plain(total, split.currency)} accounted for
-          </p>
-        </>
+      {each !== null && line.amount > 0 && (
+        <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
+          {plain(each, currency)} ea
+        </span>
       )}
-    </Sheet>
+      <input
+        value={amount}
+        onChange={(event) => {
+          setAmount(event.target.value)
+          onChange({ ...line, amount: Number(event.target.value) || 0 })
+        }}
+        inputMode="decimal"
+        placeholder="0.00"
+        aria-label="Amount"
+        className="w-20 shrink-0 bg-transparent py-1 text-right text-[14px] tabular-nums outline-none placeholder:text-neutral-300"
+      />
+      <button
+        onClick={onRemove}
+        aria-label="Remove this line"
+        className="shrink-0 rounded-full p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
+      >
+        <Close className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+}
+
+/** A card of lines: one person's, or the shared one. */
+function LineCard({
+  title,
+  badge,
+  total,
+  currency,
+  lines,
+  people,
+  hint,
+  onAdd,
+  onChange,
+  onRemove,
+  onRemoveCard,
+}: {
+  title: string
+  badge?: string
+  total: number
+  currency: string
+  lines: SplitLine[]
+  /** How many ways a line on this card divides. 1 on a person's own card. */
+  people: number
+  hint?: string
+  onAdd: () => void
+  onChange: (line: SplitLine) => void
+  onRemove: (id: string) => void
+  onRemoveCard?: () => void
+}) {
+  return (
+    <div className="mt-2.5 rounded-2xl border border-neutral-200 px-3.5 py-3">
+      <div className="flex items-center gap-2">
+        <span className="truncate text-[13px] font-semibold uppercase tracking-wide">{title}</span>
+        {badge && (
+          <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-600">
+            {badge}
+          </span>
+        )}
+        <span className="ml-auto shrink-0 text-[15px] font-semibold tabular-nums">
+          {plain(total, currency)}
+        </span>
+        {onRemoveCard && (
+          <button
+            onClick={onRemoveCard}
+            aria-label={`Remove ${title}`}
+            className="shrink-0 rounded-full p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
+          >
+            <TrashIcon className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {lines.map((line) => (
+        <LineRow
+          key={line.id}
+          line={line}
+          currency={currency}
+          each={people > 1 ? sharedEach(line.amount, people) : null}
+          onChange={onChange}
+          onRemove={() => onRemove(line.id)}
+        />
+      ))}
+
+      {lines.length === 0 && hint && (
+        <p className="border-t border-neutral-100 pt-2 text-[12px] leading-5 text-neutral-400">
+          {hint}
+        </p>
+      )}
+
+      <button
+        onClick={onAdd}
+        className="mt-1.5 flex items-center gap-1 text-[13px] font-medium text-brand-500"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add item
+      </button>
+    </div>
   )
 }
 
 /**
- * One person's share of the split, and the button that puts it in the
+ * One person's share of the bill, and the button that puts it in the
  * spending list.
  *
- * It is a **link**, not a copy: the expense's id is kept on the split, so a
- * second tap updates that expense rather than adding another one. A split
- * grows an item at a time — the share after dessert is not the share after
- * the taxi — and a copy-per-tap would leave four versions of the same dinner
- * in a month's total.
+ * It is a **link**, not a copy: the expense's id is kept on the bill, so a
+ * second tap updates that expense rather than adding another one. A bill
+ * grows a line at a time — the share after dessert is not the share after the
+ * taxi — and a copy-per-tap would leave four versions of one dinner in a
+ * month's total.
  *
- * What the expense is recorded in is the home currency, with the split's own
- * currency and the rate frozen alongside it, exactly as a hand-entered
- * foreign expense is. So this needs a rate, and says so plainly when there
- * isn't one rather than inventing a number.
+ * What the expense is recorded in is the home currency, with the bill's own
+ * currency and the rate frozen alongside it, exactly as a hand-entered foreign
+ * expense is. So this needs a rate, and says so plainly when there isn't one
+ * rather than inventing a number.
  */
 function ShareCard({
   split,
@@ -290,7 +248,7 @@ function ShareCard({
   const foreign = split.currency !== home
   const rate = rateBetween(rates, split.currency, home)
 
-  const share = chosen?.owed ?? 0
+  const share = chosen?.had ?? 0
   const amount = foreign ? (rate === null ? null : share * rate) : share
 
   const linked = expenses.find((expense) => expense.id === split.expense_id) ?? null
@@ -309,8 +267,8 @@ function ShareCard({
         title: split.title.trim() || 'Bill split',
         amount,
         currency: home,
-        // Everything the user may have set on the expense by hand survives an
-        // update — only the numbers this screen owns are rewritten.
+        // Everything the reader may have set on the expense by hand survives
+        // an update — only the numbers this screen owns are rewritten.
         category: linked?.category ?? null,
         original_amount: foreign ? share : null,
         original_currency: foreign ? split.currency : null,
@@ -340,7 +298,9 @@ function ShareCard({
 
   return (
     <>
-      <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">Your share</h2>
+      <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">
+        Put it in your expenses
+      </h2>
       <div className="rounded-2xl border border-neutral-200 p-4">
         {split.people.length > 1 && (
           <div className="flex flex-wrap gap-2 pb-3">
@@ -362,32 +322,29 @@ function ShareCard({
 
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[14px] text-neutral-500">
-            {chosen.person.name} used {plain(chosen.owed, split.currency)} of it
+            {sayName(chosen.person.name)} had {plain(chosen.had, split.currency)} of it
           </span>
           <span className="text-[19px] font-semibold tabular-nums">
-            {amount === null ? (
-              <span className="text-neutral-300">—</span>
-            ) : (
-              money(amount, home)
-            )}
+            {amount === null ? <span className="text-neutral-300">—</span> : money(amount, home)}
           </span>
         </div>
 
         {foreign && rate !== null && (
           <p className="pt-1 text-[12px] leading-5 text-neutral-400">
-            {rateLine(split.currency, home, rate)} — frozen into the expense, the way a receipt
-            in a foreign currency is.
+            {rateLine(split.currency, home, rate)} — frozen into the expense, the way a receipt in
+            a foreign currency is.
           </p>
         )}
 
         {foreign && rate === null ? (
           <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-3 text-[13px] leading-5 text-amber-800">
-            No rate for {split.currency} to {home} yet. Open Currency, refresh, and come back —
-            or set the rate you actually got.
+            No rate for {split.currency} to {home} yet. Open Currency, refresh, and come back — or
+            set the rate you actually got.
           </p>
         ) : share <= 0 ? (
           <p className="mt-3 text-[13px] leading-5 text-neutral-400">
-            {chosen.person.name} is not down for any of it, so there is nothing to record.
+            {sayName(chosen.person.name)} had nothing on this bill, so there is nothing to
+            record.
           </p>
         ) : (
           <>
@@ -406,7 +363,7 @@ function ShareCard({
               <p className="pt-2 text-center text-[12px] leading-5 text-neutral-400">
                 {stale
                   ? `Recorded as ${money(linked.amount, linked.currency)} on ${shortDate(linked.date)} — this has moved since.`
-                  : `Recorded on ${shortDate(linked.date)}. Deleting it there does not touch the split.`}
+                  : `Recorded on ${shortDate(linked.date)}. Deleting it there does not touch the bill.`}
               </p>
             )}
           </>
@@ -426,111 +383,191 @@ export function SplitEditor({
   onToast: (message: string) => void
 }) {
   const [split, setSplit] = useState<BillSplit>(initial)
-  const [entrySheet, setEntrySheet] = useState<{ entry: SplitEntry | null } | null>(null)
   const [newName, setNewName] = useState('')
-  const [removingPerson, setRemovingPerson] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const total = splitTotal(split)
   const rows = useMemo(() => positions(split), [split])
   const transfers = useMemo(() => settle(split), [split])
+  const shared = sharedLines(split)
+  const you = rows[0]
+  const payer = split.people.find((person) => person.id === split.paidBy)
 
   function change(next: BillSplit) {
     setSplit(next)
     saveSplit(next)
   }
 
+  const setLines = (lines: SplitLine[]) => change({ ...split, lines })
+
+  function addLine(person: string | null) {
+    setLines([
+      ...split.lines,
+      { id: newLineId(split.lines.map((line) => line.id)), label: '', amount: 0, person },
+    ])
+  }
+
+  const editLine = (line: SplitLine) =>
+    setLines(split.lines.map((row) => (row.id === line.id ? line : row)))
+
+  const dropLine = (id: string) => setLines(split.lines.filter((row) => row.id !== id))
+
   function addPerson() {
     const name = newName.trim()
     if (!name) return
     change({
       ...split,
-      people: [
-        ...split.people,
-        { id: newPersonId(split.people.map((person) => person.id)), name },
-      ],
+      people: [...split.people, { id: newPersonId(split.people.map((p) => p.id)), name }],
     })
     setNewName('')
   }
 
   function removePerson(id: string) {
-    // Anything they paid for would become unattributable, so it goes with
-    // them — but only after being told how much that is.
+    // Their lines go with them — a line under nobody has no owner to charge.
+    // The toast says how many that was rather than a dialog asking first.
+    const person = split.people.find((row) => row.id === id)
+    const theirs = ownLines(split, id).length
+    const people = split.people.filter((row) => row.id !== id)
     change({
       ...split,
-      people: split.people.filter((person) => person.id !== id),
+      people,
+      lines: split.lines.filter((line) => line.person !== id),
+      paidBy: split.paidBy === id ? (people[0]?.id ?? '') : split.paidBy,
       expense_person: split.expense_person === id ? null : split.expense_person,
-      entries: split.entries
-        .filter((entry) => entry.paidBy !== id)
-        .map((entry) => ({
-          ...entry,
-          shares: entry.shares.filter((share) => share !== id),
-          custom: entry.custom
-            ? Object.fromEntries(Object.entries(entry.custom).filter(([key]) => key !== id))
-            : null,
-        })),
     })
-    setRemovingPerson(null)
+    onToast(
+      theirs === 0
+        ? `${person?.name ?? 'They'} removed`
+        : `${person?.name ?? 'They'} removed, with ${theirs} ${theirs === 1 ? 'line' : 'lines'}`,
+    )
   }
 
-  const owedBy = (id: string) => split.entries.filter((entry) => entry.paidBy === id).length
-  const removingName = split.people.find((person) => person.id === removingPerson)?.name
+  function owedNote(): string {
+    if (Math.abs(you?.net ?? 0) < 0.005) return 'Nobody owes anything yet'
+    if ((you?.net ?? 0) > 0) {
+      const others = split.people.length - 1
+      return `from ${others} ${others === 1 ? 'person' : 'people'}`
+    }
+    return `to ${payer?.name ?? 'whoever paid'}`
+  }
 
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
-          <button onClick={onClose} aria-label="Back to splits" className="p-1.5 text-neutral-400">
+          <button onClick={onClose} aria-label="Back to bills" className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
           <input
             value={split.title}
             onChange={(event) => change({ ...split, title: event.target.value })}
             placeholder="What are you splitting?"
-            aria-label="Split name"
+            aria-label="Bill name"
             className="min-w-0 flex-1 bg-transparent text-[19px] font-semibold tracking-tight outline-none placeholder:text-neutral-300"
           />
         </div>
       </header>
 
-      {/*
-        Two columns from a laptop up: what you are entering on the left, what
-        it works out to on the right. Stacked, the settling-up — the whole
-        point of the screen — sat below the fold of a list you were still
-        adding to.
-      */}
-      <main className="px-5 pb-28 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:px-8 lg:pb-10">
-        <div>
-          <div className="divide-y divide-neutral-100 border-y border-neutral-100">
-            <Field label="Date">
-              <DateField value={split.date} onChange={(date) => change({ ...split, date })} />
-            </Field>
-            <Field label="Currency">
-              <CurrencySelect
-                value={split.currency}
-                onChange={(currency) => change({ ...split, currency })}
-              />
-            </Field>
-          </div>
+      <main className="px-5 pb-28 lg:px-8 lg:pb-10">
+        {/*
+          The three figures the whole screen exists to produce, above the
+          working rather than below it. The total is added up from the lines
+          and is deliberately not a field: a bill with a typed total *and* a
+          list of lines has two answers and no way to say which is wrong.
+        */}
+        <div className="rounded-2xl border border-neutral-200 p-4 lg:p-5">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-400">
+            Bill total
+          </p>
+          <p className="text-[30px] font-semibold tabular-nums tracking-tight lg:text-[34px]">
+            {money(total, split.currency)}
+          </p>
+          <p className="text-[13px] text-neutral-400">
+            {split.people.length} {split.people.length === 1 ? 'person' : 'people'}
+            {payer ? ` · ${payer.name} paid` : ''}
+          </p>
 
-          <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">Who is in</h2>
-          <div className="flex flex-wrap gap-2">
-            {split.people.map((person) => (
-              <span
-                key={person.id}
-                className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 pl-3 pr-1.5 text-[13px]"
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-neutral-50 px-3.5 py-2.5">
+              <p className="truncate text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                Your share
+              </p>
+              <p className="text-[18px] font-semibold tabular-nums">
+                {plain(you?.had ?? 0, split.currency)}
+              </p>
+              <p className="truncate text-[12px] text-neutral-400">
+                {total === 0 ? 'Nothing on the bill yet' : `of ${plain(total, split.currency)}`}
+              </p>
+            </div>
+            <div className="rounded-xl bg-neutral-50 px-3.5 py-2.5">
+              <p className="truncate text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                {(you?.net ?? 0) < -0.004 ? 'You owe' : 'Owed back'}
+              </p>
+              <p
+                className={`text-[18px] font-semibold tabular-nums ${
+                  (you?.net ?? 0) > 0.004
+                    ? 'text-emerald-600'
+                    : (you?.net ?? 0) < -0.004
+                      ? 'text-red-600'
+                      : ''
+                }`}
               >
-                {person.name}
+                {plain(Math.abs(you?.net ?? 0), split.currency)}
+              </p>
+              <p className="truncate text-[12px] text-neutral-400">{owedNote()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
+          <div>
+            <div className="mt-6 divide-y divide-neutral-100 border-y border-neutral-100">
+              <Field label="Date">
+                <DateField value={split.date} onChange={(date) => change({ ...split, date })} />
+              </Field>
+              <Field label="Currency">
+                <CurrencySelect
+                  value={split.currency}
+                  onChange={(currency) => change({ ...split, currency })}
+                />
+              </Field>
+            </div>
+
+            <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">Who paid</h2>
+            <div className="flex flex-wrap gap-2">
+              {split.people.map((person) => (
                 <button
-                  onClick={() => setRemovingPerson(person.id)}
-                  aria-label={`Remove ${person.name}`}
-                  className="rounded-full p-0.5 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
+                  key={person.id}
+                  onClick={() => change({ ...split, paidBy: person.id })}
+                  className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
+                    split.paidBy === person.id
+                      ? 'border-neutral-900 bg-neutral-900 text-white'
+                      : 'border-neutral-200 text-neutral-600'
+                  }`}
                 >
-                  <TrashIcon className="h-3.5 w-3.5" />
+                  {person.name}
                 </button>
-              </span>
+              ))}
+            </div>
+
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Who was there</h2>
+            {split.people.map((person, index) => (
+              <LineCard
+                key={person.id}
+                title={person.name}
+                badge={index === 0 ? 'you' : undefined}
+                total={rows[index]?.own ?? 0}
+                currency={split.currency}
+                lines={ownLines(split, person.id)}
+                people={1}
+                hint="What they had. A line does not need a name — a single figure is fine."
+                onAdd={() => addLine(person.id)}
+                onChange={editLine}
+                onRemove={dropLine}
+                onRemoveCard={split.people.length > 1 ? () => removePerson(person.id) : undefined}
+              />
             ))}
-            <span className="flex items-center gap-1 rounded-full border border-dashed border-neutral-300 py-1 pl-3 pr-1">
+
+            <div className="mt-2.5 flex items-center gap-1 rounded-full border border-dashed border-neutral-300 py-1.5 pl-4 pr-1.5">
               <input
                 value={newName}
                 onChange={(event) => setNewName(event.target.value)}
@@ -542,80 +579,47 @@ export function SplitEditor({
                 }}
                 placeholder="Add someone"
                 aria-label="New person's name"
-                className="w-24 bg-transparent text-[13px] outline-none placeholder:text-neutral-400"
+                className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-400"
               />
               <button
                 onClick={addPerson}
                 aria-label="Add this person"
-                className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
+                className="shrink-0 rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
-            </span>
+            </div>
+
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Shared</h2>
+            <LineCard
+              title="Shared by everyone"
+              total={shared.reduce((sum, line) => sum + line.amount, 0)}
+              currency={split.currency}
+              lines={shared}
+              people={split.people.length}
+              hint="Rice, a jug, the plate of fries nobody counted. Only know the total? Put it here as one line."
+              onAdd={() => addLine(null)}
+              onChange={editLine}
+              onRemove={dropLine}
+            />
           </div>
 
-          <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Items</h2>
-          <div className="divide-y divide-neutral-100 border-y border-neutral-100">
-            {split.entries.map((entry) => {
-              const payer = split.people.find((person) => person.id === entry.paidBy)
-              const sharers = entry.custom
-                ? Object.keys(entry.custom).length
-                : entry.shares.length || split.people.length
-              const gap = customMismatch(entry)
-              return (
-                <button
-                  key={entry.id}
-                  onClick={() => setEntrySheet({ entry })}
-                  className="flex w-full items-center gap-3 py-3 text-left active:bg-neutral-50"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px]">{entry.label}</span>
-                    <span className="block truncate text-[12px] text-neutral-400">
-                      {payer ? `${payer.name} paid` : 'Nobody paid'} · {sharers}{' '}
-                      {sharers === 1 ? 'share' : 'ways'}
-                      {gap !== null && (
-                        <span className="text-amber-600">
-                          {' '}
-                          · {plain(Math.abs(gap), split.currency)} unaccounted
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-[15px] tabular-nums">
-                    {plain(entry.amount, split.currency)}
-                  </span>
-                </button>
-              )
-            })}
-
-            <button
-              onClick={() => setEntrySheet({ entry: null })}
-              disabled={split.people.length === 0}
-              className="w-full py-3 text-left text-[15px] text-neutral-400 disabled:opacity-40 active:bg-neutral-50"
-            >
-              + Add an item
-            </button>
-          </div>
-        </div>
-
-        <div>
-          {split.entries.length > 0 && (
-            <>
-              <div className="flex items-baseline justify-between pt-4 lg:pt-0">
-                <span className="text-[15px] font-medium">Total</span>
-                <span className="text-[19px] font-semibold tabular-nums">
-                  {money(total, split.currency)}
-                </span>
-              </div>
-
-              <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Where it stands</h2>
+          <div>
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400 lg:mt-6 lg:pt-0">
+              Everyone pays
+            </h2>
+            {total === 0 ? (
+              <p className="border-y border-neutral-100 py-4 text-[13px] leading-5 text-neutral-500">
+                Put in what everyone had and the split works itself out.
+              </p>
+            ) : (
               <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                 {rows.map((row) => (
                   <div key={row.person.id} className="flex items-center gap-3 py-2.5">
                     <span className="min-w-0 flex-1 truncate text-[14px]">{row.person.name}</span>
-                    <span className="shrink-0 text-[12px] text-neutral-400 tabular-nums">
-                      paid {plain(row.paid, split.currency)} · owed{' '}
-                      {plain(row.owed, split.currency)}
+                    <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
+                      had {plain(row.had, split.currency)}
+                      {row.shared > 0.004 && ` · ${plain(row.shared, split.currency)} shared`}
                     </span>
                     <span
                       className={`w-20 shrink-0 text-right text-[14px] font-medium tabular-nums ${
@@ -633,13 +637,15 @@ export function SplitEditor({
                   </div>
                 ))}
               </div>
+            )}
 
-              <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Settle up</h2>
-              {transfers.length === 0 ? (
-                <p className="border-y border-neutral-100 py-4 text-[14px] text-neutral-500">
-                  Everyone is square. Nothing to pay.
-                </p>
-              ) : (
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Settle up</h2>
+            {transfers.length === 0 ? (
+              <p className="border-y border-neutral-100 py-4 text-[14px] text-neutral-500">
+                {total === 0 ? 'Nothing to settle yet.' : 'Everyone is square. Nothing to pay.'}
+              </p>
+            ) : (
+              <>
                 <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                   {transfers.map((transfer, index) => (
                     <div key={index} className="flex items-center gap-2 py-3">
@@ -652,96 +658,30 @@ export function SplitEditor({
                     </div>
                   ))}
                 </div>
-              )}
-              <p className="pt-2 text-[12px] leading-5 text-neutral-400">
-                {transfers.length === 0
-                  ? ''
-                  : `${transfers.length} ${
-                      transfers.length === 1 ? 'payment' : 'payments'
-                    } clears the whole thing.`}
-              </p>
+                <p className="pt-2 text-[12px] leading-5 text-neutral-400">
+                  {transfers.length} {transfers.length === 1 ? 'payment' : 'payments'} clears the
+                  whole thing.
+                </p>
+              </>
+            )}
 
-              <ShareCard split={split} onChange={change} onToast={onToast} />
-            </>
-          )}
+            <ShareCard split={split} onChange={change} onToast={onToast} />
 
-          <div className="pt-8">
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
-            >
-              Delete this split
-            </button>
+            <div className="pt-8">
+              <button
+                onClick={() => {
+                  deleteSplit(split.id)
+                  onToast('Bill deleted')
+                  onClose()
+                }}
+                className="w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
+              >
+                Delete this bill
+              </button>
+            </div>
           </div>
         </div>
       </main>
-
-      {removingPerson && (
-        <Confirm
-          title={`Remove ${removingName}?`}
-          detail={
-            owedBy(removingPerson) === 0
-              ? 'They have not paid for anything, so nothing else changes.'
-              : `The ${owedBy(removingPerson)} ${
-                  owedBy(removingPerson) === 1
-                    ? 'item they paid for goes'
-                    : 'items they paid for go'
-                } with them.`
-          }
-          confirmLabel="Remove"
-          tone="danger"
-          onConfirm={() => removePerson(removingPerson)}
-          onCancel={() => setRemovingPerson(null)}
-        />
-      )}
-
-      {confirmDelete && (
-        <Confirm
-          title={`Delete ${split.title.trim() || 'this split'}?`}
-          detail={
-            split.expense_id === null
-              ? 'The people and items go with it. This cannot be undone.'
-              : 'The people and items go with it. Any expense it added to your spending stays.'
-          }
-          confirmLabel="Delete"
-          tone="danger"
-          onConfirm={() => {
-            deleteSplit(split.id)
-            onToast('Split deleted')
-            onClose()
-          }}
-          onCancel={() => setConfirmDelete(false)}
-        />
-      )}
-
-      {entrySheet && (
-        <EntrySheet
-          split={split}
-          entry={entrySheet.entry}
-          onClose={() => setEntrySheet(null)}
-          onSave={(entry) => {
-            const exists = split.entries.some((row) => row.id === entry.id)
-            change({
-              ...split,
-              entries: exists
-                ? split.entries.map((row) => (row.id === entry.id ? entry : row))
-                : [...split.entries, entry],
-            })
-            setEntrySheet(null)
-          }}
-          onDelete={
-            entrySheet.entry
-              ? () => {
-                  change({
-                    ...split,
-                    entries: split.entries.filter((row) => row.id !== entrySheet.entry?.id),
-                  })
-                  setEntrySheet(null)
-                }
-              : undefined
-          }
-        />
-      )}
     </>
   )
 }
@@ -761,12 +701,13 @@ export function SplitsList({ onOpen }: { onOpen: (id: number) => void }) {
       {ordered.length === 0 ? (
         <EmptyState
           title="Nothing being split yet"
-          hint="Tap + to add who is in, then each thing somebody paid for"
+          hint="Tap + to put in who was there and what each of them had"
         />
       ) : (
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           {ordered.map((split) => {
             const inSpending = expenses.some((expense) => expense.id === split.expense_id)
+            const yours = positions(split)[0]
             return (
               <button
                 key={split.id}
@@ -775,11 +716,11 @@ export function SplitsList({ onOpen }: { onOpen: (id: number) => void }) {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium">
-                    {split.title || 'Untitled split'}
+                    {split.title || 'Untitled bill'}
                   </span>
                   <span className="block truncate text-[12px] text-neutral-400">
-                    {shortDate(split.date)} · {split.people.length} people ·{' '}
-                    {split.entries.length} {split.entries.length === 1 ? 'item' : 'items'}
+                    {shortDate(split.date)} · {split.people.length} people · your share{' '}
+                    {plain(yours?.had ?? 0, split.currency)}
                     {inSpending && <span className="text-brand-500"> · in your expenses</span>}
                   </span>
                 </span>

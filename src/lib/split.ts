@@ -1,6 +1,15 @@
 /**
  * Splitting a bill, and settling up afterwards.
  *
+ * The model is *what each person had*, not *how to divide each item*. A line
+ * belongs to the person who ate it; anything the table shared goes on its own
+ * card and divides across everyone. That one decision is why there is no
+ * split-method here and never needs to be:
+ *
+ *   an even split      the same figure on every person's line
+ *   a lump per person  one unlabelled line each
+ *   a percentage       type the money it comes to
+ *
  * Two problems, and the second is the interesting one.
  *
  * Dividing is easy until money refuses to divide: RM 10 between three people
@@ -8,14 +17,13 @@
  * everyone up invents one. So the remainder is dealt out a cent at a time,
  * which keeps the shares summing to exactly what was paid.
  *
- * Settling is the real work. Four people who have each paid for something are
- * owed and owing all at once, and the naive answer — everybody pays everybody
- * their share — is a dozen transfers for a weekend away. What matters is only
- * each person's *net* position, and from there the question is how few
- * transfers can flatten it.
+ * Settling is the real work. Whoever paid is owed by everybody else, and the
+ * question is how few handovers clear it. With one payer that is one handover
+ * per guest; the algorithm is general because netting is what makes the odd
+ * sen land somewhere rather than nowhere.
  */
 
-import type { BillSplit, SplitEntry, SplitPerson } from '../types'
+import type { BillSplit, SplitLine, SplitPerson } from '../types'
 
 /** Work in whole cents. Floating point and money are a bad pairing. */
 const toCents = (amount: number): number => Math.round(amount * 100)
@@ -35,55 +43,62 @@ export function divideCents(cents: number, count: number): number[] {
   return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0))
 }
 
+export const ownLines = (split: BillSplit, id: string): SplitLine[] =>
+  split.lines.filter((line) => line.person === id)
+
+export const sharedLines = (split: BillSplit): SplitLine[] =>
+  split.lines.filter((line) => line.person === null)
+
 export interface Position {
   person: SplitPerson
-  /** What they put in. */
+  /** Their own lines, added up. */
+  own: number
+  /** Their part of everything on the shared card. */
+  shared: number
+  /** What was theirs to pay: own + shared. */
+  had: number
+  /** What they put down. Only the payer puts anything down. */
   paid: number
-  /** What was theirs to pay. */
-  owed: number
   /** Positive: they are owed this. Negative: they owe it. */
   net: number
 }
 
-/** Who paid what, who owed what, per person. */
+/** What each person had, and where that leaves them. */
 export function positions(split: BillSplit): Position[] {
-  const paid = new Map<string, number>()
-  const owed = new Map<string, number>()
+  const own = new Map<string, number>()
+  const shared = new Map<string, number>()
   for (const person of split.people) {
-    paid.set(person.id, 0)
-    owed.set(person.id, 0)
+    own.set(person.id, 0)
+    shared.set(person.id, 0)
   }
 
-  for (const entry of split.entries) {
-    const cents = toCents(entry.amount)
-    if (paid.has(entry.paidBy)) paid.set(entry.paidBy, (paid.get(entry.paidBy) ?? 0) + cents)
-
-    if (entry.custom) {
-      // Typed in by hand, so it is taken as given — including when it does
-      // not add up, which the screen flags rather than silently "fixing".
-      for (const [id, amount] of Object.entries(entry.custom)) {
-        if (owed.has(id)) owed.set(id, (owed.get(id) ?? 0) + toCents(amount))
-      }
-      continue
+  for (const line of split.lines) {
+    const cents = toCents(line.amount)
+    if (line.person === null) {
+      // Shared: divided across everyone, a cent at a time so it adds back.
+      const parts = divideCents(cents, split.people.length)
+      split.people.forEach((person, index) => {
+        shared.set(person.id, (shared.get(person.id) ?? 0) + parts[index])
+      })
+    } else if (own.has(line.person)) {
+      own.set(line.person, (own.get(line.person) ?? 0) + cents)
     }
-
-    const sharers = entry.shares.length
-      ? split.people.filter((person) => entry.shares.includes(person.id))
-      : split.people
-    const parts = divideCents(cents, sharers.length)
-    sharers.forEach((person, index) => {
-      owed.set(person.id, (owed.get(person.id) ?? 0) + parts[index])
-    })
   }
+
+  const totalCents = toCents(splitTotal(split))
 
   return split.people.map((person) => {
-    const paidCents = paid.get(person.id) ?? 0
-    const owedCents = owed.get(person.id) ?? 0
+    const ownCents = own.get(person.id) ?? 0
+    const sharedCents = shared.get(person.id) ?? 0
+    const hadCents = ownCents + sharedCents
+    const paidCents = person.id === split.paidBy ? totalCents : 0
     return {
       person,
+      own: toAmount(ownCents),
+      shared: toAmount(sharedCents),
+      had: toAmount(hadCents),
       paid: toAmount(paidCents),
-      owed: toAmount(owedCents),
-      net: toAmount(paidCents - owedCents),
+      net: toAmount(paidCents - hadCents),
     }
   })
 }
@@ -100,9 +115,8 @@ export interface Transfer {
  * Greedy, and deliberately so: repeatedly make the person who owes most pay
  * the person who is owed most, as much as the smaller of the two allows. Each
  * pass zeroes at least one person, so with n people it never needs more than
- * n-1 transfers — and for the sizes a bill split actually comes in, that is
- * the minimum or within one of it. Finding the true minimum every time is an
- * NP-hard problem, and nobody splitting a dinner needs it solved exactly.
+ * n-1 transfers. With one payer that is exactly one handover per guest, which
+ * is the shortest list there is.
  */
 export function settle(split: BillSplit): Transfer[] {
   const owed = positions(split)
@@ -134,16 +148,18 @@ export function settle(split: BillSplit): Transfer[] {
   return transfers
 }
 
+/**
+ * What the bill comes to.
+ *
+ * Added up from the lines, never typed. A total field would give the bill two
+ * answers and no way to say which one is wrong.
+ */
 export const splitTotal = (split: BillSplit): number =>
-  toAmount(split.entries.reduce((sum, entry) => sum + toCents(entry.amount), 0))
+  toAmount(split.lines.reduce((sum, line) => sum + toCents(line.amount), 0))
 
-/** An entry split by hand whose parts do not add up to it. */
-export function customMismatch(entry: SplitEntry): number | null {
-  if (!entry.custom) return null
-  const parts = Object.values(entry.custom).reduce((sum, amount) => sum + toCents(amount), 0)
-  const difference = toCents(entry.amount) - parts
-  return difference === 0 ? null : toAmount(difference)
-}
+/** What each person pays for one shared line. */
+export const sharedEach = (amount: number, people: number): number =>
+  people > 0 ? toAmount(divideCents(toCents(amount), people)[0]) : 0
 
 export function newPersonId(taken: string[]): string {
   let index = 1
@@ -151,8 +167,8 @@ export function newPersonId(taken: string[]): string {
   return `p${index}`
 }
 
-export function newEntryId(taken: string[]): string {
+export function newLineId(taken: string[]): string {
   let index = 1
-  while (taken.includes(`e${index}`)) index += 1
-  return `e${index}`
+  while (taken.includes(`l${index}`)) index += 1
+  return `l${index}`
 }

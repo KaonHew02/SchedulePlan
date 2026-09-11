@@ -31,7 +31,6 @@ export default function ReminderForm({
   const [repeat, setRepeat] = useState<Repeat>(reminder?.repeat ?? 'none')
   const [notes, setNotes] = useState(reminder?.notes ?? '')
   const [showNotes, setShowNotes] = useState(Boolean(reminder?.notes))
-  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const spans = Boolean(until && until > date)
@@ -77,27 +76,18 @@ export default function ReminderForm({
           >
             Save
           </button>
-          {reminder &&
-            (confirming ? (
-              <button
-                type="button"
-                onClick={() => {
-                  deleteReminder(reminder.id)
-                  onSaved('Deleted')
-                }}
-                className="mt-2 w-full rounded-full bg-red-600 py-3 text-[15px] font-medium text-white"
-              >
-                Tap to confirm
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
-              >
-                Delete
-              </button>
-            ))}
+          {reminder && (
+            <button
+              type="button"
+              onClick={() => {
+                deleteReminder(reminder.id)
+                onSaved('Deleted')
+              }}
+              className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
+            >
+              Delete
+            </button>
+          )}
         </>
       }
     >

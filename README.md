@@ -49,12 +49,26 @@ cached for the day so it still works on a plane. The rate can be overridden by
 hand, because the money changer's rate is the one that actually applied and it
 is rarely the market's.
 
-**Bill split** — the second tab inside Expenses. Who is in, what each person
-paid for, split evenly or by exact amounts, and then the fewest payments that
-settle everybody up. Your own share can be pushed into the spending list as a
-real expense, converted and frozen the same way a foreign receipt is; the
-expense is **linked**, so a split that grows updates it instead of adding a
-second copy of the same dinner.
+**Bill split** — the second tab inside Expenses, and built around *what each
+person had* rather than how to divide each item. A line sits under the person
+who ate it; anything the table shared goes on its own card and divides across
+everyone. There is no total field and no split-method picker, because the total
+is the sum of the lines and every method falls out of them: an even split is
+the same figure on every row, a lump per person is one unlabelled line each, a
+percentage is the money it comes to. Out the other end come the three figures
+the screen exists for — bill total, your share, what you are owed — and the
+fewest payments that settle everybody up.
+
+Your own share can be pushed into the spending list as a real expense,
+converted and frozen the same way a foreign receipt is. The expense is
+**linked**, so a bill that grows updates it instead of adding a second copy of
+the same dinner.
+
+Bills saved under the older *item · who paid · who shares* shape are read
+forward into lines on the way in, so a saved bill never comes back reading
+differently: an exact-amounts item becomes one line per person, a shared one
+becomes a line on the shared card, and one shared by only some of the table
+becomes a line each.
 
 **Travel** — countries, destinations and continents counted off the schedule,
 a goal to aim at, a globe you can spin with a dot on everywhere you have been,
@@ -236,6 +250,15 @@ SchedulePlan/
     reminders/                  RemindersScreen, ReminderForm
     tools/                      ScanScreen, LabelsScreen
 ```
+
+### Delete is delete
+
+Every record's Delete acts on the first tap. The two-step *Delete → Tap to
+confirm* it replaced put a step on every deletion somebody meant in order to
+catch the rare one they did not, and the notebook is a personal one with an
+Export and a Drive copy behind it. The one thing still guarded is **Replace**
+in the backup bar, which is not a record at all — it overwrites the whole
+notebook with another copy of it.
 
 ### The pickers are ours, not the browser's
 

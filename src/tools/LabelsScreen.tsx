@@ -4,7 +4,6 @@ import TagEditor from '../components/TagEditor'
 import {
   createTag,
   deleteTag,
-  tagUsage,
   updateTag,
   useCategories,
   useTags,
@@ -34,13 +33,9 @@ export default function LabelsScreen({
 
   const [editing, setEditing] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
-  const [removing, setRemoving] = useState<{ id: string; label: string; uses: number } | null>(
-    null,
-  )
   const [error, setError] = useState<string | null>(null)
 
   const noun = kind === 'tags' ? 'tag' : 'category'
-  const used = kind === 'tags' ? 'schedule items' : 'expenses'
 
   function guard(work: () => void) {
     try {
@@ -91,18 +86,20 @@ export default function LabelsScreen({
                     })
                   }
                   onDelete={() => {
+                    // Straight through. Nothing is lost either way — deleting a
+                    // label untags records, it never deletes them — so the
+                    // toast reports how many were touched instead of a dialog
+                    // asking first.
                     setEditing(null)
-                    setRemoving({ id: tag.id, label: tag.label, uses: tagUsage(tag.id, kind) })
+                    const cleared = deleteTag(tag.id, kind)
+                    onToast(cleared ? `Deleted, ${cleared} untagged` : 'Deleted')
                   }}
                 />
               </div>
             ) : (
               <button
                 key={tag.id}
-                onClick={() => {
-                  setRemoving(null)
-                  setEditing(tag.id)
-                }}
+                onClick={() => setEditing(tag.id)}
                 className="flex w-full items-center gap-3 py-3.5 text-left active:bg-neutral-50"
               >
                 <span className="w-6 text-center text-[16px]">{tag.emoji}</span>
@@ -139,36 +136,6 @@ export default function LabelsScreen({
           )}
         </div>
 
-        {removing && (
-          <div className="mt-4 rounded-xl border border-neutral-200 p-4">
-            <p className="text-[14px] leading-6">Delete the {removing.label} {noun}?</p>
-            <p className="mt-1 text-[13px] leading-5 text-neutral-400">
-              {removing.uses === 0
-                ? 'Nothing is using it.'
-                : `${removing.uses} ${
-                    removing.uses === 1 ? used.replace(/s$/, '') : used
-                  } will lose the ${noun}. Nothing is deleted.`}
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => setRemoving(null)}
-                className="flex-1 rounded-full border border-neutral-200 py-2.5 text-[14px] font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const cleared = deleteTag(removing.id, kind)
-                  setRemoving(null)
-                  onToast(cleared ? `Deleted, ${cleared} untagged` : 'Deleted')
-                }}
-                className="flex-1 rounded-full bg-red-600 py-2.5 text-[14px] font-medium text-white"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
       </main>
     </>
   )

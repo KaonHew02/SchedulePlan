@@ -34,7 +34,6 @@ export default function WishForm({
   const [note, setNote] = useState(wish?.note ?? '')
   const [photo, setPhoto] = useState<Attachment | null>(wish?.photo ?? null)
   const [busy, setBusy] = useState(false)
-  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const preview = useFileUrl(photo?.id ?? null)
 
@@ -66,26 +65,17 @@ export default function WishForm({
           >
             {busy ? 'Saving...' : 'Save'}
           </button>
-          {wish &&
-            (confirming ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void deleteWish(wish.id).then(() => onSaved('Removed'))
-                }}
-                className="mt-2 w-full rounded-full bg-red-600 py-3 text-[15px] font-medium text-white"
-              >
-                Tap to confirm
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
-              >
-                Remove
-              </button>
-            ))}
+          {wish && (
+            <button
+              type="button"
+              onClick={() => {
+                void deleteWish(wish.id).then(() => onSaved('Removed'))
+              }}
+              className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
+            >
+              Remove
+            </button>
+          )}
         </>
       }
     >

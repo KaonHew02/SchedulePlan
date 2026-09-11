@@ -46,7 +46,6 @@ export default function ScheduleDetail({
   const tags = useTags()
   const settings = useSettings()
   const expenses = useExpenses().filter((expense) => expense.schedule_id === item.id)
-  const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Attachment | null>(null)
@@ -63,7 +62,6 @@ export default function ScheduleDetail({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete. Please try again.')
       setDeleting(false)
-      setConfirming(false)
     }
   }
 
@@ -162,23 +160,17 @@ export default function ScheduleDetail({
             <PencilIcon />
             Edit
           </button>
-          {confirming ? (
-            <button
-              onClick={remove}
-              disabled={deleting}
-              className="flex-1 rounded-full bg-red-600 py-3 text-[15px] font-medium text-white disabled:opacity-40"
-            >
-              {deleting ? 'Deleting...' : 'Tap to confirm'}
-            </button>
-          ) : (
-            <button
-              onClick={() => setConfirming(true)}
-              className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-5 py-3 text-[15px] font-medium text-red-600"
-            >
-              <TrashIcon />
-              Delete
-            </button>
-          )}
+          {/* One tap. Delete means delete — a second tap that only says
+              "are you sure" is a step on every real deletion to catch the
+              rare accidental one. */}
+          <button
+            onClick={remove}
+            disabled={deleting}
+            className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-5 py-3 text-[15px] font-medium text-red-600 disabled:opacity-40"
+          >
+            <TrashIcon />
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </Sheet>
 

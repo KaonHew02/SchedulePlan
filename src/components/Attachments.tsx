@@ -223,7 +223,6 @@ export function FileViewer({
   const url = useFileUrl(file.id)
   const [reading, setReading] = useState<OcrProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState(false)
 
   async function read() {
     setError(null)
@@ -317,25 +316,16 @@ export function FileViewer({
         >
           Save a copy
         </button>
-        {onRemove &&
-          (confirming ? (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="rounded-full bg-red-600 px-4 py-2.5 text-[14px] font-medium text-white"
-            >
-              Tap to confirm
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-4 py-2.5 text-[14px] font-medium text-red-600"
-            >
-              <TrashIcon />
-              Remove
-            </button>
-          ))}
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-4 py-2.5 text-[14px] font-medium text-red-600"
+          >
+            <TrashIcon />
+            Remove
+          </button>
+        )}
       </div>
     </Sheet>
   )

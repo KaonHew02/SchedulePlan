@@ -17,6 +17,7 @@
 import { useSyncExternalStore } from 'react'
 import { DB_KEY, RECORDS, idbGet, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
+import { divideCents } from './split'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, makeTagId } from './tags'
 import type {
   Attachment,
@@ -28,9 +29,20 @@ import type {
   ScheduleDraft,
   ScheduleItem,
   Settings,
+  SplitLine,
+  SplitPerson,
   Tag,
   WishPlace,
 } from '../types'
+
+/** A split entry as it was saved before lines existed. Only `fillSplit` reads it. */
+interface LegacyEntry {
+  label?: string
+  amount?: number
+  paidBy?: string
+  shares?: string[]
+  custom?: Record<string, number> | null
+}
 
 /** The old home. Read once, on first run after the move, then left alone. */
 const LEGACY_KEY = 'scheduleplan:v1'
@@ -190,18 +202,78 @@ function fillExpense(raw: Partial<Expense>, index = 0): Expense {
 }
 
 /**
- * Splits saved before one could push a share into the spending list have
- * neither of the two fields that link them there. Filling the gap once, here,
- * keeps every screen downstream free of a null-check it would carry forever.
+ * Read a split forward.
+ *
+ * Two migrations live here, and the second is the one that matters. Splits
+ * saved before a share could be pushed into the spending list have neither
+ * link field. Splits saved before 2026-09-11 held **entries** — an item, who
+ * paid for it and who shared it — rather than lines under the person who had
+ * it, because the model was "divide this item" and is now "what did each
+ * person have".
+ *
+ * A saved bill is a record, so every old shape is turned into the lines that
+ * come to the same figures rather than being dropped:
+ *
+ *   split by exact amounts   one line per person, for their own amount
+ *   shared by everyone       one line on the shared card
+ *   shared by some of them   one line each, for their part of it
+ *
+ * Who paid moves from the item to the bill — whoever fronted the most is
+ * taken as the payer, which with one payer (nearly every old split) is simply
+ * who it always was.
  */
-function fillSplit(raw: Partial<BillSplit>, index = 0): BillSplit {
+function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index = 0): BillSplit {
+  const people: SplitPerson[] = Array.isArray(raw.people) ? raw.people : []
+  const ids = people.map((person) => person.id)
+
+  let lines: SplitLine[] = Array.isArray(raw.lines) ? raw.lines : []
+  let paidBy = typeof raw.paidBy === 'string' ? raw.paidBy : ''
+
+  if (!Array.isArray(raw.lines) && Array.isArray(raw.entries)) {
+    const converted: SplitLine[] = []
+    const fronted = new Map<string, number>()
+    let next = 1
+    const push = (label: string, amount: number, person: string | null) => {
+      converted.push({ id: `l${next++}`, label, amount, person })
+    }
+
+    for (const entry of raw.entries) {
+      const amount = Number(entry?.amount) || 0
+      const label = String(entry?.label ?? '')
+      if (entry?.paidBy) fronted.set(entry.paidBy, (fronted.get(entry.paidBy) ?? 0) + amount)
+
+      if (entry?.custom) {
+        for (const [id, value] of Object.entries(entry.custom)) {
+          if (ids.includes(id) && value) push(label, Number(value) || 0, id)
+        }
+        continue
+      }
+
+      const sharers = Array.isArray(entry?.shares) && entry.shares.length
+        ? entry.shares.filter((id) => ids.includes(id))
+        : ids
+      if (sharers.length === 0 || sharers.length === ids.length) {
+        push(label, amount, null)
+        continue
+      }
+      const parts = divideCents(Math.round(amount * 100), sharers.length)
+      sharers.forEach((id, part) => push(label, parts[part] / 100, id))
+    }
+
+    lines = converted
+    if (!paidBy) {
+      paidBy = [...fronted.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+    }
+  }
+
   return {
     id: typeof raw.id === 'number' ? raw.id : index + 1,
     title: String(raw.title ?? ''),
     date: String(raw.date ?? ''),
     currency: typeof raw.currency === 'string' ? raw.currency : DEFAULT_SETTINGS.currency,
-    people: Array.isArray(raw.people) ? raw.people : [],
-    entries: Array.isArray(raw.entries) ? raw.entries : [],
+    people,
+    lines,
+    paidBy: ids.includes(paidBy) ? paidBy : (ids[0] ?? ''),
     expense_id: typeof raw.expense_id === 'number' ? raw.expense_id : null,
     expense_person: typeof raw.expense_person === 'string' ? raw.expense_person : null,
   }
