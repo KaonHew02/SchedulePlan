@@ -16,12 +16,10 @@ import type { Attachment } from '../types'
  * the text reader to work with.
  */
 
-/** Anything a browser will either render or hand to another app. */
-const ANY_FILE =
-  'image/*,application/pdf,text/plain,text/csv,application/msword,' +
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document,' +
-  'application/vnd.ms-excel,' +
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+/** Shown inline in the viewer rather than as a file chip. */
+const isPdf = (type: string): boolean => type === 'application/pdf'
+const isText = (type: string): boolean =>
+  type.startsWith('text/') || type === 'application/json'
 
 /**
  * An object URL for a stored blob, released when it is no longer on screen.
@@ -105,12 +103,21 @@ export function AttachmentStrip({
   const [busy, setBusy] = useState(false)
   const [viewing, setViewing] = useState<Attachment | null>(null)
 
-  async function take(list: FileList | null, mode: 'file' | 'photo' | 'scan') {
-    if (!list?.length) return
+  /**
+   * `chosen` is an array, and that is the whole bug fix.
+   *
+   * `input.files` is a **live** FileList: clearing `input.value` — which every
+   * one of these handlers does, so that picking the same file twice still
+   * fires a change — empties the very list the handler is holding. Reading it
+   * afterwards found nothing, every time, which is why attaching had never
+   * worked. Copy the files out first and the input can be reset freely.
+   */
+  async function take(chosen: File[], mode: 'file' | 'photo' | 'scan') {
+    if (chosen.length === 0) return
     setBusy(true)
     const added: Attachment[] = []
     try {
-      for (const file of Array.from(list)) {
+      for (const file of chosen) {
         added.push(await saveFile(file, { scan: mode === 'scan' }))
       }
       onChange([...files, ...added])
@@ -152,40 +159,44 @@ export function AttachmentStrip({
 
       {/* Three inputs rather than one: `capture` is what makes a phone open
           the camera instead of the gallery, and it cannot be toggled per tap. */}
+      {/* No `accept` on this one. A list of MIME types is a list of things
+          the file dialog will refuse to show you, and the store keeps any
+          blob — a .pptx, a .zip, a .heic — perfectly well. */}
       <input
         ref={pick}
         type="file"
         multiple
-        accept={ANY_FILE}
         className="hidden"
         onChange={(event) => {
-          const list = event.target.files
+          const chosen = Array.from(event.target.files ?? [])
           event.target.value = ''
-          void take(list, 'file')
+          void take(chosen, 'file')
         }}
       />
       <input
         ref={photo}
         type="file"
         accept="image/*"
+        multiple
         capture="environment"
         className="hidden"
         onChange={(event) => {
-          const list = event.target.files
+          const chosen = Array.from(event.target.files ?? [])
           event.target.value = ''
-          void take(list, 'photo')
+          void take(chosen, 'photo')
         }}
       />
       <input
         ref={scan}
         type="file"
         accept="image/*"
+        multiple
         capture="environment"
         className="hidden"
         onChange={(event) => {
-          const list = event.target.files
+          const chosen = Array.from(event.target.files ?? [])
           event.target.value = ''
-          void take(list, 'scan')
+          void take(chosen, 'scan')
         }}
       />
 
@@ -223,6 +234,21 @@ export function FileViewer({
   const url = useFileUrl(file.id)
   const [reading, setReading] = useState<OcrProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+
+  // A text file is worth showing as text. Capped: a 20MB CSV pasted whole
+  // into a sheet would take the sheet with it.
+  useEffect(() => {
+    if (!url || !isText(file.type)) return
+    let live = true
+    void fetch(url)
+      .then((response) => response.text())
+      .then((text) => live && setPreview(text.slice(0, 4000)))
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [url, file.type])
 
   async function read() {
     setError(null)
@@ -250,18 +276,28 @@ export function FileViewer({
 
   return (
     <Sheet onClose={onClose} title={file.name}>
-      {isImage(file.type) ? (
-        url ? (
-          <img
-            src={url}
-            alt={file.name}
-            className="max-h-[46vh] w-full rounded-xl border border-neutral-100 object-contain"
-          />
-        ) : (
-          <div className="flex h-40 items-center justify-center rounded-xl bg-neutral-50">
-            <Spinner className="h-5 w-5 text-neutral-300" />
-          </div>
-        )
+      {/* Show the thing, not a description of it, wherever the browser can
+          render it. Only formats nothing can display fall back to the chip. */}
+      {!url ? (
+        <div className="flex h-40 items-center justify-center rounded-xl bg-neutral-50">
+          <Spinner className="h-5 w-5 text-neutral-300" />
+        </div>
+      ) : isImage(file.type) ? (
+        <img
+          src={url}
+          alt={file.name}
+          className="max-h-[46vh] w-full rounded-xl border border-neutral-100 object-contain"
+        />
+      ) : isPdf(file.type) ? (
+        <iframe
+          src={url}
+          title={file.name}
+          className="h-[46vh] w-full rounded-xl border border-neutral-100 bg-white"
+        />
+      ) : isText(file.type) ? (
+        <pre className="max-h-[46vh] overflow-auto whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-[12px] leading-5 text-neutral-700">
+          {preview ?? ' '}
+        </pre>
       ) : (
         <div className="flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-5">
           <FileIcon className="h-7 w-7 text-neutral-400" />
