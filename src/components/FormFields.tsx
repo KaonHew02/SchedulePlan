@@ -192,9 +192,23 @@ export function Toggle({
         checked ? 'bg-brand-500' : 'bg-neutral-200'
       }`}
     >
+      {/*
+        The knob moves by `left`, not by a transform.
+        
+        It used to have no horizontal anchor at all — `absolute` with
+        `left: auto`, so it started at its *static* position, plus a translate
+        to slide it. That put the knob at 22..42 in a 44px track: inside, but
+        2px off the right edge against 22px on the left, which is close enough
+        to the end that the white circle and its shadow read as escaping.
+        
+        Two numbers that have to add up to the right place is how that
+        happened. One number that *is* the place cannot drift, and it no
+        longer depends on where the browser thinks a box with no anchor would
+        have gone: 3..23 off, 21..41 on, 3px of track either side.
+      */}
       <span
-        className={`absolute top-[3px] h-5 w-5 rounded-full bg-white shadow transition-transform ${
-          checked ? 'translate-x-[21px]' : 'translate-x-[3px]'
+        className={`absolute top-[3px] h-5 w-5 rounded-full bg-white shadow transition-all ${
+          checked ? 'left-[21px]' : 'left-[3px]'
         }`}
       />
     </button>
