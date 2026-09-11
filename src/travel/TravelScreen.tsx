@@ -188,7 +188,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
       {/* Stats and the globe on the left, the lists on the right. Two
           columns rather than one long scroll is the whole reason the width
           cap could go. */}
-      <main className="px-5 pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[420px_minmax(0,1fr)] xl:items-start xl:gap-10">
+      <main className="px-5 pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] xl:items-start xl:gap-10">
         <div className="xl:sticky xl:top-4">
         <p className="pb-3 pt-2 text-[13px] text-neutral-500">So far you have been to</p>
 

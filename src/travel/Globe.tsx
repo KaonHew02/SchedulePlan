@@ -25,19 +25,31 @@ import { loadWorldMap, type WorldMap } from './worldmap'
  */
 
 const SIZE = 268
-const RADIUS = 112
+/** Nearly the full width of the box. A circle leaves the corners free anyway. */
+const RADIUS = 126
 const CENTRE = SIZE / 2
 
 /** Below 1 the globe would be smaller than its window; past 8 it is one country. */
 const MIN_ZOOM = 1
 const MAX_ZOOM = 8
 
-const OCEAN = '#F1F0FA'
-const LAND = '#CBC7DD'
-const LAND_HOVER = '#B4AECB'
-const BEEN = '#A3E635'
-const BEEN_HOVER = '#8FD119'
-const EDGE = '#B8B2DE'
+/*
+ * Neutral, not lavender, and the borders are dark enough to read.
+ *
+ * The first pass tinted everything toward the app's purple and drew the
+ * borders in the ocean colour, on the reasoning that a white hairline between
+ * two greys reads as a crack. It does — but so does no border at all, and the
+ * result was a globe you could not pick a country out of. Dark lines on plain
+ * grey is what a map looks like, and this is the one place in the app that is
+ * a map rather than a screen.
+ */
+const OCEAN = '#EFEFF2'
+const LAND = '#C6C6CC'
+const LAND_HOVER = '#ADADB6'
+const BEEN = '#B7E764'
+const BEEN_HOVER = '#A3E635'
+const BORDER = '#84848E'
+const EDGE = '#C9C9D2'
 
 const clamp = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
 
@@ -164,7 +176,7 @@ export default function Globe({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-full max-w-[340px]">
+      <div className="relative w-full max-w-[460px]">
         <svg
           ref={svg}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -238,11 +250,12 @@ export default function Globe({
             </g>
           )}
 
-          {/* Borders are the ocean colour rather than white: a white hairline
-              between two greys reads as a crack, the sea colour reads as a
-              coastline. */}
+          {/* The stroke width is NOT divided by zoom. The projection scale
+              changes, the viewBox does not, so a user unit is a screen pixel
+              at every zoom — dividing made the borders thinner the further in
+              you went, which is backwards. */}
           {land && (
-            <g stroke={OCEAN} strokeWidth={0.5 / zoom} strokeLinejoin="round" clipPath={`url(#${clip})`}>
+            <g stroke={BORDER} strokeWidth="0.6" strokeLinejoin="round" clipPath={`url(#${clip})`}>
               {land.map((shape, index) => {
                 const lit = shape.code !== null && shape.code === shown
                 return (
@@ -264,7 +277,7 @@ export default function Globe({
             </g>
           )}
 
-          <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="none" stroke={EDGE} strokeWidth="1.5" />
+          <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="none" stroke={EDGE} strokeWidth="1" />
 
           <g transform={`translate(${CENTRE} ${CENTRE})`} clipPath={`url(#${clip})`}>
             {dots.map(({ country: place, point }) => (
