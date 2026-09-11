@@ -1,34 +1,13 @@
 import { useState } from 'react'
-import { FileViewer, useFileUrl } from '../components/Attachments'
-import { FileIcon, PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../components/Icons'
+import { FileViewer, Thumb } from '../components/Attachments'
+import { PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { daysBetween, longDate, relativeDay, timeRange } from '../lib/date'
-import { isImage } from '../lib/files'
 import { money } from '../lib/currency'
 import { lastDay, spansDays, useExpenses, useSettings, useTags } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { Attachment, ScheduleItem } from '../types'
 
-function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
-  const url = useFileUrl(isImage(file.type) ? file.id : null)
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      title={file.name}
-      className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50"
-    >
-      {url ? (
-        <img src={url} alt={file.name} className="h-full w-full object-cover" />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center text-neutral-400">
-          <FileIcon className="h-5 w-5" />
-        </span>
-      )}
-    </button>
-  )
-}
 
 export default function ScheduleDetail({
   item,

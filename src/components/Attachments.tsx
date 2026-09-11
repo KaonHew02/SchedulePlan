@@ -27,23 +27,44 @@ const isText = (type: string): boolean =>
  * Object URLs are a leak by default: the browser holds the blob alive until
  * the document is discarded or the URL is revoked by hand.
  */
-export function useFileUrl(id: string | null): string | null {
+export type FileState = 'loading' | 'ready' | 'missing'
+
+/**
+ * The blob behind an attachment, and whether it is actually there.
+ *
+ * `missing` matters: a record can outlive its bytes. A backup restored
+ * without them, a browser that evicted the file store, a half-finished
+ * import — the row still says "11 attachments" and every one of them opens
+ * nothing. Without this the screen cannot tell that apart from a PDF, and
+ * draws the same grey page icon for both.
+ */
+export function useStoredFile(id: string | null): { url: string | null; state: FileState } {
   const [url, setUrl] = useState<string | null>(null)
+  const [state, setState] = useState<FileState>(id ? 'loading' : 'ready')
 
   useEffect(() => {
     if (!id) {
       setUrl(null)
+      setState('ready')
       return
     }
     let live = true
     let created: string | null = null
+    setState('loading')
 
-    void readFile(id).then((blob) => {
-      if (!blob) return
-      if (!live) return
-      created = URL.createObjectURL(blob)
-      setUrl(created)
-    })
+    void readFile(id).then(
+      (blob) => {
+        if (!live) return
+        if (!blob) {
+          setState('missing')
+          return
+        }
+        created = URL.createObjectURL(blob)
+        setUrl(created)
+        setState('ready')
+      },
+      () => live && setState('missing'),
+    )
 
     return () => {
       live = false
@@ -52,34 +73,57 @@ export function useFileUrl(id: string | null): string | null {
     }
   }, [id])
 
-  return url
+  return { url, state }
 }
 
-function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
-  const url = useFileUrl(isImage(file.type) ? file.id : null)
+/**
+ * An object URL for a stored blob, released when it is no longer on screen.
+ *
+ * Object URLs are a leak by default: the browser holds the blob alive until
+ * the document is discarded or the URL is revoked by hand.
+ */
+export function useFileUrl(id: string | null): string | null {
+  return useStoredFile(id).url
+}
+
+/**
+ * One attachment, 64px square. The only one — the detail sheets each grew a
+ * cut-down copy that drew a bare page icon for everything, so eleven files
+ * looked like eleven identical blanks with nothing to tell them apart.
+ */
+export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
+  const { url, state } = useStoredFile(file.id)
+  const extension = file.name.split('.').pop()?.slice(0, 5).toUpperCase()
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      title={file.name}
-      className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 transition-colors hover:border-neutral-300"
+      title={state === 'missing' ? `${file.name} — not in this browser` : file.name}
+      className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border transition-colors ${
+        state === 'missing'
+          ? 'border-amber-300 bg-amber-50'
+          : 'border-neutral-200 bg-neutral-50 hover:border-neutral-300'
+      }`}
     >
-      {url ? (
-        <img src={url} alt={file.name} className="h-full w-full object-cover" />
-      ) : isImage(file.type) ? (
+      {state === 'loading' ? (
         <span className="flex h-full w-full items-center justify-center">
           <Spinner className="h-4 w-4 text-neutral-300" />
         </span>
+      ) : state === 'missing' ? (
+        <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-amber-700">
+          <FileIcon className="h-5 w-5" />
+          <span className="w-full truncate text-[9px] leading-none">missing</span>
+        </span>
+      ) : url && isImage(file.type) ? (
+        <img src={url} alt={file.name} className="h-full w-full object-cover" />
       ) : (
         <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-neutral-400">
           <FileIcon className="h-5 w-5" />
-          <span className="w-full truncate text-[9px] leading-none">
-            {file.name.split('.').pop()?.slice(0, 5).toUpperCase()}
-          </span>
+          <span className="w-full truncate text-[9px] leading-none">{extension}</span>
         </span>
       )}
-      {file.kind === 'scan' && (
+      {file.kind === 'scan' && state === 'ready' && (
         <span className="absolute bottom-0 inset-x-0 bg-neutral-900/70 py-0.5 text-center text-[9px] font-medium text-white">
           SCAN
         </span>
