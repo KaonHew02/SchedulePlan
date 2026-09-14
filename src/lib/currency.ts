@@ -147,6 +147,12 @@ export const decimalsFor = (code: string): number => (ZERO_DECIMAL.has(code) ? 0
  * derived from magnitude gets AED and DKK wrong: both are close enough to a
  * dollar to quote singly, and both are quoted in hundreds anyway, on the size
  * of the notes people actually hand over.
+ *
+ * The lira is the one row not copied. The board prices it singly, which now
+ * reads `1 TRY = 0.0838 MYR` — the shape this whole idea exists to get rid of
+ * — and that row on the board is dead anyway: it quotes 0.0520 against 0.1100,
+ * a spread of two, which is not a rate anybody is trading on. A hundred, like
+ * every other currency of that size.
  */
 const QUOTE_UNIT: Record<string, number> = {
   IDR: 1_000_000,
@@ -184,6 +190,7 @@ const QUOTE_UNIT: Record<string, number> = {
   SAR: 100,
   SEK: 100,
   THB: 100,
+  TRY: 100,
   TWD: 100,
   ZAR: 100,
 }
