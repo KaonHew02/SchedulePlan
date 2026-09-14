@@ -33,6 +33,16 @@ export const DEFAULT_CATEGORIES: Tag[] = [
   { id: 'other-spend', label: 'Other', emoji: '📌' },
 ]
 
+/**
+ * The tag Travel counts.
+ *
+ * An id and not a label, so renaming it to 'Trips' or swapping the aeroplane
+ * for a suitcase keeps working — `updateTag` never regenerates an id, exactly
+ * because things point at them. Delete the tag outright and Travel goes quiet,
+ * which is the one thing the empty state has to be able to say.
+ */
+export const TRAVEL_TAG = 'travel'
+
 /** Shown as one-tap choices when naming a tag. Any other emoji can be typed. */
 export const EMOJI_CHOICES = [
   '🙂', '💼', '✈️', '🍽', '🏸', '🎫', '📌', '🏠',

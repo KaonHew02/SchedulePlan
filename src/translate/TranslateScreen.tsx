@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ChevronDown,
-  ChevronLeft,
   Close,
   SpeakerIcon,
   SpeakerOffIcon,
@@ -211,10 +210,8 @@ function PhraseRow({
 }
 
 export default function TranslateScreen({
-  onBack,
   onToast,
 }: {
-  onBack: () => void
   onToast: (message: string) => void
 }) {
   const phrases = usePhrases()
@@ -301,10 +298,7 @@ export default function TranslateScreen({
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-1 px-5 pb-3 pt-4 lg:px-8">
-          <button onClick={onBack} aria-label="Back" className="-ml-2 p-2 text-neutral-400">
-            <ChevronLeft />
-          </button>
+        <div className="flex items-center px-5 pb-3 pt-4 lg:px-8">
           <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Translate</h1>
         </div>
       </header>

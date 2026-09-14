@@ -7,6 +7,7 @@ import Toast from './components/Toast'
 import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import RemindersScreen from './reminders/RemindersScreen'
+import TranslateScreen from './translate/TranslateScreen'
 import MoreScreen from './screens/MoreScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
 import TravelScreen from './travel/TravelScreen'
@@ -71,6 +72,7 @@ export default function App() {
             {screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
             {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
             {screen === 'currency' && <CurrencyScreen />}
+            {screen === 'translate' && <TranslateScreen onToast={setToast} />}
             {screen === 'more' && <MoreScreen onToast={setToast} />}
           </div>
         </div>

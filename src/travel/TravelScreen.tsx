@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useFileUrl } from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
-import { ChevronRight, Close, PinIcon, Plus } from '../components/Icons'
+import { ChevronRight, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
+import { TRAVEL_TAG } from '../lib/tags'
 import {
   deleteWish,
   lastDay,
@@ -120,11 +121,25 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
   const today = todayISO()
 
+  /*
+   * A trip is tagged Travel and has a country on it.
+   *
+   * The country alone was the first test, which made a run to Daiso with
+   * 'Malaysia' on it a trip. The second was a switch of its own on every item,
+   * which worked and put a button on every row of this list to turn it off —
+   * a column of 'Not a trip' down the side of a page about trips, which is a
+   * strange thing to have built.
+   *
+   * The tag was already there and already being used: these are the same
+   * chips that say Personal and Work on the add form, and a shop is not tagged
+   * Travel. Nothing new to learn and nothing new to maintain, at the cost of
+   * one rule worth knowing — a trip has to carry the tag.
+   */
   const trips = useMemo(
     () =>
       schedule
         .filter((item): item is ScheduleItem & { place: NonNullable<ScheduleItem['place']> } =>
-          Boolean(item.place?.country && item.place.trip),
+          Boolean(item.place?.country && item.tag === TRAVEL_TAG),
         )
         .sort((a, b) => b.date.localeCompare(a.date)),
     [schedule],
@@ -147,24 +162,6 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
       continents: [...continents],
     }
   }, [trips])
-
-  /** Take something out of Travel without touching anything else about it. */
-  async function demote(trip: ScheduleItem & { place: NonNullable<ScheduleItem['place']> }) {
-    await store.updateSchedule(trip.id, {
-      date: trip.date,
-      end_date: trip.end_date,
-      all_day: trip.all_day,
-      start_time: trip.start_time,
-      end_time: trip.end_time,
-      title: trip.title,
-      location: trip.location,
-      notes: trip.notes,
-      tag: trip.tag,
-      place: { ...trip.place, trip: false },
-      attachments: trip.attachments,
-    })
-    onToast(`${trip.title} is no longer a trip`)
-  }
 
   /** Spend recorded against a trip, in the home currency. */
   const spendOf = useMemo(() => {
@@ -313,8 +310,8 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center">
             <p className="text-[14px] text-neutral-600">No trips recorded yet.</p>
             <p className="mx-auto mt-1 max-w-[280px] text-[13px] leading-5 text-neutral-400">
-              A trip is a schedule item with a country on it, marked as a trip. Add one in
-              Schedule, open &ldquo;Add location, notes or files&rdquo; and pick the country.
+              A trip is a schedule item tagged ✈️ Travel with a country on it. Tag it in
+              Schedule, then open &ldquo;Add location, notes or files&rdquo; and pick the country.
             </p>
           </div>
         ) : (
@@ -343,28 +340,6 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                       {money(spent, settings.currency)}
                     </span>
                   )}
-                  {/*
-                    Here as well as on the form, because this is where you find
-                    out: the shop only looks wrong once it is sitting in a list
-                    of trips. It takes the item out of Travel and leaves it
-                    alone in the diary — the country stays on it, since it is
-                    still true.
-
-                    Drawn as a control and not as grey text. As text it sat at
-                    the end of every row reading like a label on the row —
-                    'Daiso · Malaysia · Not a trip' — which is the opposite of
-                    what it says, and K quite reasonably read the whole list as
-                    already sorted and asked why the errands were still in it.
-                  */}
-                  <button
-                    onClick={() => void demote(trip)}
-                    title="Take this out of Travel — it stays in the diary"
-                    aria-label={`Take ${trip.title} out of Travel`}
-                    className="flex shrink-0 items-center gap-1 rounded-full border border-neutral-200 px-2.5 py-1 text-[12px] text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
-                  >
-                    <Close className="h-3 w-3" />
-                    Not a trip
-                  </button>
                 </div>
               )
             })}
@@ -452,7 +427,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           prefill={{
             title: visiting.name,
             notes: visiting.note,
-            place: { country: visiting.country, city: null, trip: true },
+            place: { country: visiting.country, city: null },
             allDay: true,
             attachments: visiting.photo ? [visiting.photo] : [],
           }}

@@ -10,8 +10,8 @@ currency, a converter, a bill split that works out who owes whom, a scanner
 that reads a receipt or a booking with no account and no API key, and a Travel
 screen that counts where you have been.
 
-Six tabs — Schedule, Travel, Expenses, Reminders, Currency, More. Everything
-else lives behind **More**.
+Seven tabs — Schedule, Travel, Expenses, Reminders, Currency, Translate, More.
+Everything else lives behind **More**.
 
 ---
 
@@ -63,8 +63,10 @@ the thousand. So **the lot is tappable**: tap it in the rate line and pick the
 one in front of you. It sticks per currency, re-quotes the whole screen, and
 the built-in choice is marked so there is a way back to it.
 
-**Translate** — behind More, for the moment in front of somebody where the
-words are not there. Five travel languages, any two of them, and three things
+**Translate** — for the moment in front of somebody where the words are not
+there. It started behind More and came out next to Currency, because on the
+trip it was built for, the till and the person behind it are the same thirty
+seconds. Five travel languages, any two of them, and three things
 to do with the answer: **say it** through the phone's own voice, **show it** at
 a size readable across a food stall, and keep it. Everything translated is
 written into the notebook, because the places you need this most — a border
@@ -146,18 +148,23 @@ top-level object**. Work, travel, badminton and lunch are all schedule items;
 expenses, receipts, attachments and splits hang off them. Travel does not break
 that.
 
-A trip is a schedule item with a **country** on it that is *marked as a trip* —
-two optional fields beside location and notes. Everything on the Travel screen
-is derived from that: the counters, the goal, the globe, the trip list, and the
-spend, which comes free because expenses already link to schedule items.
+A trip is a schedule item tagged **✈️ Travel** with a **country** on it.
+Everything on the Travel screen is derived from that: the counters, the goal,
+the globe, the trip list, and the spend, which comes free because expenses
+already link to schedule items.
 
-The mark is there because the country on its own was the whole test, and a run
-to Daiso with 'Malaysia' on it was therefore a trip — sitting between two real
-ones and counting towards a goal of fifty countries. A country says *where*
-something is, and plenty of things worth writing down are somewhere without
-being travel. The switch is on by default when a country is picked, and there
-is a **Not a trip** on every row of the Travel list, because the list is where
-you find out.
+It took three goes. The country alone was the first test, which made a run to
+Daiso with 'Malaysia' on it a trip, sitting between two real ones and counting
+towards a goal of a hundred countries. The second was a switch of its own on
+every item, which worked — and put a **Not a trip** button on every row of the
+list, a column of them down the side of a page about trips, which is a strange
+thing to have built. The tag was there the whole time and already being used:
+it is the same chip that says Personal and Work on the add form, and a shop is
+not tagged Travel. Nothing new to learn, nothing new to maintain.
+
+The tag is matched by **id**, so renaming it to 'Trips' or swapping the
+aeroplane for a suitcase keeps working. Delete it outright and Travel goes
+quiet.
 
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
 days it covers, and its files — which can be added right there, rather than

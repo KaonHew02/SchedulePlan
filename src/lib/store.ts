@@ -171,13 +171,7 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
     // Backups from before Travel existed have no place at all.
     place:
       raw.place && typeof raw.place.country === 'string'
-        ? {
-            country: raw.place.country,
-            city: raw.place.city ?? null,
-            // Written before the switch existed means it was counting, and a
-            // backup should restore the notebook you had, not a tidier one.
-            trip: raw.place.trip !== false,
-          }
+        ? { country: raw.place.country, city: raw.place.city ?? null }
         : null,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
     // Both absent from every backup written before the trip page existed.
@@ -469,11 +463,7 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
     notes: draft.notes?.trim() || null,
     tag: draft.tag ?? null,
     place: draft.place?.country
-      ? {
-          country: draft.place.country.toUpperCase(),
-          city: draft.place.city?.trim() || null,
-          trip: draft.place.trip !== false,
-        }
+      ? { country: draft.place.country.toUpperCase(), city: draft.place.city?.trim() || null }
       : null,
     attachments: draft.attachments ?? [],
   }

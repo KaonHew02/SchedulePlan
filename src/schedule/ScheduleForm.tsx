@@ -52,9 +52,6 @@ export default function ScheduleForm({
   const [country, setCountry] = useState<string | null>(
     item?.place?.country ?? prefill?.place?.country ?? null,
   )
-  // On when a country is picked, because most things with a country on them
-  // are travel — and off in one tap for the ones that are just somewhere.
-  const [isTrip, setIsTrip] = useState(item?.place?.trip ?? prefill?.place?.trip ?? true)
   const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
   const schedule = useSchedule()
   // Countries already in the notebook go to the top of the picker.
@@ -112,7 +109,7 @@ export default function ScheduleForm({
         location: location.trim() || null,
         notes: notes.trim() || null,
         tag,
-        place: country ? { country, city: city.trim() || null, trip: isTrip } : null,
+        place: country ? { country, city: city.trim() || null } : null,
         attachments: files,
       })
       // On success the parent closes this sheet.
@@ -249,19 +246,9 @@ export default function ScheduleForm({
                 />
               </Field>
               {country && (
-                <>
-                  <Field label="City">
-                    <TextField label="City" value={city} onChange={setCity} />
-                  </Field>
-                  {/*
-                    Asked rather than assumed. A country on an item says where
-                    it is, and the shops and appointments that are also
-                    somewhere were being counted as countries visited.
-                  */}
-                  <Field label="A trip" hint="Counts in Travel">
-                    <Toggle checked={isTrip} onChange={setIsTrip} label="Counts as a trip" />
-                  </Field>
-                </>
+                <Field label="City">
+                  <TextField label="City" value={city} onChange={setCity} />
+                </Field>
               )}
               <div className="py-3">
                 <textarea

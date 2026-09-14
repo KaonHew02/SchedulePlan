@@ -56,17 +56,6 @@ export interface Place {
   country: string
   /** Free text: 'Da Nang', 'Kyoto'. Null when only the country is known. */
   city: string | null
-  /**
-   * Whether Travel should count this.
-   *
-   * A country on an item used to be the whole test, which made a run to Daiso
-   * with 'Malaysia' on it a trip, sitting in the list between two real ones and
-   * counting towards a goal of fifty countries. The country field says *where*
-   * something is and plenty of things worth writing down are somewhere without
-   * being travel — so whether it is a trip is now its own answer rather than a
-   * side effect of having filled a field in.
-   */
-  trip: boolean
 }
 
 /**
@@ -276,7 +265,14 @@ export interface Settings {
 }
 
 export type ViewMode = 'day' | 'week' | 'month'
-export type Screen = 'schedule' | 'travel' | 'expenses' | 'reminders' | 'currency' | 'more'
+export type Screen =
+  | 'schedule'
+  | 'travel'
+  | 'expenses'
+  | 'reminders'
+  | 'currency'
+  | 'translate'
+  | 'more'
 /** Which half of the Expenses module is showing. */
 export type ExpensesTab = 'spending' | 'splits'
 /** The tools that still live behind More rather than in the nav. */
