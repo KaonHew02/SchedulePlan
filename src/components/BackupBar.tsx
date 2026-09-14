@@ -17,7 +17,7 @@ import {
   countIn,
   fullSnapshot,
   itemCount,
-  restore,
+  mergeIn,
   updateSettings,
   useSaveState,
   useSettings,
@@ -129,13 +129,36 @@ export default function BackupBar({
     setPending({ source: file.name, data })
   }
 
-  function confirmReplace() {
+  /*
+   * Two different jobs behind one button, and they are not the same job.
+   *
+   * **From Drive** is a restore: the copy in Drive is the notebook, and
+   * pulling it down means this device should look like that copy. Replace.
+   *
+   * **Import** is not. A file you are handed can be a whole notebook or five
+   * rows of somebody's itinerary, and replacing on the strength of that meant
+   * the only way to accept the five was to lose the rest. It adds now, and
+   * skips rows it already has — so importing your own backup over your own
+   * notebook finds everything present and changes nothing, which is what that
+   * gesture should have meant all along.
+   */
+  function confirmApply() {
     if (!pending) return
-    const source = pending.source
+    const fromDrive = pending.source === 'Drive'
     run('restore', async () => {
-      const count = source === 'Drive' ? await applyDrive(pending.data) : await restore(pending.data)
+      if (fromDrive) {
+        const count = await applyDrive(pending.data)
+        setPending(null)
+        onToast(`Restored ${count} items`)
+        return
+      }
+      const { added, skipped } = await mergeIn(pending.data)
       setPending(null)
-      onToast(`Restored ${count} items`)
+      onToast(
+        added === 0
+          ? 'Everything in that file was already here'
+          : `Added ${added} items${skipped ? `, skipped ${skipped} already here` : ''}`,
+      )
     })
   }
 
@@ -243,15 +266,34 @@ export default function BackupBar({
       {pending && (
         <Confirm
           title={
-            <>
-              Replace the {itemCount()} items on this device with {countIn(pending.data)} from{' '}
-              {pending.source}?
-            </>
+            pending.source === 'Drive' ? (
+              <>
+                Replace the {itemCount()} items on this device with {countIn(pending.data)} from
+                Drive?
+              </>
+            ) : (
+              <>
+                Add {countIn(pending.data)} items from {pending.source} to the {itemCount()} already
+                here?
+              </>
+            )
           }
-          detail="This cannot be undone. Export first if you are unsure."
-          confirmLabel={busy === 'restore' ? 'Restoring...' : 'Replace'}
+          detail={
+            pending.source === 'Drive'
+              ? 'This cannot be undone. Export first if you are unsure.'
+              : 'Nothing here is removed. Anything the file already matches is skipped rather than added twice.'
+          }
+          confirmLabel={
+            busy === 'restore'
+              ? pending.source === 'Drive'
+                ? 'Restoring...'
+                : 'Adding...'
+              : pending.source === 'Drive'
+                ? 'Replace'
+                : 'Add'
+          }
           busy={busy === 'restore'}
-          onConfirm={confirmReplace}
+          onConfirm={confirmApply}
           onCancel={() => setPending(null)}
         />
       )}

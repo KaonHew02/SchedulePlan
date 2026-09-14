@@ -928,7 +928,8 @@ export function countIn(data: Partial<Snapshot>): number {
  * notebooks means guessing which entries are the same, and guessing wrong
  * quietly duplicates a day. The caller is expected to have said so first.
  */
-export async function restore(candidate: unknown): Promise<number> {
+/** Everything both ways in are agreed on: it is a backup, and it is readable. */
+function validateSnapshot(candidate: unknown): Partial<Snapshot> {
   const data = candidate as Partial<Snapshot> | null
   if (!data || typeof data !== 'object' || !Array.isArray(data.schedule)) {
     throw new Error("That file isn't a SchedulePlan backup.")
@@ -943,6 +944,11 @@ export async function restore(candidate: unknown): Promise<number> {
       throw new Error(`Entry ${index + 1} in that file is missing a title or a date.`)
     }
   }
+  return data
+}
+
+export async function restore(candidate: unknown): Promise<number> {
+  const data = validateSnapshot(candidate)
 
   // Bytes first. A record pointing at an attachment that failed to land is a
   // broken thumbnail forever, so fail before anything is replaced.
@@ -958,6 +964,122 @@ export async function restore(candidate: unknown): Promise<number> {
 
   await writeDb(next)
   return countIn(next)
+}
+
+/**
+ * Add a file's contents to the notebook instead of replacing it.
+ *
+ * This is what Import does now. Replacing was the honest thing when the only
+ * file you could be holding was your own backup, and it stopped being honest
+ * the moment a file could be *part* of a notebook — an itinerary somebody
+ * prepared for you, a trip off another device. Replace meant the only way to
+ * accept five new rows was to lose everything else.
+ *
+ * Identical rows are skipped rather than doubled, which is what makes the old
+ * use still work: importing your own backup over your own notebook now finds
+ * everything already there and changes nothing, rather than giving you two of
+ * every day. "Identical" is deliberately shallow — same day, same title, same
+ * time — because two dinners called Dinner on the same evening at the same
+ * hour are one dinner written twice, and a deep compare would keep both
+ * because one of them picked up a photo.
+ *
+ * Ids are reassigned on the way in. The incoming file's ids mean nothing here
+ * and half of them will already be taken.
+ *
+ * Settings and labels are the notebook's own. A file that carries a home
+ * currency should not change yours on the way past; the only time its settings
+ * are taken is when there is nothing here to overrule them.
+ */
+export async function mergeIn(candidate: unknown): Promise<{ added: number; skipped: number }> {
+  const data = validateSnapshot(candidate)
+
+  // Bytes first, as in `restore`: a record pointing at an attachment that
+  // failed to land is a broken thumbnail forever.
+  for (const file of data.files ?? []) {
+    if (file?.id && typeof file.dataUrl === 'string') {
+      await writeFileFromDataUrl(file.id, file.dataUrl)
+    }
+  }
+
+  const db = readDb()
+  const incoming = coerce(data)
+  const empty =
+    db.schedule.length === 0 &&
+    db.expenses.length === 0 &&
+    db.reminders.length === 0 &&
+    db.wishlist.length === 0 &&
+    db.phrases.length === 0
+
+  let added = 0
+  let skipped = 0
+
+  /** Add the rows that are not already here, renumbering as they land. */
+  function absorb<T extends { id: number }>(
+    mine: T[],
+    theirs: T[],
+    fingerprint: (row: T) => string,
+  ): T[] {
+    const seen = new Set(mine.map(fingerprint))
+    let nextNumber = mine.reduce((top, row) => Math.max(top, row.id), 0) + 1
+    const kept = [...mine]
+    for (const row of theirs) {
+      const print = fingerprint(row)
+      if (seen.has(print)) {
+        skipped += 1
+        continue
+      }
+      seen.add(print)
+      kept.push({ ...row, id: nextNumber })
+      nextNumber += 1
+      added += 1
+    }
+    return kept
+  }
+
+  const next: DB = {
+    ...db,
+    schedule: absorb(
+      db.schedule,
+      incoming.schedule,
+      (row) => `${row.date}|${row.end_date ?? ''}|${row.start_time}|${row.title.trim().toLowerCase()}`,
+    ).sort(byTimeline),
+    expenses: absorb(
+      db.expenses,
+      incoming.expenses,
+      (row) => `${row.date}|${row.amount}|${row.currency}|${row.title.trim().toLowerCase()}`,
+    ),
+    reminders: absorb(
+      db.reminders,
+      incoming.reminders,
+      (row) => `${row.date}|${row.time}|${row.title.trim().toLowerCase()}`,
+    ).sort(byDue),
+    splits: absorb(
+      db.splits,
+      incoming.splits,
+      (row) => `${row.date}|${row.title.trim().toLowerCase()}`,
+    ),
+    wishlist: absorb(
+      db.wishlist,
+      incoming.wishlist,
+      (row) => `${row.country}|${row.name.trim().toLowerCase()}`,
+    ),
+    phrases: absorb(
+      db.phrases,
+      incoming.phrases,
+      (row) => `${row.from}|${row.to}|${row.source.trim().toLowerCase()}`,
+    ),
+    // Labels are added, never replaced: a file's tag list should not take
+    // yours away, and an item pointing at a tag id nobody has is a blank chip.
+    tags: [...db.tags, ...incoming.tags.filter((tag) => !db.tags.some((mine) => mine.id === tag.id))],
+    categories: [
+      ...db.categories,
+      ...incoming.categories.filter((tag) => !db.categories.some((mine) => mine.id === tag.id)),
+    ],
+    settings: empty ? incoming.settings : db.settings,
+  }
+
+  await writeDb(next)
+  return { added, skipped }
 }
 
 // ------------------------------------------------------------------ phrases

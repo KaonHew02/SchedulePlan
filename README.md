@@ -225,8 +225,18 @@ the top of **More** is what makes it survivable:
   for it. When the hour is up it stops and says so, rather than being a switch
   that quietly stopped working after lunch.
 
-Import and From Drive both **replace** rather than merge, and both say what
-they are about to overwrite first. Tapping the saved time opens **Your data**,
+**From Drive replaces; Import adds.** They look like one gesture and are not
+one job. The copy in Drive *is* the notebook, so pulling it down should leave
+this device looking like that copy. A file you are handed is a different
+animal — it can be a whole notebook or five rows of an itinerary somebody
+prepared for you, and replacing on the strength of that meant the only way to
+accept the five was to lose everything else. So Import adds, and skips rows it
+already has: importing your own backup over your own notebook now finds
+everything present and changes nothing, rather than giving you two of every
+day. It never takes your settings from the file either, unless there is
+nothing here to overrule them. Both say what they are about to do first.
+
+Tapping the saved time opens **Your data**,
 which says which store, whether the browser has agreed to keep it, how much
 room it is using and when Drive last saw a copy.
 
