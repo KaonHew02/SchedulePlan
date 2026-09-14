@@ -168,6 +168,18 @@ The tag is matched by **id**, so renaming it to 'Trips' or swapping the
 aeroplane for a suitcase keeps working. Delete it outright and Travel goes
 quiet.
 
+One journey is usually several rows in the diary — Danang, then Hoi An, then
+Danang again — and Travel listed three trips where there was one. Any row can
+be marked **part of** another on the schedule form, which makes it a *leg*: it
+stays in the diary, still counts as a place you have been, and stops being its
+own line in Travel. The trip then spans its legs' dates, adds up their
+spending, and lists them as stops on its page. The shape is borrowed from
+`Expense.schedule_id`, which already binds a receipt to the day it belongs to.
+
+Counting and listing are deliberately different: the list shows trips, the
+counters and the globe read every visit including the legs. Otherwise joining
+two rows would quietly delete a destination.
+
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
 days it covers, and its files — which can be added right there, rather than
 only in the schedule form, since a boarding pass is something you are handed

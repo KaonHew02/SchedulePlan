@@ -9,10 +9,13 @@ import { placeLabel } from '../lib/places'
 import {
   deleteTripLink,
   lastDay,
+  legsOf,
   saveTripFiles,
   saveTripLink,
   saveTripPlan,
+  spanOf,
   useExpenses,
+  useSchedule,
   useSettings,
 } from '../lib/store'
 import type { ScheduleItem } from '../types'
@@ -84,6 +87,10 @@ export default function TripScreen({
 }) {
   const settings = useSettings()
   const expenses = useExpenses()
+  const schedule = useSchedule()
+
+  const legs = useMemo(() => legsOf(schedule, trip.id), [schedule, trip.id])
+  const span = useMemo(() => spanOf(trip, legs), [trip, legs])
 
   /*
    * The plan is typed into local state and written a moment after typing
@@ -113,15 +120,22 @@ export default function TripScreen({
   const [linkError, setLinkError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
 
-  const spent = useMemo(
-    () =>
-      expenses
-        .filter((expense) => expense.schedule_id === trip.id)
-        .reduce((sum, expense) => sum + expense.amount, 0),
-    [expenses, trip.id],
-  )
+  /*
+   * The trip's money, its legs' included.
+   *
+   * A dinner in Hoi An is attached to the Hoi An row, and Hoi An is three days
+   * of this journey — so a total that counted only receipts pinned to the
+   * first row would quietly under-report the trip by however much of it
+   * happened on the other rows.
+   */
+  const spent = useMemo(() => {
+    const ids = new Set([trip.id, ...legs.map((leg) => leg.id)])
+    return expenses
+      .filter((expense) => expense.schedule_id !== null && ids.has(expense.schedule_id))
+      .reduce((sum, expense) => sum + expense.amount, 0)
+  }, [expenses, trip.id, legs])
 
-  const days = daysBetween(trip.date, lastDay(trip))
+  const days = daysBetween(span.start, span.end)
 
   async function addLink() {
     if (!safeUrl(url)) {
@@ -162,7 +176,7 @@ export default function TripScreen({
                 {placeLabel(trip.place)}
               </span>
               <span className="block truncate text-[13px] text-neutral-400">
-                {rangeLabel(trip.date, lastDay(trip))}
+                {rangeLabel(span.start, span.end)}
                 {days > 1 && ` · ${days} days`}
               </span>
             </span>
@@ -175,6 +189,38 @@ export default function TripScreen({
               </span>
             )}
           </div>
+
+          {/*
+            The legs, when there are any. This is the reason they exist: one
+            journey to Vietnam is Danang, then Hoi An, then Danang again, and
+            Travel listed three trips where there was one. They are joined on
+            the schedule form — 'Part of trip' — and this is where the joining
+            shows up as something other than a row that went missing.
+          */}
+          {legs.length > 0 && (
+            <>
+              <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+                Stops · {legs.length + 1}
+              </h2>
+              <div className="divide-y divide-neutral-100 border-y border-neutral-100">
+                {[trip, ...legs].map((stop) => (
+                  <div key={stop.id} className="flex items-baseline gap-3 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px]">{stop.title}</span>
+                      {stop.place && (
+                        <span className="block truncate text-[12px] text-neutral-400">
+                          {placeLabel(stop.place)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
+                      {rangeLabel(stop.date, lastDay(stop))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Plan</h2>
           <textarea

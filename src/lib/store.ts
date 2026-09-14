@@ -19,7 +19,7 @@ import { DB_KEY, RECORDS, idbGet, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
 import { safeUrl } from './links'
 import { divideCents } from './split'
-import { DEFAULT_CATEGORIES, DEFAULT_TAGS, makeTagId } from './tags'
+import { DEFAULT_CATEGORIES, DEFAULT_TAGS, TRAVEL_TAG, makeTagId } from './tags'
 import type {
   Attachment,
   BillSplit,
@@ -174,9 +174,10 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
         ? { country: raw.place.country, city: raw.place.city ?? null }
         : null,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
-    // Both absent from every backup written before the trip page existed.
+    // All absent from every backup written before the trip page existed.
     plan: typeof raw.plan === 'string' ? raw.plan : null,
     links: Array.isArray(raw.links) ? raw.links : [],
+    trip_id: typeof raw.trip_id === 'number' ? raw.trip_id : null,
   }
 }
 
@@ -420,6 +421,53 @@ const orphaned = (before: Attachment[], after: Attachment[]): string[] => {
 /** The last day an item covers — its own date when it does not span. */
 export const lastDay = (item: ScheduleItem): string => item.end_date ?? item.date
 
+/**
+ * Somewhere you actually went: tagged Travel, with a country on it.
+ *
+ * This is what the counters and the globe are made of. It counts legs as well
+ * as trips, because Hoi An is a place you have been whether it is its own row
+ * in Travel or the middle three days of the Vietnam one.
+ */
+export const isVisit = (item: ScheduleItem): boolean =>
+  Boolean(item.place?.country && item.tag === TRAVEL_TAG)
+
+/**
+ * A trip in its own right rather than a leg of one — one row in Travel.
+ *
+ * A leg whose trip has gone missing counts as its own trip again, which
+ * `deleteSchedule` already makes sure of; this is the belt to that braces,
+ * because a notebook can also arrive from a file.
+ */
+export const isTrip = (item: ScheduleItem, schedule: ScheduleItem[]): boolean =>
+  isVisit(item) &&
+  (item.trip_id === null ||
+    item.trip_id === undefined ||
+    !schedule.some((other) => other.id === item.trip_id))
+
+/**
+ * The whole stretch a trip covers, legs included.
+ *
+ * A trip row used to show its own two dates. Once Hoi An and the second
+ * Danang leg hang off it, '16 – 17 Sep' is the first three days of a five-day
+ * journey, which reads as a mistake rather than as a detail.
+ */
+export function spanOf(
+  trip: ScheduleItem,
+  legs: ScheduleItem[],
+): { start: string; end: string } {
+  let start = trip.date
+  let end = lastDay(trip)
+  for (const leg of legs) {
+    if (leg.date < start) start = leg.date
+    if (lastDay(leg) > end) end = lastDay(leg)
+  }
+  return { start, end }
+}
+
+/** What is bound to a trip, earliest first. */
+export const legsOf = (schedule: ScheduleItem[], tripId: number): ScheduleItem[] =>
+  schedule.filter((item) => item.trip_id === tripId).sort(byTimeline)
+
 /** Does this item sit on this day at all? True for every day a trip covers. */
 export const occupies = (item: ScheduleItem, day: string): boolean =>
   item.date <= day && lastDay(item) >= day
@@ -499,6 +547,7 @@ export const store = {
       ...cleanScheduleDraft(draft),
       plan: null,
       links: [],
+      trip_id: draft.trip_id ?? null,
     }
     await writeDb({ ...db, schedule: [...db.schedule, item] })
     return item
@@ -515,6 +564,7 @@ export const store = {
       // changing the time of a trip should not empty its plan.
       plan: existing.plan,
       links: existing.links,
+      trip_id: draft.trip_id ?? null,
     }
     await writeDb({
       ...db,
@@ -531,7 +581,12 @@ export const store = {
     if (!existing) throw new Error('That schedule item no longer exists.')
     await writeDb({
       ...db,
-      schedule: db.schedule.filter((item) => item.id !== id),
+      // Deleting a trip sets its legs free rather than leaving them pointing
+      // at a number nothing answers to. They go back to being trips of their
+      // own, which is what they were before they were joined.
+      schedule: db.schedule
+        .filter((item) => item.id !== id)
+        .map((item) => (item.trip_id === id ? { ...item, trip_id: null } : item)),
       // An expense keeps its own life; it just stops pointing at a gap.
       expenses: db.expenses.map((expense) =>
         expense.schedule_id === id ? { ...expense, schedule_id: null } : expense,

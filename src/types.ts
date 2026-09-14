@@ -110,6 +110,19 @@ export interface ScheduleItem {
    */
   plan: string | null
   links: TripLink[]
+  /**
+   * The trip this belongs to, when it is a leg of one rather than a trip
+   * itself.
+   *
+   * One journey to Vietnam is often four or five rows in the diary — Danang,
+   * then Hoi An, then Danang again — and Travel listed every one of them as a
+   * separate trip. They are one trip with legs, and this says which.
+   *
+   * The shape is borrowed from `Expense.schedule_id`, which already binds a
+   * receipt to the day it belongs to. Null means this is a trip in its own
+   * right, which is what everything written before this field existed was.
+   */
+  trip_id: number | null
 }
 
 /** What the form sends when creating or editing an item. */
@@ -125,6 +138,8 @@ export interface ScheduleDraft {
   tag: TagId | null
   place: Place | null
   attachments: Attachment[]
+  /** Which trip this is a leg of. See `ScheduleItem.trip_id`. */
+  trip_id?: number | null
 }
 
 /** How often a reminder comes back between its start and its until date. */

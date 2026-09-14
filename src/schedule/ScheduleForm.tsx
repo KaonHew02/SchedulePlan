@@ -5,7 +5,7 @@ import { DateField, Field, TextField, TimeField, Toggle } from '../components/Fo
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
-import { createTag, useSchedule, useTags } from '../lib/store'
+import { createTag, isTrip, useSchedule, useTags } from '../lib/store'
 import type { Attachment, Place, ScheduleDraft, ScheduleItem, TagId } from '../types'
 
 const FORM_ID = 'schedule-form'
@@ -53,7 +53,30 @@ export default function ScheduleForm({
     item?.place?.country ?? prefill?.place?.country ?? null,
   )
   const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
+  const [tripId, setTripId] = useState<number | null>(item?.trip_id ?? null)
   const schedule = useSchedule()
+
+  /*
+   * The trips this row could be a leg of.
+   *
+   * One journey to Vietnam is four rows in the diary and was four trips in
+   * Travel. Joining them needs somewhere to say so, and this is it: pick the
+   * trip and this row stops being a trip of its own and becomes part of that
+   * one — still in the diary, still counted as a place you have been, just no
+   * longer its own line in the list.
+   *
+   * A trip that is already a leg is not offered, because legs of legs is a
+   * shape nothing else here would know what to do with. Nor is this row
+   * itself, for the obvious reason.
+   */
+  const joinable = useMemo(
+    () =>
+      schedule
+        .filter((row) => row.id !== item?.id && isTrip(row, schedule))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 30),
+    [schedule, item?.id],
+  )
   // Countries already in the notebook go to the top of the picker.
   const recentCountries = useMemo(() => {
     const seen: string[] = []
@@ -111,6 +134,7 @@ export default function ScheduleForm({
         tag,
         place: country ? { country, city: city.trim() || null } : null,
         attachments: files,
+        trip_id: tripId,
       })
       // On success the parent closes this sheet.
     } catch (err) {
@@ -248,6 +272,25 @@ export default function ScheduleForm({
               {country && (
                 <Field label="City">
                   <TextField label="City" value={city} onChange={setCity} />
+                </Field>
+              )}
+              {joinable.length > 0 && (
+                <Field label="Part of trip" hint="Groups it under one trip in Travel">
+                  <select
+                    value={tripId ?? ''}
+                    onChange={(event) =>
+                      setTripId(event.target.value ? Number(event.target.value) : null)
+                    }
+                    aria-label="The trip this is part of"
+                    className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-none transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    <option value="">Its own trip</option>
+                    {joinable.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.title} · {shortDate(row.date)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               )}
               <div className="py-3">

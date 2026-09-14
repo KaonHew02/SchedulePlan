@@ -5,11 +5,13 @@ import { ChevronRight, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
-import { TRAVEL_TAG } from '../lib/tags'
 import {
   deleteWish,
+  isTrip,
+  isVisit,
   lastDay,
   occupies,
+  spanOf,
   store,
   updateSettings,
   useExpenses,
@@ -135,25 +137,53 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
    * Travel. Nothing new to learn and nothing new to maintain, at the cost of
    * one rule worth knowing — a trip has to carry the tag.
    */
-  const trips = useMemo(
+  /*
+   * Two different lists out of the same rows, and keeping them apart is the
+   * whole point of legs.
+   *
+   * `trips` is what Travel *lists*: one row per journey. `visits` is what the
+   * counters and the globe are made of, and it includes the legs — Hoi An is
+   * a place K has been whether it is a row of its own or the middle three days
+   * of the Vietnam one. Counting the list would have quietly deleted a
+   * destination the moment two rows were joined.
+   */
+  const visits = useMemo(
     () =>
-      schedule
-        .filter((item): item is ScheduleItem & { place: NonNullable<ScheduleItem['place']> } =>
-          Boolean(item.place?.country && item.tag === TRAVEL_TAG),
-        )
-        .sort((a, b) => b.date.localeCompare(a.date)),
+      schedule.filter(
+        (item): item is ScheduleItem & { place: NonNullable<ScheduleItem['place']> } =>
+          isVisit(item),
+      ),
     [schedule],
   )
+
+  const trips = useMemo(
+    () =>
+      visits
+        .filter((item) => isTrip(item, schedule))
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [visits, schedule],
+  )
+
+  /** The legs of each trip, by trip id. */
+  const legsBy = useMemo(() => {
+    const map = new Map<number, ScheduleItem[]>()
+    for (const item of schedule) {
+      if (item.trip_id === null || item.trip_id === undefined) continue
+      map.set(item.trip_id, [...(map.get(item.trip_id) ?? []), item])
+    }
+    for (const [id, legs] of map) map.set(id, legs.sort((a, b) => a.date.localeCompare(b.date)))
+    return map
+  }, [schedule])
 
   const stats = useMemo(() => {
     const countries = new Set<string>()
     const destinations = new Set<string>()
     const continents = new Set<ContinentCode>()
-    for (const trip of trips) {
-      countries.add(trip.place.country)
+    for (const visit of visits) {
+      countries.add(visit.place.country)
       // A destination is a place, not a visit — three trips to Kyoto is one.
-      destinations.add(`${trip.place.country}:${(trip.place.city ?? '').toLowerCase()}`)
-      const found = countryOf(trip.place.country)
+      destinations.add(`${visit.place.country}:${(visit.place.city ?? '').toLowerCase()}`)
+      const found = countryOf(visit.place.country)
       if (found) continents.add(found.continent)
     }
     return {
@@ -161,17 +191,32 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
       destinations: destinations.size,
       continents: [...continents],
     }
-  }, [trips])
+  }, [visits])
 
-  /** Spend recorded against a trip, in the home currency. */
+  /**
+   * Spend against a trip, in the home currency — its own and its legs'.
+   *
+   * A dinner in Hoi An is money spent on the Vietnam trip, and it is attached
+   * to the Hoi An row, so a trip that only counted its own receipts would
+   * under-report itself by however much of the journey was legs.
+   */
   const spendOf = useMemo(() => {
-    const totals = new Map<number, number>()
+    const perItem = new Map<number, number>()
     for (const expense of expenses) {
       if (expense.schedule_id === null) continue
-      totals.set(expense.schedule_id, (totals.get(expense.schedule_id) ?? 0) + expense.amount)
+      perItem.set(expense.schedule_id, (perItem.get(expense.schedule_id) ?? 0) + expense.amount)
+    }
+    const totals = new Map<number, number>()
+    for (const trip of trips) {
+      const legs = legsBy.get(trip.id) ?? []
+      totals.set(
+        trip.id,
+        (perItem.get(trip.id) ?? 0) +
+          legs.reduce((sum, leg) => sum + (perItem.get(leg.id) ?? 0), 0),
+      )
     }
     return totals
-  }, [expenses])
+  }, [expenses, trips, legsBy])
 
   const here = trips.find((trip) => occupies(trip, today))
   const next = [...trips].reverse().find((trip) => trip.date > today)
@@ -318,7 +363,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           <div className="divide-y divide-neutral-100 border-y border-neutral-100">
             {trips.map((trip) => {
               const spent = spendOf.get(trip.id) ?? 0
-              const nights = daysBetween(trip.date, lastDay(trip))
+              const legs = legsBy.get(trip.id) ?? []
+              const span = spanOf(trip, legs)
+              const nights = daysBetween(span.start, span.end)
               return (
                 <div key={trip.id} className="group flex items-center gap-3 py-3">
                   <button
@@ -329,8 +376,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-medium">{trip.title}</span>
                       <span className="block truncate text-[12px] text-neutral-400">
-                        {placeLabel(trip.place)} · {rangeLabel(trip.date, lastDay(trip))}
+                        {placeLabel(trip.place)} · {rangeLabel(span.start, span.end)}
                         {nights > 1 && ` · ${nights} days`}
+                        {legs.length > 0 && ` · ${legs.length + 1} stops`}
                         {(trip.plan || trip.links.length > 0) && ' · has a page'}
                       </span>
                     </span>
