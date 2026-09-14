@@ -41,6 +41,24 @@ export interface Place {
   city: string | null
 }
 
+/**
+ * A phrase that has been translated once and kept.
+ *
+ * Kept because the translator needs a signal and a border desk does not have
+ * one. Both sides are stored rather than just the answer: half the use of a
+ * phrase you already have is pointing at the Chinese to find it again.
+ */
+export interface Phrase {
+  id: number
+  from: string
+  to: string
+  source: string
+  result: string
+  /** Held at the top of the list, above everything by recency. */
+  starred: boolean
+  savedAt: string
+}
+
 /** Somewhere you have not been yet. */
 export interface WishPlace {
   id: number

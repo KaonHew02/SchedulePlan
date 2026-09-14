@@ -2,8 +2,9 @@ import { useState, type ComponentType } from 'react'
 import BackupBar from '../components/BackupBar'
 import CurrencySelect from '../components/CurrencySelect'
 import DataSheet from '../components/DataSheet'
-import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
+import { ChevronRight, ScanIcon, TagIcon, TranslateIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
+import TranslateScreen from '../translate/TranslateScreen'
 import LabelsScreen from '../tools/LabelsScreen'
 import ScanScreen from '../tools/ScanScreen'
 import { updateSettings, useSettings } from '../lib/store'
@@ -15,7 +16,7 @@ import { updateSettings, useSettings } from '../lib/store'
  * is the point of this screen working: things graduate out of it when they
  * turn out to be used every day.
  */
-type Page = 'scan' | 'tags' | 'categories'
+type Page = 'scan' | 'translate' | 'tags' | 'categories'
 
 function Row({
   icon: Icon,
@@ -51,6 +52,7 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
   const back = () => setPage(null)
 
   if (page === 'scan') return <ScanScreen onBack={back} onToast={onToast} />
+  if (page === 'translate') return <TranslateScreen onBack={back} onToast={onToast} />
   if (page === 'tags') return <LabelsScreen kind="tags" onBack={back} onToast={onToast} />
   if (page === 'categories') {
     return <LabelsScreen kind="categories" onBack={back} onToast={onToast} />
@@ -80,6 +82,12 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
             label="Document scanner"
             hint="Read a booking or a page into the schedule"
             onClick={() => setPage('scan')}
+          />
+          <Row
+            icon={TranslateIcon}
+            label="Translate"
+            hint="Say it in their language, or show them the screen"
+            onClick={() => setPage('translate')}
           />
         </div>
 

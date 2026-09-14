@@ -24,6 +24,7 @@ import type {
   BillSplit,
   Expense,
   ExpenseDraft,
+  Phrase,
   Reminder,
   ReminderDraft,
   ScheduleDraft,
@@ -67,6 +68,7 @@ export interface Snapshot {
   reminders: Reminder[]
   splits: BillSplit[]
   wishlist: WishPlace[]
+  phrases: Phrase[]
   settings: Settings
   /** Present in a full export; absent when only the records were wanted. */
   files?: FilePayload[]
@@ -80,6 +82,7 @@ interface DB {
   reminders: Reminder[]
   splits: BillSplit[]
   wishlist: WishPlace[]
+  phrases: Phrase[]
   settings: Settings
 }
 
@@ -100,6 +103,7 @@ const EMPTY: DB = {
   reminders: [],
   splits: [],
   wishlist: [],
+  phrases: [],
   settings: DEFAULT_SETTINGS,
 }
 
@@ -292,6 +296,9 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
     reminders: Array.isArray(parsed?.reminders) ? parsed.reminders.map(fillReminder) : [],
     splits: Array.isArray(parsed?.splits) ? parsed.splits.map(fillSplit) : [],
     wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist : [],
+    // Absent from every backup written before the translator existed, which
+    // is the whole reason this reads defensively rather than trusting it.
+    phrases: Array.isArray(parsed?.phrases) ? parsed.phrases : [],
     settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
   }
 }
@@ -348,6 +355,7 @@ function toDocument(db: DB): Snapshot {
     reminders: db.reminders,
     splits: db.splits,
     wishlist: db.wishlist,
+    phrases: db.phrases,
     settings: db.settings,
   }
 }
@@ -932,4 +940,61 @@ export async function restore(candidate: unknown): Promise<number> {
 
   await writeDb(next)
   return countIn(next)
+}
+
+// ------------------------------------------------------------------ phrases
+
+export function usePhrases(): Phrase[] {
+  return useSyncExternalStore(subscribe, () => readDb().phrases)
+}
+
+/**
+ * Keep a phrase, or move an identical one back to the top.
+ *
+ * Translating the same thing twice is what happens when you forget you already
+ * have it, and it should leave one row rather than two — so a repeat is dated
+ * forward instead of added, and keeps whatever star it already had.
+ */
+export async function savePhrase(
+  phrase: Omit<Phrase, 'id' | 'savedAt' | 'starred'> & { starred?: boolean },
+): Promise<Phrase> {
+  const db = readDb()
+  const source = phrase.source.trim()
+  const result = phrase.result.trim()
+  if (!source || !result) throw new Error('Nothing to keep.')
+
+  const same = db.phrases.find(
+    (row) => row.from === phrase.from && row.to === phrase.to && row.source === source,
+  )
+  const saved: Phrase = {
+    id: same?.id ?? nextId(db.phrases),
+    from: phrase.from,
+    to: phrase.to,
+    source,
+    result,
+    starred: phrase.starred ?? same?.starred ?? false,
+    savedAt: new Date().toISOString(),
+  }
+  await writeDb({
+    ...db,
+    phrases: same
+      ? db.phrases.map((row) => (row.id === saved.id ? saved : row))
+      : [...db.phrases, saved],
+  })
+  return saved
+}
+
+export async function togglePhraseStar(id: number): Promise<void> {
+  const db = readDb()
+  await writeDb({
+    ...db,
+    phrases: db.phrases.map((row) =>
+      row.id === id ? { ...row, starred: !row.starred } : row,
+    ),
+  })
+}
+
+export async function deletePhrase(id: number): Promise<void> {
+  const db = readDb()
+  await writeDb({ ...db, phrases: db.phrases.filter((row) => row.id !== id) })
 }

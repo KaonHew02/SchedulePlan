@@ -223,3 +223,36 @@ export const GlobeIcon = ({ className = 'w-6 h-6' }: Props) => (
     <path d="M3.8 9.5h14.4M3.8 14.5h14.4" />
   </svg>
 )
+
+export const TranslateIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 5h9M7.5 5v1.6c0 3-1.7 5.7-4.5 7.4M5 9.4c0 2.3 2.7 4.4 6 4.8" />
+    <path d="M12.5 20.5 16.75 10l4.25 10.5M14.2 17h5.1" />
+  </svg>
+)
+
+export const SpeakerIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 5 6.5 8.7H3.5v6.6h3L11 19z" />
+    <path d="M15 9.2a4 4 0 0 1 0 5.6M17.8 6.4a8 8 0 0 1 0 11.2" />
+  </svg>
+)
+
+export const SpeakerOffIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 5 6.5 8.7H3.5v6.6h3L11 19z" />
+    <path d="m15.5 9.5 5 5M20.5 9.5l-5 5" />
+  </svg>
+)
+
+export const StarIcon = ({ className = 'w-4 h-4', filled = false }: Props & { filled?: boolean }) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
+    <path d="m12 3.8 2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.73L6.8 19.85l1-5.8-4.2-4.1 5.8-.85z" />
+  </svg>
+)
+
+export const ZoomIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </svg>
+)

@@ -63,6 +63,22 @@ the thousand. So **the lot is tappable**: tap it in the rate line and pick the
 one in front of you. It sticks per currency, re-quotes the whole screen, and
 the built-in choice is marked so there is a way back to it.
 
+**Translate** — behind More, for the moment in front of somebody where the
+words are not there. Five travel languages, any two of them, and three things
+to do with the answer: **say it** through the phone's own voice, **show it** at
+a size readable across a food stall, and keep it. Everything translated is
+written into the notebook, because the places you need this most — a border
+queue, a market, a bus — have the worst signal, and the second time you need a
+phrase there should be no request at all. A dozen travel basics are in the back
+of the book from the start.
+
+Two translators with no key and no account, tried in order, and the screen says
+which one answered. Saying it out loud is the browser's own voice and therefore
+the device's: a phone has Vietnamese, a Windows laptop with no language pack
+has three American voices and nothing else. Where there is no voice the app
+says so rather than handing the text to an English one, which sounds like it
+worked and is not.
+
 **Bill split** — the second tab inside Expenses, and built around *what each
 person had* rather than how to divide each item. A line sits under the person
 who ate it; anything the table shared goes on its own card and divides across
@@ -245,6 +261,8 @@ SchedulePlan/
       autosave.ts               The Drive Auto switch, and its one honest limit
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
+      translate.ts              The translator chain, the voice lookup, and the
+                                starter phrasebook
       places.ts                 The country table, and the globe projection
       date.ts                   Date maths and formatting (no date library)
       tags.ts                   Default tags, categories, emoji choices
@@ -258,6 +276,7 @@ SchedulePlan/
                                 MonthGrid, ItemCard, ScheduleForm,
                                 ScheduleDetail
     travel/                     TravelScreen, Globe, WishForm
+    translate/                  TranslateScreen
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
                                 ReceiptScan, SplitsScreen
     currency/                   CurrencyScreen
