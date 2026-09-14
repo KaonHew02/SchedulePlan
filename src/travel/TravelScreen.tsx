@@ -19,6 +19,7 @@ import {
 import ScheduleForm from '../schedule/ScheduleForm'
 import type { ScheduleDraft, ScheduleItem, WishPlace } from '../types'
 import Globe from './Globe'
+import TripScreen from './TripScreen'
 import WishForm from './WishForm'
 
 /**
@@ -111,6 +112,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
   const [form, setForm] = useState<{ wish: WishPlace | null } | null>(null)
   // A wish on its way to becoming a trip: the schedule form is open on it.
   const [visiting, setVisiting] = useState<WishPlace | null>(null)
+  // A trip opened onto its own page. Held as an id rather than the item so
+  // that editing the plan re-renders with the new one instead of a stale copy.
+  const [openTripId, setOpenTripId] = useState<number | null>(null)
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalDraft, setGoalDraft] = useState(String(settings.travelGoal))
 
@@ -120,7 +124,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
     () =>
       schedule
         .filter((item): item is ScheduleItem & { place: NonNullable<ScheduleItem['place']> } =>
-          Boolean(item.place?.country),
+          Boolean(item.place?.country && item.place.trip),
         )
         .sort((a, b) => b.date.localeCompare(a.date)),
     [schedule],
@@ -144,6 +148,24 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
     }
   }, [trips])
 
+  /** Take something out of Travel without touching anything else about it. */
+  async function demote(trip: ScheduleItem & { place: NonNullable<ScheduleItem['place']> }) {
+    await store.updateSchedule(trip.id, {
+      date: trip.date,
+      end_date: trip.end_date,
+      all_day: trip.all_day,
+      start_time: trip.start_time,
+      end_time: trip.end_time,
+      title: trip.title,
+      location: trip.location,
+      notes: trip.notes,
+      tag: trip.tag,
+      place: { ...trip.place, trip: false },
+      attachments: trip.attachments,
+    })
+    onToast(`${trip.title} is no longer a trip`)
+  }
+
   /** Spend recorded against a trip, in the home currency. */
   const spendOf = useMemo(() => {
     const totals = new Map<number, number>()
@@ -159,6 +181,21 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
   const goalShare = settings.travelGoal
     ? Math.min(1, stats.countries.length / settings.travelGoal)
     : 0
+
+  // Looked up from the live list, so a plan typed on the page is on screen the
+  // moment it is saved — and marking something Not a trip while its own page
+  // is open drops back here instead of leaving a page for a trip that is gone.
+  const openTrip = trips.find((trip) => trip.id === openTripId)
+  if (openTrip) {
+    return (
+      <TripScreen
+        key={openTrip.id}
+        trip={openTrip}
+        onBack={() => setOpenTripId(null)}
+        onToast={onToast}
+      />
+    )
+  }
 
   return (
     <>
@@ -276,8 +313,8 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center">
             <p className="text-[14px] text-neutral-600">No trips recorded yet.</p>
             <p className="mx-auto mt-1 max-w-[280px] text-[13px] leading-5 text-neutral-400">
-              A trip is just a schedule item with a country on it. Add one in Schedule, open
-              &ldquo;Add location, notes or files&rdquo; and pick the country.
+              A trip is a schedule item with a country on it, marked as a trip. Add one in
+              Schedule, open &ldquo;Add location, notes or files&rdquo; and pick the country.
             </p>
           </div>
         ) : (
@@ -286,20 +323,41 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
               const spent = spendOf.get(trip.id) ?? 0
               const nights = daysBetween(trip.date, lastDay(trip))
               return (
-                <div key={trip.id} className="flex items-center gap-3 py-3">
-                  <CountryBadge code={trip.place.country} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-medium">{trip.title}</span>
-                    <span className="block truncate text-[12px] text-neutral-400">
-                      {placeLabel(trip.place)} · {rangeLabel(trip.date, lastDay(trip))}
-                      {nights > 1 && ` · ${nights} days`}
+                <div key={trip.id} className="group flex items-center gap-3 py-3">
+                  <button
+                    onClick={() => setOpenTripId(trip.id)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <CountryBadge code={trip.place.country} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium">{trip.title}</span>
+                      <span className="block truncate text-[12px] text-neutral-400">
+                        {placeLabel(trip.place)} · {rangeLabel(trip.date, lastDay(trip))}
+                        {nights > 1 && ` · ${nights} days`}
+                        {(trip.plan || trip.links.length > 0) && ' · has a page'}
+                      </span>
                     </span>
-                  </span>
+                  </button>
                   {spent > 0 && (
                     <span className="shrink-0 text-[13px] tabular-nums text-neutral-500">
                       {money(spent, settings.currency)}
                     </span>
                   )}
+                  {/*
+                    Here as well as on the form, because this is where you find
+                    out: the shop only looks wrong once it is sitting in a list
+                    of trips. It takes the item out of Travel and leaves it
+                    alone in the diary — the country stays on it, since it is
+                    still true.
+                  */}
+                  <button
+                    onClick={() => void demote(trip)}
+                    title="Take this out of Travel"
+                    aria-label={`${trip.title} is not a trip`}
+                    className="shrink-0 rounded-full px-2 py-1 text-[12px] text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                  >
+                    Not a trip
+                  </button>
                 </div>
               )
             })}
@@ -387,7 +445,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           prefill={{
             title: visiting.name,
             notes: visiting.note,
-            place: { country: visiting.country, city: null },
+            place: { country: visiting.country, city: null, trip: true },
             allDay: true,
             attachments: visiting.photo ? [visiting.photo] : [],
           }}

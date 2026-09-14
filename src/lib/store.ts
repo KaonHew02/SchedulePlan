@@ -17,6 +17,7 @@
 import { useSyncExternalStore } from 'react'
 import { DB_KEY, RECORDS, idbGet, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
+import { safeUrl } from './links'
 import { divideCents } from './split'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, makeTagId } from './tags'
 import type {
@@ -33,6 +34,7 @@ import type {
   SplitLine,
   SplitPerson,
   Tag,
+  TripLink,
   WishPlace,
 } from '../types'
 
@@ -169,9 +171,18 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
     // Backups from before Travel existed have no place at all.
     place:
       raw.place && typeof raw.place.country === 'string'
-        ? { country: raw.place.country, city: raw.place.city ?? null }
+        ? {
+            country: raw.place.country,
+            city: raw.place.city ?? null,
+            // Written before the switch existed means it was counting, and a
+            // backup should restore the notebook you had, not a tidier one.
+            trip: raw.place.trip !== false,
+          }
         : null,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    // Both absent from every backup written before the trip page existed.
+    plan: typeof raw.plan === 'string' ? raw.plan : null,
+    links: Array.isArray(raw.links) ? raw.links : [],
   }
 }
 
@@ -458,7 +469,11 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
     notes: draft.notes?.trim() || null,
     tag: draft.tag ?? null,
     place: draft.place?.country
-      ? { country: draft.place.country.toUpperCase(), city: draft.place.city?.trim() || null }
+      ? {
+          country: draft.place.country.toUpperCase(),
+          city: draft.place.city?.trim() || null,
+          trip: draft.place.trip !== false,
+        }
       : null,
     attachments: draft.attachments ?? [],
   }
@@ -488,7 +503,13 @@ export function onDay(items: ScheduleItem[], day: string): ScheduleItem[] {
 export const store = {
   async createSchedule(draft: ScheduleDraft): Promise<ScheduleItem> {
     const db = readDb()
-    const item: ScheduleItem = { id: nextId(db.schedule), ...cleanScheduleDraft(draft) }
+    // The add form asks for neither; the trip page is what writes them.
+    const item: ScheduleItem = {
+      id: nextId(db.schedule),
+      ...cleanScheduleDraft(draft),
+      plan: null,
+      links: [],
+    }
     await writeDb({ ...db, schedule: [...db.schedule, item] })
     return item
   },
@@ -497,7 +518,14 @@ export const store = {
     const db = readDb()
     const existing = db.schedule.find((item) => item.id === id)
     if (!existing) throw new Error('That schedule item no longer exists.')
-    const updated: ScheduleItem = { id, ...cleanScheduleDraft(draft) }
+    const updated: ScheduleItem = {
+      id,
+      ...cleanScheduleDraft(draft),
+      // The form has no field for these, so saving it must not erase them:
+      // changing the time of a trip should not empty its plan.
+      plan: existing.plan,
+      links: existing.links,
+    }
     await writeDb({
       ...db,
       schedule: db.schedule.map((item) => (item.id === id ? updated : item)),
@@ -997,4 +1025,61 @@ export async function togglePhraseStar(id: number): Promise<void> {
 export async function deletePhrase(id: number): Promise<void> {
   const db = readDb()
   await writeDb({ ...db, phrases: db.phrases.filter((row) => row.id !== id) })
+}
+
+// --------------------------------------------------------------- trip page
+
+/** The itinerary. Written from the trip page, which is the only reader. */
+export async function saveTripPlan(id: number, plan: string): Promise<void> {
+  const db = readDb()
+  const text = plan.trim()
+  await writeDb({
+    ...db,
+    schedule: db.schedule.map((item) =>
+      item.id === id ? { ...item, plan: text || null } : item,
+    ),
+  })
+}
+
+/**
+ * Add or replace a link on a trip.
+ *
+ * The url is normalised and checked before it is stored rather than before it
+ * is rendered: an `href` is a place scripts can run from, so the one thing a
+ * saved link must be is http or https.
+ */
+export async function saveTripLink(
+  id: number,
+  link: { id?: number; label: string; url: string },
+): Promise<void> {
+  const db = readDb()
+  const item = db.schedule.find((row) => row.id === id)
+  if (!item) throw new Error('That trip no longer exists.')
+
+  const url = safeUrl(link.url)
+  if (!url) throw new Error('That does not look like a link.')
+
+  const saved: TripLink = {
+    id: link.id ?? nextId(item.links),
+    label: link.label.trim(),
+    url,
+  }
+  const links = item.links.some((row) => row.id === saved.id)
+    ? item.links.map((row) => (row.id === saved.id ? saved : row))
+    : [...item.links, saved]
+
+  await writeDb({
+    ...db,
+    schedule: db.schedule.map((row) => (row.id === id ? { ...row, links } : row)),
+  })
+}
+
+export async function deleteTripLink(id: number, linkId: number): Promise<void> {
+  const db = readDb()
+  await writeDb({
+    ...db,
+    schedule: db.schedule.map((item) =>
+      item.id === id ? { ...item, links: item.links.filter((row) => row.id !== linkId) } : item,
+    ),
+  })
 }

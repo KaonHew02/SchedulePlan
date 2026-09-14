@@ -256,3 +256,10 @@ export const ZoomIcon = ({ className = 'w-4 h-4' }: Props) => (
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
   </svg>
 )
+
+export const LinkIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.5 13.5a3.7 3.7 0 0 0 5.4.3l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.5 1.5" />
+    <path d="M13.5 10.5a3.7 3.7 0 0 0-5.4-.3l-2.6 2.6a3.7 3.7 0 0 0 5.2 5.2l1.5-1.5" />
+  </svg>
+)

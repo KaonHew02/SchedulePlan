@@ -34,11 +34,39 @@ export interface Attachment {
  * what lets the Travel screen count countries without inventing a second kind
  * of record for the whole app to know about.
  */
+/**
+ * Something on the internet that belongs to a trip — the vlog, most of the
+ * time, but a booking confirmation or a map pin just as well.
+ *
+ * A link and not the file. A ten-minute vlog is hundreds of megabytes, which
+ * does not fit in a Drive backup and may not fit in browser storage at all,
+ * and it is already sitting on YouTube anyway. What the notebook is missing is
+ * not the video, it is which video went with which trip.
+ */
+export interface TripLink {
+  id: number
+  /** What to call it. Falls back to the host when left blank. */
+  label: string
+  /** Always http or https — see `safeUrl`. */
+  url: string
+}
+
 export interface Place {
   /** ISO 3166-1 alpha-2. The flag, the continent and the globe all key off it. */
   country: string
   /** Free text: 'Da Nang', 'Kyoto'. Null when only the country is known. */
   city: string | null
+  /**
+   * Whether Travel should count this.
+   *
+   * A country on an item used to be the whole test, which made a run to Daiso
+   * with 'Malaysia' on it a trip, sitting in the list between two real ones and
+   * counting towards a goal of fifty countries. The country field says *where*
+   * something is and plenty of things worth writing down are somewhere without
+   * being travel — so whether it is a trip is now its own answer rather than a
+   * side effect of having filled a field in.
+   */
+  trip: boolean
 }
 
 /**
@@ -86,6 +114,13 @@ export interface ScheduleItem {
   tag: TagId | null
   place: Place | null
   attachments: Attachment[]
+  /**
+   * The itinerary, kept apart from `notes` on purpose: notes is a line, shown
+   * inline after the time in every list, and an itinerary pasted into it would
+   * wreck all of them. This one is only ever read on the trip page.
+   */
+  plan: string | null
+  links: TripLink[]
 }
 
 /** What the form sends when creating or editing an item. */

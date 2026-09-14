@@ -146,12 +146,32 @@ top-level object**. Work, travel, badminton and lunch are all schedule items;
 expenses, receipts, attachments and splits hang off them. Travel does not break
 that.
 
-A trip is a schedule item that runs across days and has a **country** on it —
-one more optional field beside location and notes. Everything on the Travel
-screen is derived from that: the counters, the goal, the globe, the trip list,
-and the spend, which comes free because expenses already link to schedule
-items. Adding a country to something already in the diary is all it takes to
-appear there.
+A trip is a schedule item with a **country** on it that is *marked as a trip* —
+two optional fields beside location and notes. Everything on the Travel screen
+is derived from that: the counters, the goal, the globe, the trip list, and the
+spend, which comes free because expenses already link to schedule items.
+
+The mark is there because the country on its own was the whole test, and a run
+to Daiso with 'Malaysia' on it was therefore a trip — sitting between two real
+ones and counting towards a goal of fifty countries. A country says *where*
+something is, and plenty of things worth writing down are somewhere without
+being travel. The switch is on by default when a country is picked, and there
+is a **Not a trip** on every row of the Travel list, because the list is where
+you find out.
+
+Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
+days it covers, its photos. The plan is kept apart from the item's notes on
+purpose — notes is a line, shown inline after the time in every list, and an
+itinerary pasted into it would wreck all of them. It saves as you type rather
+than on a button or on blur, because a plan written on a bus and then locked in
+a pocket never blurs.
+
+Vlogs are **links, not files**. A ten-minute vlog is hundreds of megabytes,
+which does not fit in a Drive backup and may not fit in browser storage at all,
+and it is already on YouTube — what the notebook was missing is not the video
+but which video went with which trip. Links are checked for scheme when they
+are stored rather than when they are drawn, because an `href` is somewhere code
+can run and a notebook is a file that gets exported and imported again.
 
 The one thing Travel stores of its own is the **wishlist**, because somewhere
 you have *not* been is not a schedule item at all.
@@ -263,6 +283,7 @@ SchedulePlan/
       drive-config.ts           Client ID and folder ID (both safe to publish)
       translate.ts              The translator chain, the voice lookup, and the
                                 starter phrasebook
+      links.ts                  Making a pasted link safe to put in an href
       places.ts                 The country table, and the globe projection
       date.ts                   Date maths and formatting (no date library)
       tags.ts                   Default tags, categories, emoji choices
@@ -275,7 +296,7 @@ SchedulePlan/
     schedule/                   DayStrip, DayView, WeekView, MonthView,
                                 MonthGrid, ItemCard, ScheduleForm,
                                 ScheduleDetail
-    travel/                     TravelScreen, Globe, WishForm
+    travel/                     TravelScreen, TripScreen, Globe, WishForm
     translate/                  TranslateScreen
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
                                 ReceiptScan, SplitsScreen
