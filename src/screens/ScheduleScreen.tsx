@@ -242,7 +242,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
             ) : (
               <div className="space-y-2">
                 {upNext.map((item) => (
-                  <ItemCard key={item.id} item={item} onOpen={setDetail} />
+                  <ItemCard key={item.id} item={item} onOpen={setDetail} compact />
                 ))}
               </div>
             )}

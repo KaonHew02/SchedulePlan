@@ -41,7 +41,7 @@ export default function WeekView({
             </button>
             <div className="space-y-2">
               {dayItems.map((item) => (
-                <ItemCard key={item.id} item={item} day={day} onOpen={onOpen} />
+                <ItemCard key={item.id} item={item} day={day} onOpen={onOpen} compact />
               ))}
             </div>
           </section>

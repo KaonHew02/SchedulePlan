@@ -33,11 +33,17 @@ export default function ItemCard({
   day,
   /** Show the start time inside the card — off when a gutter already says it. */
   showTime = true,
+  /**
+   * The card is somewhere narrow — a week column, the Up next rail — so notes
+   * are cut to two lines. Everywhere with the width for them shows the lot.
+   */
+  compact = false,
 }: {
   item: ScheduleItem
   onOpen: (item: ScheduleItem) => void
   day?: string
   showTime?: boolean
+  compact?: boolean
 }) {
   const tags = useTags()
   const tint = tintFor(item.tag, tags)
@@ -72,8 +78,21 @@ export default function ItemCard({
               )}
             </span>
 
+            {/*
+              Notes keep the lines they were typed with.
+              
+              Without `whitespace-pre-wrap` an address, a phone number, opening
+              hours and what to order all ran together into one grey paragraph
+              — every newline collapsed to a space — and then got cut after two
+              lines of it. K writes these as a block to be read down, and the
+              card was reflowing them into prose and then hiding most of it.
+            */}
             {item.notes && (
-              <span className="mt-0.5 line-clamp-2 block text-[13px] leading-5 text-neutral-500">
+              <span
+                className={`mt-0.5 block whitespace-pre-wrap text-[13px] leading-5 text-neutral-500 ${
+                  compact ? 'line-clamp-2' : ''
+                }`}
+              >
                 {item.notes}
               </span>
             )}
