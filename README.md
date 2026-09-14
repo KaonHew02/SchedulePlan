@@ -160,7 +160,9 @@ is a **Not a trip** on every row of the Travel list, because the list is where
 you find out.
 
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
-days it covers, its photos. The plan is kept apart from the item's notes on
+days it covers, and its files — which can be added right there, rather than
+only in the schedule form, since a boarding pass is something you are handed
+while looking at the trip. The plan is kept apart from the item's notes on
 purpose — notes is a line, shown inline after the time in every list, and an
 itinerary pasted into it would wreck all of them. It saves as you type rather
 than on a button or on blur, because a plan written on a bus and then locked in

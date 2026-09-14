@@ -1074,6 +1074,26 @@ export async function saveTripLink(
   })
 }
 
+/**
+ * Replace a trip's files.
+ *
+ * Straight through to the notebook, the way the plan and the links go: the
+ * trip page has no Save button and adding a boarding pass to it should not be
+ * the one thing on the page that needs one. Bytes for anything dropped are
+ * released, exactly as editing the item through the form would.
+ */
+export async function saveTripFiles(id: number, attachments: Attachment[]): Promise<void> {
+  const db = readDb()
+  const existing = db.schedule.find((item) => item.id === id)
+  if (!existing) throw new Error('That trip no longer exists.')
+
+  await writeDb({
+    ...db,
+    schedule: db.schedule.map((item) => (item.id === id ? { ...item, attachments } : item)),
+  })
+  void deleteFiles(orphaned(existing.attachments, attachments))
+}
+
 export async function deleteTripLink(id: number, linkId: number): Promise<void> {
   const db = readDb()
   await writeDb({

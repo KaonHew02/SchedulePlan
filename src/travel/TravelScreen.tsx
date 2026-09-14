@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useFileUrl } from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
-import { ChevronRight, PinIcon, Plus } from '../components/Icons'
+import { ChevronRight, Close, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
@@ -349,13 +349,20 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                     of trips. It takes the item out of Travel and leaves it
                     alone in the diary — the country stays on it, since it is
                     still true.
+
+                    Drawn as a control and not as grey text. As text it sat at
+                    the end of every row reading like a label on the row —
+                    'Daiso · Malaysia · Not a trip' — which is the opposite of
+                    what it says, and K quite reasonably read the whole list as
+                    already sorted and asked why the errands were still in it.
                   */}
                   <button
                     onClick={() => void demote(trip)}
-                    title="Take this out of Travel"
-                    aria-label={`${trip.title} is not a trip`}
-                    className="shrink-0 rounded-full px-2 py-1 text-[12px] text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                    title="Take this out of Travel — it stays in the diary"
+                    aria-label={`Take ${trip.title} out of Travel`}
+                    className="flex shrink-0 items-center gap-1 rounded-full border border-neutral-200 px-2.5 py-1 text-[12px] text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
                   >
+                    <Close className="h-3 w-3" />
                     Not a trip
                   </button>
                 </div>

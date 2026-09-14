@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileViewer, Thumb } from '../components/Attachments'
+import AttachmentStrip from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
 import { ChevronLeft, LinkIcon, Plus, TrashIcon } from '../components/Icons'
 import { money } from '../lib/currency'
@@ -9,12 +9,13 @@ import { placeLabel } from '../lib/places'
 import {
   deleteTripLink,
   lastDay,
+  saveTripFiles,
   saveTripLink,
   saveTripPlan,
   useExpenses,
   useSettings,
 } from '../lib/store'
-import type { Attachment, ScheduleItem } from '../types'
+import type { ScheduleItem } from '../types'
 
 /**
  * One trip, all of it, on one page.
@@ -110,7 +111,7 @@ export default function TripScreen({
   const [url, setUrl] = useState('')
   const [label, setLabel] = useState('')
   const [linkError, setLinkError] = useState<string | null>(null)
-  const [viewing, setViewing] = useState<Attachment | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   const spent = useMemo(
     () =>
@@ -272,20 +273,27 @@ export default function TripScreen({
           )}
 
           {/*
-            The photos are the item's own attachments rather than a second
-            gallery: a picture added to the trip in Schedule is a picture of
-            the trip, and having two places to put one would mean explaining
-            which.
+            The item's own attachments rather than a second gallery: a photo
+            added to the trip in Schedule is a photo of the trip, and two
+            places to put one would mean explaining which. Shown whether or not
+            there are any, because this page was read-only about files at first
+            — the section simply was not there until something had been
+            attached somewhere else, which is a strange way to be offered a
+            boarding pass slot.
           */}
-          {trip.attachments.length > 0 && (
-            <>
-              <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">Photos & files</h2>
-              <div className="flex flex-wrap gap-2">
-                {trip.attachments.map((file) => (
-                  <Thumb key={file.id} file={file} onOpen={() => setViewing(file)} />
-                ))}
-              </div>
-            </>
+          <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">Photos &amp; files</h2>
+          <AttachmentStrip
+            files={trip.attachments}
+            onChange={(files) => {
+              setFileError(null)
+              void saveTripFiles(trip.id, files).catch((error: unknown) =>
+                setFileError(error instanceof Error ? error.message : 'That would not save.'),
+              )
+            }}
+            onError={setFileError}
+          />
+          {fileError && (
+            <p className="pt-2 text-[12px] leading-5 text-amber-700">{fileError}</p>
           )}
 
           {trip.notes && (
@@ -298,8 +306,6 @@ export default function TripScreen({
           )}
         </div>
       </main>
-
-      {viewing && <FileViewer file={viewing} onClose={() => setViewing(null)} />}
     </>
   )
 }
