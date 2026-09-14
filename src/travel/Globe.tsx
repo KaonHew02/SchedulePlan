@@ -45,11 +45,24 @@ const MAX_ZOOM = 8
  */
 const OCEAN = '#EFEFF2'
 const LAND = '#C6C6CC'
-const LAND_HOVER = '#ADADB6'
 const BEEN = '#B7E764'
-const BEEN_HOVER = '#A3E635'
 const BORDER = '#84848E'
 const EDGE = '#C9C9D2'
+
+/*
+ * The country under the pointer, and it is meant to shout.
+ *
+ * Lighting one used to mean darkening it a single step — #C6C6CC to #ADADB6,
+ * #B7E764 to #A3E635. That is a difference a colour picker can see and a
+ * person leaning at a laptop cannot: K pointed at Malaysia and nothing on
+ * screen moved. So the highlight is a different colour now rather than a
+ * darker shade of the same one — purple for somewhere not visited, deep green
+ * for somewhere visited, each with a heavier outline, and the shape is redrawn
+ * last so no neighbour's border is laid back over it.
+ */
+const LAND_LIT = '#6C5CE7'
+const BEEN_LIT = '#3F6212'
+const LIT_BORDER = '#2E2C43'
 
 const clamp = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
 
@@ -144,7 +157,11 @@ export default function Globe({
       .rotate([-view.lon, -view.lat])
     const draw = world.geoPath(projection)
     return world.shapes
-      .map((shape) => ({
+      .map((shape, index) => ({
+        // Three shapes in the file have no code of their own, so the key
+        // cannot be one. It is fixed here rather than at render time because
+        // the list gets reordered to put the lit country on top.
+        key: shape.code ?? `x${index}`,
         code: shape.code,
         been: shape.code !== null && been.has(shape.code),
         d: draw(shape.feature) ?? '',
@@ -171,8 +188,20 @@ export default function Globe({
     [visited, view, scale, world],
   )
 
-  const shown = picked ?? hovered
+  // Pointing wins over the last tap. The other way round, one click on the
+  // map froze the highlight and nothing you pointed at afterwards lit up.
+  const shown = hovered ?? picked
   const country = shown ? countryOf(shown) : undefined
+
+  // SVG has no z-index: what is drawn last is on top. The lit country goes to
+  // the end so its heavy outline is not half-covered by the countries next to
+  // it, which are drawn after it in the file's own order.
+  const ordered = useMemo(() => {
+    if (!land) return null
+    const lit = (shape: { code: string | null }) =>
+      shape.code !== null && shape.code === shown ? 1 : 0
+    return [...land].sort((a, b) => lit(a) - lit(b))
+  }, [land, shown])
 
   return (
     <div className="flex flex-col items-center">
@@ -254,18 +283,24 @@ export default function Globe({
               changes, the viewBox does not, so a user unit is a screen pixel
               at every zoom — dividing made the borders thinner the further in
               you went, which is backwards. */}
-          {land && (
-            <g stroke={BORDER} strokeWidth="0.6" strokeLinejoin="round" clipPath={`url(#${clip})`}>
-              {land.map((shape, index) => {
+          {ordered && (
+            <g strokeLinejoin="round" clipPath={`url(#${clip})`}>
+              {ordered.map((shape) => {
                 const lit = shape.code !== null && shape.code === shown
                 return (
                   <path
-                    key={shape.code ?? `x${index}`}
+                    key={shape.key}
                     d={shape.d}
-                    fill={
-                      shape.been ? (lit ? BEEN_HOVER : BEEN) : lit ? LAND_HOVER : LAND
-                    }
+                    fill={lit ? (shape.been ? BEEN_LIT : LAND_LIT) : shape.been ? BEEN : LAND}
+                    stroke={lit ? LIT_BORDER : BORDER}
+                    strokeWidth={lit ? 1.4 : 0.6}
                     onPointerEnter={() => shape.code && setHovered(shape.code)}
+                    // Sliding off a coast into the sea should put the country
+                    // out. Only the svg cleared the highlight before, so it
+                    // stayed lit until the pointer left the globe altogether.
+                    onPointerLeave={() =>
+                      setHovered((was) => (was === shape.code ? null : was))
+                    }
                     onClick={() => {
                       if (travelled.current || !shape.code) return
                       setPicked(shape.code)
@@ -280,20 +315,41 @@ export default function Globe({
           <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="none" stroke={EDGE} strokeWidth="1" />
 
           <g transform={`translate(${CENTRE} ${CENTRE})`} clipPath={`url(#${clip})`}>
-            {dots.map(({ country: place, point }) => (
-              <g
-                key={place.code}
-                onPointerEnter={() => setHovered(place.code)}
-                onClick={() => {
-                  if (travelled.current) return
-                  setPicked(place.code)
-                  onPick?.(place.code)
-                }}
-              >
-                <circle cx={point.x} cy={point.y} r="4.5" fill="#FFFFFF" opacity="0.85" />
-                <circle cx={point.x} cy={point.y} r="2.8" fill="#84CC16" />
-              </g>
-            ))}
+            {dots.map(({ country: place, point }) => {
+              // Singapore has no outline to light, so its dot does the job:
+              // same cue, the size a 2.8px mark can manage.
+              const lit = place.code === shown
+              return (
+                <g
+                  key={place.code}
+                  onPointerEnter={() => setHovered(place.code)}
+                  onPointerLeave={() =>
+                    setHovered((was) => (was === place.code ? null : was))
+                  }
+                  onClick={() => {
+                    if (travelled.current) return
+                    setPicked(place.code)
+                    onPick?.(place.code)
+                  }}
+                >
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={lit ? 6.5 : 4.5}
+                    fill="#FFFFFF"
+                    opacity="0.85"
+                  />
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={lit ? 4.2 : 2.8}
+                    fill={lit ? BEEN_LIT : '#84CC16'}
+                    stroke={lit ? LIT_BORDER : 'none'}
+                    strokeWidth="1"
+                  />
+                </g>
+              )
+            })}
           </g>
         </svg>
 

@@ -132,6 +132,90 @@ export function plain(amount: number, code: string): string {
 
 export const decimalsFor = (code: string): number => (ZERO_DECIMAL.has(code) ? 0 : 2)
 
+// ------------------------------------------------------------------- lots
+
+/**
+ * The lot a currency is quoted in.
+ *
+ * Nobody prices a Vietnamese dong. The board at the money changer in Seremban
+ * prices a million of them, a thousand yen, a hundred baht, and one pound —
+ * and the number it shows you is the number you have to check, so those are
+ * the lots this app quotes in too. A rate line reading `1 VND = 0.0002 MYR`
+ * is arithmetically perfect and matches nothing on any wall in Asia.
+ *
+ * The list is the board itself, photographed and typed in, because a rule
+ * derived from magnitude gets AED and DKK wrong: both are close enough to a
+ * dollar to quote singly, and both are quoted in hundreds anyway, on the size
+ * of the notes people actually hand over.
+ */
+const QUOTE_UNIT: Record<string, number> = {
+  IDR: 1_000_000,
+  VND: 1_000_000,
+  LAK: 1_000_000,
+  IRR: 1_000_000,
+  JPY: 1_000,
+  KRW: 1_000,
+  KHR: 1_000,
+  MMK: 1_000,
+  COP: 1_000,
+  CLP: 1_000,
+  UZS: 1_000,
+  AED: 100,
+  BDT: 100,
+  BRL: 100,
+  CNY: 100,
+  CZK: 100,
+  DKK: 100,
+  EGP: 100,
+  HKD: 100,
+  HUF: 100,
+  INR: 100,
+  ISK: 100,
+  KES: 100,
+  LKR: 100,
+  MXN: 100,
+  NOK: 100,
+  NPR: 100,
+  PHP: 100,
+  PKR: 100,
+  PLN: 100,
+  QAR: 100,
+  RUB: 100,
+  SAR: 100,
+  SEK: 100,
+  THB: 100,
+  TWD: 100,
+  ZAR: 100,
+}
+
+/** How many units of `code` a rate is quoted for. One, unless it is listed. */
+export const unitFor = (code: string): number => QUOTE_UNIT[code] ?? 1
+
+/** '1,000,000' — the lot itself, grouped, for the left of a rate line. */
+export const unitLabel = (code: string): string =>
+  new Intl.NumberFormat('en-MY').format(unitFor(code))
+
+/** What a whole lot of `from` is worth, given a rate for one of them. */
+export const perLot = (rate: number, from: string): number => rate * unitFor(from)
+
+/**
+ * A rate, printed to as many places as it is worth reading.
+ *
+ * Not `decimalsFor`: that is for money, and this is a rate. 175.4386 MYR to
+ * the million dong is worth four places when the same four on a dinner bill
+ * would be noise, and 5,700 VND to the ringgit is worth none.
+ */
+export const rateDigits = (value: number): number =>
+  value >= 1000 ? 0 : value >= 100 ? 2 : value >= 1 ? 3 : 4
+
+export function rateNumber(value: number): string {
+  const digits = rateDigits(value)
+  return new Intl.NumberFormat('en-MY', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
 // ------------------------------------------------------------------ cache
 
 export function readCache(): RateTable | null {
@@ -234,8 +318,12 @@ export function convert(
   return rate === null ? null : amount * rate
 }
 
-/** 'RM 1 = ¥ 37.92' — the line under a conversion that makes it checkable. */
+/**
+ * '100 THB = 13.099 MYR' — the line that makes a conversion checkable.
+ *
+ * Quoted in `from`'s own lot, so it can be held up against the board without
+ * moving a decimal point in your head.
+ */
 export function rateLine(from: string, to: string, rate: number): string {
-  const digits = rate < 0.01 ? 6 : rate < 1 ? 4 : rate > 1000 ? 0 : 3
-  return `1 ${from} = ${rate.toFixed(digits)} ${to}`
+  return `${unitLabel(from)} ${from} = ${rateNumber(perLot(rate, from))} ${to}`
 }

@@ -28,10 +28,12 @@ Then open **http://localhost:5173/SchedulePlan/** (the base path matters).
 
 ## What it does
 
-**Schedule** — day, week and month views. An item can be a whole day, and it
-can run from one date to another, which is what a trip actually is. A spanning
-item appears on every day it covers and says which day of it you are looking
-at. Items carry your own tags, a location, notes and attachments.
+**Schedule** — day, week and month views, opening on the **month**: the day you
+are in is the one thing you already know, and what the screen is opened to find
+out is what is coming. Tapping a date drops into the day. An item can be a whole
+day, and it can run from one date to another, which is what a trip actually is.
+A spanning item appears on every day it covers and says which day of it you are
+looking at. Items carry your own tags, a location, notes and attachments.
 
 **Reminders** — due date and time, optionally running *until* a later date and
 time, optionally repeating daily or weekly inside that window. Alerts only fire
@@ -48,6 +50,12 @@ cost. An expense can hang off a schedule item, which is how a trip adds up.
 cached for the day so it still works on a plane. The rate can be overridden by
 hand, because the money changer's rate is the one that actually applied and it
 is rarely the market's.
+
+Everything is quoted in the currency's **own lot** — a million dong, a thousand
+yen, a hundred baht, one pound — which is how the board behind the counter
+quotes it, so the number on the wall and the number on the screen are the same
+shape and can simply be compared. Typing your own rate works the same way: the
+board says 164 ringgit to the million dong, so 164 is what you type.
 
 **Bill split** — the second tab inside Expenses, and built around *what each
 person had* rather than how to divide each item. A line sits under the person

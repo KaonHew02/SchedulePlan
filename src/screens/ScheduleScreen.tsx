@@ -87,7 +87,14 @@ function ViewToggle({
 }
 
 export default function ScheduleScreen({ onToast }: { onToast: (message: string) => void }) {
-  const [view, setView] = useState<ViewMode>('day')
+  /*
+   * Month first. Opening on the day was the obvious default — the app is for
+   * today — but the day you are on is the one thing you already know. What the
+   * screen is opened to find out is what is coming, and the month grid answers
+   * that in one look. Tapping a date still drops into the day, which is the
+   * direction the question actually runs.
+   */
+  const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(todayISO())
   const schedule = useSchedule()
 

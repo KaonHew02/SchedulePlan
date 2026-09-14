@@ -6,13 +6,17 @@ import {
   COMMON,
   CURRENCY_NAMES,
   convert,
-  decimalsFor,
   effectiveRates,
   fetchRates,
+  perLot,
   plain,
   rateBetween,
+  rateDigits,
   rateLine,
+  rateNumber,
   readCache,
+  unitFor,
+  unitLabel,
 } from '../lib/currency'
 import { updateSettings, useSettings } from '../lib/store'
 import type { RateTable } from '../types'
@@ -33,6 +37,11 @@ import type { RateTable } from '../types'
  * is nowhere near the market rate, and the number that belongs in your
  * notebook is the one you actually got. Type it here and it sticks, for the
  * converter and for every expense entered afterwards.
+ *
+ * Everything quoted on this screen is quoted in the currency's own lot — a
+ * million dong, a thousand yen, a hundred baht — which is what the board on
+ * the wall is quoting, and therefore what you are copying off it. `unitFor`
+ * holds the list.
  */
 export default function CurrencyScreen() {
   const settings = useSettings()
@@ -85,16 +94,20 @@ export default function CurrencyScreen() {
     setEditingRate(false)
     if (!Number.isFinite(typed) || typed <= 0) return
 
+    // What was typed is a price for a whole lot — 164 ringgit for a million
+    // dong — so it comes back to a rate for one unit before anything stores it.
+    const perOne = typed / unitFor(from)
+
     // Overrides are stored against the home currency, which is what the whole
     // table is quoted in — so a rate typed for a pair has to be converted
     // back to that shape before it is kept.
     const fromRate = rates[from]
     if (from === settings.currency) {
-      updateSettings({ manualRates: { ...settings.manualRates, [to]: typed } })
-    } else if (to === settings.currency && typed > 0) {
-      updateSettings({ manualRates: { ...settings.manualRates, [from]: 1 / typed } })
+      updateSettings({ manualRates: { ...settings.manualRates, [to]: perOne } })
+    } else if (to === settings.currency) {
+      updateSettings({ manualRates: { ...settings.manualRates, [from]: 1 / perOne } })
     } else if (fromRate) {
-      updateSettings({ manualRates: { ...settings.manualRates, [to]: typed * fromRate } })
+      updateSettings({ manualRates: { ...settings.manualRates, [to]: perOne * fromRate } })
     }
   }
 
@@ -154,10 +167,12 @@ export default function CurrencyScreen() {
 
           <div className="flex items-center gap-3">
             <span className="min-w-0 flex-1 truncate text-[26px] font-semibold tabular-nums tracking-tight">
+              {/* Grouped, not toFixed. A conversion into dong ran to seven
+                  digits in a row and had to be counted with a finger. */}
               {result === null ? (
                 <span className="text-neutral-300">—</span>
               ) : (
-                result.toFixed(decimalsFor(to))
+                plain(result, to)
               )}
             </span>
             <CurrencySelect value={to} onChange={setTo} label="Convert to" />
@@ -168,13 +183,15 @@ export default function CurrencyScreen() {
           <div className="mt-3 rounded-2xl bg-neutral-50 px-4 py-3">
             {editingRate ? (
               <div className="flex items-center gap-2">
-                <span className="shrink-0 text-[13px] text-neutral-500">1 {from} =</span>
+                <span className="shrink-0 text-[13px] tabular-nums text-neutral-500">
+                  {unitLabel(from)} {from} =
+                </span>
                 <input
                   autoFocus
                   value={manualDraft}
                   onChange={(event) => setManualDraft(event.target.value)}
                   inputMode="decimal"
-                  aria-label={`${to} per ${from}`}
+                  aria-label={`${to} per ${unitLabel(from)} ${from}`}
                   className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
                 />
                 <span className="shrink-0 text-[13px] text-neutral-500">{to}</span>
@@ -202,7 +219,10 @@ export default function CurrencyScreen() {
                   )}
                   <button
                     onClick={() => {
-                      setManualDraft(rate.toFixed(rate < 1 ? 4 : 3))
+                      // Seeded with the market price of a lot, so the board's
+                      // number goes in over the top of a number the same shape.
+                      const lot = perLot(rate, from)
+                      setManualDraft(lot.toFixed(rateDigits(lot)))
                       setEditingRate(true)
                     }}
                     className="ml-auto text-[13px] font-medium text-brand-500"
@@ -245,12 +265,21 @@ export default function CurrencyScreen() {
         </div>
 
         <div>
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-0">
-          1 {settings.currency} buys
+        {/*
+          Two numbers per row, because a money changer's board and this list
+          face opposite ways. Big number: what your money turns into, which is
+          the one you want in a shop. Small number: what a lot of theirs costs
+          in yours, which is the one printed on the wall behind the counter.
+          Working the second out from the first is a division by 5,700, in a
+          queue, holding a bag.
+        */}
+        <h2 className="pb-1 pt-8 text-[13px] font-medium tabular-nums text-neutral-400 lg:pt-0">
+          {unitLabel(settings.currency)} {settings.currency} buys
         </h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           {COMMON.filter((code) => code !== settings.currency).map((code) => {
             const value = rates[code]
+            const back = rateBetween(rates, code, settings.currency)
             return (
               <button
                 key={code}
@@ -258,17 +287,32 @@ export default function CurrencyScreen() {
                   setFrom(settings.currency)
                   setTo(code)
                 }}
-                className="flex w-full items-baseline gap-3 py-3 text-left active:bg-neutral-50"
+                className="flex w-full items-start gap-3 py-3 text-left active:bg-neutral-50"
               >
-                <span className="w-11 shrink-0 text-[14px] font-medium">{code}</span>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-400">
-                  {CURRENCY_NAMES[code] ?? ''}
+                <span className="w-11 shrink-0 text-[14px] font-medium leading-6">{code}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] leading-6 text-neutral-400">
+                    {CURRENCY_NAMES[code] ?? ''}
+                  </span>
+                  {back !== null && (
+                    <span className="block text-[12px] leading-4 tabular-nums text-neutral-400">
+                      {rateLine(code, settings.currency, back)}
+                    </span>
+                  )}
                 </span>
-                <span className="shrink-0 text-[15px] tabular-nums">
-                  {value ? plain(value, code) : <span className="text-neutral-300">—</span>}
+                {/* A rate, not a price: `plain` would round the whole SGD
+                    column to 0.31 and the yen column to a flat 35. */}
+                <span className="shrink-0 text-[15px] leading-6 tabular-nums">
+                  {value ? (
+                    rateNumber(value * unitFor(settings.currency))
+                  ) : (
+                    <span className="text-neutral-300">—</span>
+                  )}
                 </span>
                 {settings.manualRates[code] && (
-                  <span className="shrink-0 text-[11px] font-medium text-amber-600">yours</span>
+                  <span className="shrink-0 text-[11px] font-medium leading-6 text-amber-600">
+                    yours
+                  </span>
                 )}
               </button>
             )

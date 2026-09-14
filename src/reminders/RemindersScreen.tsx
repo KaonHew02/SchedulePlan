@@ -25,16 +25,23 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
         )}
       </button>
       <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-        <div className="flex items-center gap-1.5">
+        {/*
+          The title wraps. It used to be a single truncated line, which is the
+          right call for a name and the wrong one for a reminder: K writes
+          these as instructions — "Kiosk → print boarding pass → T1/U1/V1
+          Document Check → Immigration" — and the half that got cut was the
+          half telling you what to do. A row is as tall as what it has to say.
+        */}
+        <div className="flex items-start gap-1.5">
           <span
-            className={`truncate text-[15px] leading-6 ${
+            className={`text-[15px] leading-6 ${
               reminder.done ? 'text-neutral-400 line-through' : 'font-medium'
             }`}
           >
             {reminder.title}
           </span>
           {active && (
-            <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
+            <span className="mt-[3px] shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
               On now
             </span>
           )}
@@ -105,6 +112,11 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
     ] as [string, Reminder[]][]
   }, [reminders])
 
+  // Sections pair up two to a row on a laptop, but only when there are two to
+  // pair. With just one open list the grid put it in the left cell and left
+  // the right half of the screen empty next to reminders that needed the room.
+  const visible = useMemo(() => sections.filter(([, rows]) => rows.length > 0), [sections])
+
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
@@ -127,8 +139,12 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
         ) : (
           // Four sections down one column leaves a laptop mostly empty, and
           // they are independent lists, so they pair up side by side.
-          <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
-          {sections.map(([name, rows]) =>
+          <div
+            className={
+              visible.length > 1 ? 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10' : ''
+            }
+          >
+          {visible.map(([name, rows]) =>
             rows.length === 0 ? null : (
               <section key={name}>
                 <h2
