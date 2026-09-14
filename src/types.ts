@@ -212,6 +212,12 @@ export interface Settings {
   lastDriveSync: string | null
   /** Rates the user typed in by hand, which beat any fetched table. */
   manualRates: Record<string, number>
+  /**
+   * The lot a currency is quoted in, where the user has picked one — the
+   * built-in list is only what the board in Seremban uses, and boards do not
+   * agree with each other. Empty for every currency left on the default.
+   */
+  quoteUnits: Record<string, number>
   /** How many countries you are aiming for. Drives the Travel progress bar. */
   travelGoal: number
 }

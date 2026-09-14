@@ -373,12 +373,23 @@ export default function ExpenseForm({
   )
 }
 
-/** The line under a converted expense, for the list and the detail sheet. */
-export function conversionNote(expense: Expense): string | null {
+/**
+ * The line under a converted expense, for the list and the detail sheet.
+ *
+ * The rate itself is frozen — it is what the receipt was converted at and does
+ * not move again. The *lot* it is read in is not frozen, because that is only
+ * how it is written down, and it should match the way the same currency is
+ * written everywhere else in the app.
+ */
+export function conversionNote(
+  expense: Expense,
+  lots?: Record<string, number>,
+): string | null {
   if (!expense.original_currency || !expense.original_amount || !expense.exchange_rate) return null
   return `${money(expense.original_amount, expense.original_currency)} · ${rateLine(
     expense.original_currency,
     expense.currency,
     expense.exchange_rate,
+    lots,
   )}`
 }

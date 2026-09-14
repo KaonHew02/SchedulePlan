@@ -215,7 +215,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
                 </span>
               </div>
               {list.map((expense) => {
-                const note = conversionNote(expense)
+                const note = conversionNote(expense, settings.quoteUnits)
                 return (
                   <button
                     key={expense.id}

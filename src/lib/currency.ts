@@ -188,15 +188,34 @@ const QUOTE_UNIT: Record<string, number> = {
   ZAR: 100,
 }
 
-/** How many units of `code` a rate is quoted for. One, unless it is listed. */
-export const unitFor = (code: string): number => QUOTE_UNIT[code] ?? 1
+/**
+ * How many units of `code` a rate is quoted for.
+ *
+ * `lots` is the user's own choice, and it beats the list, because the list is
+ * one board and boards do not agree with each other: yen is per thousand at
+ * the counter in Seremban and per hundred at plenty of others. A currency left
+ * alone is not in `lots` at all, so improving the list later still reaches
+ * everyone who never overrode it.
+ */
+export const unitFor = (code: string, lots: Record<string, number> = {}): number =>
+  lots[code] ?? QUOTE_UNIT[code] ?? 1
 
 /** '1,000,000' — the lot itself, grouped, for the left of a rate line. */
-export const unitLabel = (code: string): string =>
-  new Intl.NumberFormat('en-MY').format(unitFor(code))
+export const unitLabel = (code: string, lots?: Record<string, number>): string =>
+  new Intl.NumberFormat('en-MY').format(unitFor(code, lots))
 
 /** What a whole lot of `from` is worth, given a rate for one of them. */
-export const perLot = (rate: number, from: string): number => rate * unitFor(from)
+export const perLot = (rate: number, from: string, lots?: Record<string, number>): number =>
+  rate * unitFor(from, lots)
+
+/**
+ * The lots worth offering, in the order tapping moves through them.
+ *
+ * Every one is a lot some board in the region actually prints. 100,000 is
+ * there for the changers that quote dong that way rather than by the million.
+ */
+export const LOTS = [1, 100, 1_000, 100_000, 1_000_000]
+
 
 /**
  * A rate, printed to as many places as it is worth reading.
@@ -324,6 +343,11 @@ export function convert(
  * Quoted in `from`'s own lot, so it can be held up against the board without
  * moving a decimal point in your head.
  */
-export function rateLine(from: string, to: string, rate: number): string {
-  return `${unitLabel(from)} ${from} = ${rateNumber(perLot(rate, from))} ${to}`
+export function rateLine(
+  from: string,
+  to: string,
+  rate: number,
+  lots?: Record<string, number>,
+): string {
+  return `${unitLabel(from, lots)} ${from} = ${rateNumber(perLot(rate, from, lots))} ${to}`
 }

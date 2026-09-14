@@ -331,8 +331,8 @@ function ShareCard({
 
         {foreign && rate !== null && (
           <p className="pt-1 text-[12px] leading-5 text-neutral-400">
-            {rateLine(split.currency, home, rate)} — frozen into the expense, the way a receipt in
-            a foreign currency is.
+            {rateLine(split.currency, home, rate, settings.quoteUnits)} — frozen into the
+            expense, the way a receipt in a foreign currency is.
           </p>
         )}
 

@@ -88,6 +88,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoDrive: false,
   lastDriveSync: null,
   manualRates: {},
+  quoteUnits: {},
   travelGoal: 50,
 }
 

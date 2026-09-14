@@ -4,7 +4,7 @@ import { CalendarIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { longDate } from '../lib/date'
 import { money } from '../lib/currency'
-import { useCategories, useSchedule } from '../lib/store'
+import { useCategories, useSchedule, useSettings } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { Attachment, Expense } from '../types'
 import { conversionNote } from './ExpenseForm'
@@ -23,11 +23,12 @@ export default function ExpenseDetail({
 }) {
   const categories = useCategories()
   const schedule = useSchedule()
+  const settings = useSettings()
   const linked = schedule.find((item) => item.id === expense.schedule_id)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Attachment | null>(null)
-  const note = conversionNote(expense)
+  const note = conversionNote(expense, settings.quoteUnits)
 
   async function remove() {
     setDeleting(true)

@@ -57,6 +57,12 @@ quotes it, so the number on the wall and the number on the screen are the same
 shape and can simply be compared. Typing your own rate works the same way: the
 board says 164 ringgit to the million dong, so 164 is what you type.
 
+The built-in lots are one board, photographed in Seremban, and boards do not
+agree with each other — plenty of changers price yen by the hundred rather than
+the thousand. So **the lot is tappable**: tap it in the rate line and pick the
+one in front of you. It sticks per currency, re-quotes the whole screen, and
+the built-in choice is marked so there is a way back to it.
+
 **Bill split** — the second tab inside Expenses, and built around *what each
 person had* rather than how to divide each item. A line sits under the person
 who ate it; anything the table shared goes on its own card and divides across

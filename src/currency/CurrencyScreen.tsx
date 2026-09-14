@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CurrencySelect from '../components/CurrencySelect'
+import Popover from '../components/Popover'
 import { RefreshIcon, Spinner, SwapIcon } from '../components/Icons'
 import { longDate } from '../lib/date'
 import {
@@ -8,6 +9,7 @@ import {
   convert,
   effectiveRates,
   fetchRates,
+  LOTS,
   perLot,
   plain,
   rateBetween,
@@ -42,7 +44,84 @@ import type { RateTable } from '../types'
  * million dong, a thousand yen, a hundred baht — which is what the board on
  * the wall is quoting, and therefore what you are copying off it. `unitFor`
  * holds the list.
+ *
+ * The lot is tappable, because the list is one board. Another changer prices
+ * yen by the hundred, or dong by the hundred thousand, and the point of the
+ * lot is to match whatever is on the wall in front of you — a list that cannot
+ * be argued with is only right in the shop it was photographed in. The choice
+ * sticks per currency, and the whole screen re-quotes in it.
  */
+/**
+ * The lot a rate is quoted in, as a menu rather than a cycle.
+ *
+ * Tapping through the five in order sounds lighter and is not. Yen defaults to
+ * the thousand because that is what the board in the photo uses; the changer
+ * who disagrees uses the hundred, which is one tap away here and four in a
+ * cycle, in the wrong direction, in a queue.
+ *
+ * The built-in lot is marked, because it is the one printed on most boards and
+ * there has to be a way back to it that is not counting.
+ */
+function LotPicker({
+  code,
+  lot,
+  onPick,
+}: {
+  code: string
+  lot: number
+  onPick: (lot: number) => void
+}) {
+  const anchor = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+  const group = new Intl.NumberFormat('en-MY')
+
+  return (
+    <>
+      <button
+        ref={anchor}
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-label={`Quoted per ${group.format(lot)} ${code}. Tap to change the lot.`}
+        title="The lot this is quoted in — set it to match the board"
+        className={`-mx-1 rounded-md px-1 underline decoration-neutral-400 decoration-dotted underline-offset-4 transition-colors hover:bg-neutral-200/70 ${
+          open ? 'bg-neutral-200/70' : ''
+        }`}
+      >
+        {group.format(lot)}
+      </button>
+
+      {open && (
+        <Popover anchor={anchor} label={`Lot for ${code}`} onClose={() => setOpen(false)}>
+          <div className="w-[176px] p-1.5">
+            <p className="px-2.5 pb-1 pt-1 text-[12px] leading-4 text-neutral-400">
+              Quote {code} per
+            </p>
+            {LOTS.map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                onClick={() => {
+                  onPick(choice)
+                  setOpen(false)
+                }}
+                className={`flex w-full items-baseline justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-[14px] tabular-nums transition-colors ${
+                  choice === lot ? 'bg-brand-50 font-medium text-brand-700' : 'hover:bg-neutral-100'
+                }`}
+              >
+                {group.format(choice)}
+                {choice === unitFor(code) && (
+                  <span className="text-[11px] font-normal text-neutral-400">usual</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </Popover>
+      )}
+    </>
+  )
+}
+
 export default function CurrencyScreen() {
   const settings = useSettings()
   const [table, setTable] = useState<RateTable | null>(() => readCache())
@@ -59,6 +138,17 @@ export default function CurrencyScreen() {
     () => effectiveRates(table, settings.manualRates),
     [table, settings.manualRates],
   )
+
+  const lots = settings.quoteUnits ?? {}
+
+  function setLot(code: string, lot: number) {
+    const kept = { ...lots }
+    // Choosing the built-in lot stores nothing, so a currency nobody has an
+    // opinion about stays on the list rather than on a frozen copy of it.
+    if (lot === unitFor(code)) delete kept[code]
+    else kept[code] = lot
+    updateSettings({ quoteUnits: kept })
+  }
 
   async function load(force = false) {
     setLoading(true)
@@ -96,7 +186,7 @@ export default function CurrencyScreen() {
 
     // What was typed is a price for a whole lot — 164 ringgit for a million
     // dong — so it comes back to a rate for one unit before anything stores it.
-    const perOne = typed / unitFor(from)
+    const perOne = typed / unitFor(from, lots)
 
     // Overrides are stored against the home currency, which is what the whole
     // table is quoted in — so a rate typed for a pair has to be converted
@@ -184,14 +274,14 @@ export default function CurrencyScreen() {
             {editingRate ? (
               <div className="flex items-center gap-2">
                 <span className="shrink-0 text-[13px] tabular-nums text-neutral-500">
-                  {unitLabel(from)} {from} =
+                  {unitLabel(from, lots)} {from} =
                 </span>
                 <input
                   autoFocus
                   value={manualDraft}
                   onChange={(event) => setManualDraft(event.target.value)}
                   inputMode="decimal"
-                  aria-label={`${to} per ${unitLabel(from)} ${from}`}
+                  aria-label={`${to} per ${unitLabel(from, lots)} ${from}`}
                   className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
                 />
                 <span className="shrink-0 text-[13px] text-neutral-500">{to}</span>
@@ -211,7 +301,17 @@ export default function CurrencyScreen() {
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-[14px] tabular-nums">{rateLine(from, to, rate)}</span>
+                  {/* Only the lot is a control. The rest is a sentence, and a
+                      sentence that is entirely clickable reads as a link to
+                      somewhere else rather than as a number you can change. */}
+                  <span className="text-[14px] tabular-nums">
+                    <LotPicker
+                      code={from}
+                      lot={unitFor(from, lots)}
+                      onPick={(lot) => setLot(from, lot)}
+                    />{' '}
+                    {from} = {rateNumber(perLot(rate, from, lots))} {to}
+                  </span>
                   {overridden && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                       Yours
@@ -221,7 +321,7 @@ export default function CurrencyScreen() {
                     onClick={() => {
                       // Seeded with the market price of a lot, so the board's
                       // number goes in over the top of a number the same shape.
-                      const lot = perLot(rate, from)
+                      const lot = perLot(rate, from, lots)
                       setManualDraft(lot.toFixed(rateDigits(lot)))
                       setEditingRate(true)
                     }}
@@ -239,7 +339,7 @@ export default function CurrencyScreen() {
                       </button>
                     </>
                   ) : table ? (
-                    `Market rate from ${longDate(table.date)}`
+                    `Market rate from ${longDate(table.date)} · tap the lot to match the board`
                   ) : (
                     'No rates loaded yet'
                   )}
@@ -274,7 +374,7 @@ export default function CurrencyScreen() {
           queue, holding a bag.
         */}
         <h2 className="pb-1 pt-8 text-[13px] font-medium tabular-nums text-neutral-400 lg:pt-0">
-          {unitLabel(settings.currency)} {settings.currency} buys
+          {unitLabel(settings.currency, lots)} {settings.currency} buys
         </h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           {COMMON.filter((code) => code !== settings.currency).map((code) => {
@@ -296,7 +396,7 @@ export default function CurrencyScreen() {
                   </span>
                   {back !== null && (
                     <span className="block text-[12px] leading-4 tabular-nums text-neutral-400">
-                      {rateLine(code, settings.currency, back)}
+                      {rateLine(code, settings.currency, back, lots)}
                     </span>
                   )}
                 </span>
@@ -304,7 +404,7 @@ export default function CurrencyScreen() {
                     column to 0.31 and the yen column to a flat 35. */}
                 <span className="shrink-0 text-[15px] leading-6 tabular-nums">
                   {value ? (
-                    rateNumber(value * unitFor(settings.currency))
+                    rateNumber(value * unitFor(settings.currency, lots))
                   ) : (
                     <span className="text-neutral-300">—</span>
                   )}
