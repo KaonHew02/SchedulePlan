@@ -139,7 +139,18 @@ export default function CurrencyScreen() {
     [table, settings.manualRates],
   )
 
-  const lots = settings.quoteUnits ?? {}
+  /*
+   * The home currency is stripped out. It never carries a lot of its own
+   * choosing — how your own money is counted is the list's business, not a
+   * setting — and stripping it here means a stale entry saved before that rule
+   * existed cannot come back to life by switching which currency the notebook
+   * is kept in. It also drops out of storage the next time any lot is picked.
+   */
+  const lots = useMemo(() => {
+    const kept = { ...(settings.quoteUnits ?? {}) }
+    delete kept[settings.currency]
+    return kept
+  }, [settings.quoteUnits, settings.currency])
 
   function setLot(code: string, lot: number) {
     const kept = { ...lots }
@@ -174,6 +185,26 @@ export default function CurrencyScreen() {
   const result = convert(entered, from, to, rates)
   const overridden = Boolean(settings.manualRates[to] || settings.manualRates[from])
 
+  const home = settings.currency
+
+  /*
+   * Which side of the pair the rate line prices, and what it prices it in.
+   *
+   * A board never prices your own money. The UNITS column is always theirs,
+   * the ringgit column is always what it costs, and that stays true whichever
+   * way round you happen to be converting. So the line prices the foreign
+   * side, and the lot belongs to that side.
+   *
+   * It used to follow `from`, which meant converting ringgit *into* dong put
+   * the lot on the ringgit. K set it to a million — reasonably, having just
+   * read VND 1000000 off a board — typed the board's number into it, and
+   * every conversion afterwards came out as zero, because what had been
+   * stored was a price for a million ringgit. Nobody quotes a million ringgit.
+   */
+  const priced = from === home && to !== home ? to : from
+  const inTerms = priced === from ? to : from
+  const quoteRate = rateBetween(rates, priced, inTerms)
+
   function swap() {
     setFrom(to)
     setTo(from)
@@ -184,20 +215,21 @@ export default function CurrencyScreen() {
     setEditingRate(false)
     if (!Number.isFinite(typed) || typed <= 0) return
 
-    // What was typed is a price for a whole lot — 164 ringgit for a million
-    // dong — so it comes back to a rate for one unit before anything stores it.
-    const perOne = typed / unitFor(from, lots)
+    // What was typed is a price for a whole lot of the priced currency — 164
+    // ringgit for a million dong — so it comes back to a rate for one unit
+    // before anything stores it.
+    const perOne = typed / unitFor(priced, lots)
 
     // Overrides are stored against the home currency, which is what the whole
     // table is quoted in — so a rate typed for a pair has to be converted
     // back to that shape before it is kept.
-    const fromRate = rates[from]
-    if (from === settings.currency) {
-      updateSettings({ manualRates: { ...settings.manualRates, [to]: perOne } })
-    } else if (to === settings.currency) {
-      updateSettings({ manualRates: { ...settings.manualRates, [from]: 1 / perOne } })
-    } else if (fromRate) {
-      updateSettings({ manualRates: { ...settings.manualRates, [to]: perOne * fromRate } })
+    const pricedRate = rates[priced]
+    if (priced === home) {
+      updateSettings({ manualRates: { ...settings.manualRates, [inTerms]: perOne } })
+    } else if (inTerms === home) {
+      updateSettings({ manualRates: { ...settings.manualRates, [priced]: 1 / perOne } })
+    } else if (pricedRate) {
+      updateSettings({ manualRates: { ...settings.manualRates, [inTerms]: perOne * pricedRate } })
     }
   }
 
@@ -269,22 +301,22 @@ export default function CurrencyScreen() {
           </div>
         </div>
 
-        {rate !== null && (
+        {quoteRate !== null && (
           <div className="mt-3 rounded-2xl bg-neutral-50 px-4 py-3">
             {editingRate ? (
               <div className="flex items-center gap-2">
                 <span className="shrink-0 text-[13px] tabular-nums text-neutral-500">
-                  {unitLabel(from, lots)} {from} =
+                  {unitLabel(priced, lots)} {priced} =
                 </span>
                 <input
                   autoFocus
                   value={manualDraft}
                   onChange={(event) => setManualDraft(event.target.value)}
                   inputMode="decimal"
-                  aria-label={`${to} per ${unitLabel(from, lots)} ${from}`}
+                  aria-label={`${inTerms} per ${unitLabel(priced, lots)} ${priced}`}
                   className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
                 />
-                <span className="shrink-0 text-[13px] text-neutral-500">{to}</span>
+                <span className="shrink-0 text-[13px] text-neutral-500">{inTerms}</span>
                 <button
                   onClick={saveManual}
                   className="ml-auto rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
@@ -306,11 +338,11 @@ export default function CurrencyScreen() {
                       somewhere else rather than as a number you can change. */}
                   <span className="text-[14px] tabular-nums">
                     <LotPicker
-                      code={from}
-                      lot={unitFor(from, lots)}
-                      onPick={(lot) => setLot(from, lot)}
+                      code={priced}
+                      lot={unitFor(priced, lots)}
+                      onPick={(lot) => setLot(priced, lot)}
                     />{' '}
-                    {from} = {rateNumber(perLot(rate, from, lots))} {to}
+                    {priced} = {rateNumber(perLot(quoteRate, priced, lots))} {inTerms}
                   </span>
                   {overridden && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
@@ -321,7 +353,7 @@ export default function CurrencyScreen() {
                     onClick={() => {
                       // Seeded with the market price of a lot, so the board's
                       // number goes in over the top of a number the same shape.
-                      const lot = perLot(rate, from, lots)
+                      const lot = perLot(quoteRate, priced, lots)
                       setManualDraft(lot.toFixed(rateDigits(lot)))
                       setEditingRate(true)
                     }}
@@ -373,8 +405,12 @@ export default function CurrencyScreen() {
           Working the second out from the first is a division by 5,700, in a
           queue, holding a bag.
         */}
+        {/* `unitFor` without the overrides on purpose: how your own money is
+            counted is not a thing you pick, it is a thing the list knows — a
+            million for a notebook kept in dong, one for a notebook kept in
+            ringgit. Only the currency being priced takes an override. */}
         <h2 className="pb-1 pt-8 text-[13px] font-medium tabular-nums text-neutral-400 lg:pt-0">
-          {unitLabel(settings.currency, lots)} {settings.currency} buys
+          {unitLabel(settings.currency)} {settings.currency} buys
         </h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           {COMMON.filter((code) => code !== settings.currency).map((code) => {
@@ -404,7 +440,7 @@ export default function CurrencyScreen() {
                     column to 0.31 and the yen column to a flat 35. */}
                 <span className="shrink-0 text-[15px] leading-6 tabular-nums">
                   {value ? (
-                    rateNumber(value * unitFor(settings.currency, lots))
+                    rateNumber(value * unitFor(settings.currency))
                   ) : (
                     <span className="text-neutral-300">—</span>
                   )}
