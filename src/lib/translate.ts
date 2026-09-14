@@ -33,16 +33,73 @@ export interface Language {
   speech: string
 }
 
+/**
+ * The ones a trip from here actually uses, held at the top of the list.
+ *
+ * Same idea as the currencies: the full list is long and the first six lines
+ * of it should be the ones somebody in Malaysia is reaching for. Everything
+ * else is a word of typing away.
+ */
+export const COMMON_LANGUAGES = ['zh-CN', 'vi', 'en', 'ms', 'th', 'id', 'ja', 'ko', 'ta']
+
 export const LANGUAGES: Language[] = [
-  { code: 'zh-CN', name: 'Chinese', native: '华语', speech: 'zh-CN' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)', native: '华语', speech: 'zh-CN' },
+  { code: 'zh-TW', name: 'Chinese (Traditional)', native: '繁體中文', speech: 'zh-TW' },
   { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', speech: 'vi-VN' },
   { code: 'en', name: 'English', native: 'English', speech: 'en-US' },
   { code: 'ms', name: 'Malay', native: 'Bahasa Melayu', speech: 'ms-MY' },
   { code: 'th', name: 'Thai', native: 'ไทย', speech: 'th-TH' },
+  { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', speech: 'id-ID' },
+  { code: 'ja', name: 'Japanese', native: '日本語', speech: 'ja-JP' },
+  { code: 'ko', name: 'Korean', native: '한국어', speech: 'ko-KR' },
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்', speech: 'ta-IN' },
+  { code: 'ar', name: 'Arabic', native: 'العربية', speech: 'ar-SA' },
+  { code: 'bn', name: 'Bengali', native: 'বাংলা', speech: 'bn-BD' },
+  { code: 'my', name: 'Burmese', native: 'မြန်မာ', speech: 'my-MM' },
+  { code: 'cs', name: 'Czech', native: 'Čeština', speech: 'cs-CZ' },
+  { code: 'da', name: 'Danish', native: 'Dansk', speech: 'da-DK' },
+  { code: 'nl', name: 'Dutch', native: 'Nederlands', speech: 'nl-NL' },
+  { code: 'fil', name: 'Filipino', native: 'Filipino', speech: 'fil-PH' },
+  { code: 'fi', name: 'Finnish', native: 'Suomi', speech: 'fi-FI' },
+  { code: 'fr', name: 'French', native: 'Français', speech: 'fr-FR' },
+  { code: 'de', name: 'German', native: 'Deutsch', speech: 'de-DE' },
+  { code: 'el', name: 'Greek', native: 'Ελληνικά', speech: 'el-GR' },
+  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', speech: 'gu-IN' },
+  { code: 'he', name: 'Hebrew', native: 'עברית', speech: 'he-IL' },
+  { code: 'hi', name: 'Hindi', native: 'हिन्दी', speech: 'hi-IN' },
+  { code: 'hu', name: 'Hungarian', native: 'Magyar', speech: 'hu-HU' },
+  { code: 'it', name: 'Italian', native: 'Italiano', speech: 'it-IT' },
+  { code: 'jv', name: 'Javanese', native: 'Basa Jawa', speech: 'jv-ID' },
+  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', speech: 'kn-IN' },
+  { code: 'km', name: 'Khmer', native: 'ខ្មែរ', speech: 'km-KH' },
+  { code: 'lo', name: 'Lao', native: 'ລາວ', speech: 'lo-LA' },
+  { code: 'ml', name: 'Malayalam', native: 'മലയാളം', speech: 'ml-IN' },
+  { code: 'mr', name: 'Marathi', native: 'मराठी', speech: 'mr-IN' },
+  { code: 'ne', name: 'Nepali', native: 'नेपाली', speech: 'ne-NP' },
+  { code: 'no', name: 'Norwegian', native: 'Norsk', speech: 'nb-NO' },
+  { code: 'fa', name: 'Persian', native: 'فارسی', speech: 'fa-IR' },
+  { code: 'pl', name: 'Polish', native: 'Polski', speech: 'pl-PL' },
+  { code: 'pt', name: 'Portuguese', native: 'Português', speech: 'pt-BR' },
+  { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', speech: 'pa-IN' },
+  { code: 'ro', name: 'Romanian', native: 'Română', speech: 'ro-RO' },
+  { code: 'ru', name: 'Russian', native: 'Русский', speech: 'ru-RU' },
+  { code: 'si', name: 'Sinhala', native: 'සිංහල', speech: 'si-LK' },
+  { code: 'es', name: 'Spanish', native: 'Español', speech: 'es-ES' },
+  { code: 'sw', name: 'Swahili', native: 'Kiswahili', speech: 'sw-KE' },
+  { code: 'sv', name: 'Swedish', native: 'Svenska', speech: 'sv-SE' },
+  { code: 'te', name: 'Telugu', native: 'తెలుగు', speech: 'te-IN' },
+  { code: 'tr', name: 'Turkish', native: 'Türkçe', speech: 'tr-TR' },
+  { code: 'uk', name: 'Ukrainian', native: 'Українська', speech: 'uk-UA' },
+  { code: 'ur', name: 'Urdu', native: 'اردو', speech: 'ur-PK' },
 ]
 
 export const languageOf = (code: string): Language | undefined =>
   LANGUAGES.find((language) => language.code === code)
+
+/** Right-to-left scripts, so the answer is not laid out backwards. */
+const RTL = new Set(['ar', 'he', 'fa', 'ur'])
+
+export const isRtl = (code: string): boolean => RTL.has(code.split('-')[0])
 
 /** 'zh-CN' → 'zh'. Some services want the region and some choke on it. */
 const short = (code: string): string => code.split('-')[0]
@@ -65,7 +122,11 @@ const PROVIDERS = [
   {
     name: 'MyMemory',
     url: (text: string, from: string, to: string) =>
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${short(from)}|${short(to)}`,
+      // The full code, region and all. It was stripped to two letters at
+      // first, on the assumption the service wanted them: it does not — it
+      // takes RFC3066 — and stripping turned zh-TW into zh, so the fallback
+      // quietly answered Traditional Chinese in Simplified.
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`,
     read: (body: unknown): string | null => {
       const data = (body as { responseData?: { translatedText?: string } })?.responseData
       const text = data?.translatedText?.trim()

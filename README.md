@@ -66,7 +66,9 @@ the built-in choice is marked so there is a way back to it.
 **Translate** — for the moment in front of somebody where the words are not
 there. It started behind More and came out next to Currency, because on the
 trip it was built for, the till and the person behind it are the same thirty
-seconds. Five travel languages, any two of them, and three things
+seconds. Forty-eight languages, any two of them — the nine a trip from here
+actually uses at the top of the list and the rest a word of typing away, the
+same arrangement the currency picker uses — and three things
 to do with the answer: **say it** through the phone's own voice, **show it** at
 a size readable across a food stall, and keep it. Everything translated is
 written into the notebook, because the places you need this most — a border

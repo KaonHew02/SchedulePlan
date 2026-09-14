@@ -12,8 +12,10 @@ import {
 } from '../components/Icons'
 import Popover from '../components/Popover'
 import {
+  COMMON_LANGUAGES,
   LANGUAGES,
   STARTER,
+  isRtl,
   languageOf,
   onVoices,
   speak,
@@ -53,7 +55,37 @@ function LanguagePicker({
 }) {
   const anchor = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const chosen = languageOf(value)
+
+  /*
+   * The ones a trip from here uses, then the rest alphabetically — the same
+   * arrangement as the currency list, for the same reason. Five languages fit
+   * in a list; fifty do not, and the five that were there before are still the
+   * first things on screen.
+   */
+  const ordered = useMemo(() => {
+    const common = COMMON_LANGUAGES.map((code) => languageOf(code)).filter(
+      (language): language is Language => Boolean(language),
+    )
+    const rest = LANGUAGES.filter((language) => !COMMON_LANGUAGES.includes(language.code)).sort(
+      (a, b) => a.name.localeCompare(b.name),
+    )
+    return [...common, ...rest]
+  }, [])
+
+  // Matched on both names, because half the time you know it as 'Khmer' and
+  // half the time you are looking for ខ្មែរ.
+  const matches = useMemo(() => {
+    const text = query.trim().toLowerCase()
+    if (!text) return ordered
+    return ordered.filter(
+      (language) =>
+        language.name.toLowerCase().includes(text) ||
+        language.native.toLowerCase().includes(text) ||
+        language.code.toLowerCase().startsWith(text),
+    )
+  }, [ordered, query])
 
   return (
     <>
@@ -62,7 +94,10 @@ function LanguagePicker({
         type="button"
         aria-label={label}
         aria-expanded={open}
-        onClick={() => setOpen((was) => !was)}
+        onClick={() => {
+          setQuery('')
+          setOpen((was) => !was)
+        }}
         className={`flex shrink-0 items-center gap-1 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium transition-colors hover:bg-neutral-200/70 ${
           open ? 'bg-neutral-200/70 ring-2 ring-brand-500/40' : ''
         }`}
@@ -73,36 +108,61 @@ function LanguagePicker({
 
       {open && (
         <Popover anchor={anchor} label={label} onClose={() => setOpen(false)}>
-          <div className="w-[212px] p-1.5">
-            {LANGUAGES.map((language) => (
-              <button
-                key={language.code}
-                type="button"
-                onClick={() => {
-                  onChange(language.code)
-                  setOpen(false)
-                }}
-                className={`flex w-full items-baseline gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                  language.code === value ? 'bg-brand-50' : 'hover:bg-neutral-100'
-                }`}
-              >
-                <span
-                  className={`text-[14px] ${
-                    language.code === value ? 'font-medium text-brand-700' : ''
+          <div className="w-[248px] p-2">
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search"
+              aria-label="Search languages"
+              className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-none placeholder:text-neutral-400"
+            />
+            <div className="no-scrollbar max-h-[228px] overflow-y-auto">
+              {matches.length === 0 && (
+                <p className="px-3 py-4 text-center text-[13px] text-neutral-400">
+                  No language matches that.
+                </p>
+              )}
+              {matches.map((language) => (
+                <button
+                  key={language.code}
+                  type="button"
+                  // The crossed-out speaker needs a sentence somewhere, and a
+                  // row in a list is not the place to print one.
+                  title={
+                    voiceFor(language.speech, voices)
+                      ? language.name
+                      : `${language.name} — this device has no voice for it, so it can be shown but not spoken`
+                  }
+                  onClick={() => {
+                    onChange(language.code)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-baseline gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
+                    language.code === value ? 'bg-brand-50' : 'hover:bg-neutral-100'
                   }`}
                 >
-                  {language.native}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[12px] text-neutral-400">
-                  {language.name}
-                </span>
-                {/* Said here rather than when you press speak, so the choice is
-                    made knowing what the phone can do with it. */}
-                {!voiceFor(language.speech, voices) && (
-                  <SpeakerOffIcon className="h-3.5 w-3.5 shrink-0 text-neutral-300" />
-                )}
-              </button>
-            ))}
+                  <span
+                    className={`text-[14px] ${
+                      language.code === value ? 'font-medium text-brand-700' : ''
+                    }`}
+                  >
+                    {language.native}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-neutral-400">
+                    {language.name}
+                  </span>
+                  {/* Said here rather than when you press speak, so the choice
+                      is made knowing what the phone can do with it. */}
+                  {!voiceFor(language.speech, voices) && (
+                    <SpeakerOffIcon
+                      className="h-3.5 w-3.5 shrink-0 text-neutral-300"
+                      aria-label="No voice on this device"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </Popover>
       )}
@@ -149,7 +209,10 @@ function ShowSheet({
         </button>
       </div>
       <div className="flex flex-1 items-center justify-center px-6 pb-16">
-        <p className="text-center text-[30px] font-semibold leading-tight sm:text-[40px]">
+        <p
+          dir={language && isRtl(language.code) ? 'rtl' : 'ltr'}
+          className="text-center text-[30px] font-semibold leading-tight sm:text-[40px]"
+        >
           {phrase}
         </p>
       </div>
@@ -361,7 +424,12 @@ export default function TranslateScreen({
 
           {result && (
             <div className="mt-3 rounded-2xl bg-neutral-50 p-4">
-              <p className="text-[20px] font-medium leading-8">{result.text}</p>
+              <p
+                dir={isRtl(to) ? 'rtl' : 'ltr'}
+                className="text-[20px] font-medium leading-8"
+              >
+                {result.text}
+              </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {targetVoice ? (
