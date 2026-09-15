@@ -60,7 +60,7 @@ export default function ItemCard({
   return (
     <button
       onClick={() => onOpen(item)}
-      className={`relative flex w-full gap-3 overflow-hidden rounded-2xl ${tint.bg} px-3.5 py-3 text-left transition-transform active:scale-[0.99]`}
+      className={`relative flex w-full overflow-hidden rounded-2xl ${tint.bg} px-3.5 py-3 text-left transition-transform active:scale-[0.99]`}
     >
       <span className={`absolute inset-y-0 left-0 w-1.5 ${tint.bar}`} />
 
@@ -68,6 +68,18 @@ export default function ItemCard({
         <span className="flex items-start gap-2">
           <span className="text-[15px] leading-6">{tagEmoji(tags, item.tag)}</span>
           <span className="min-w-0 flex-1">
+            {/*
+              The time rides in the title's row rather than in a column of its
+              own down the side of the card.
+
+              A column is what it was, and a column is `shrink-0` for the
+              card's whole height — but it only ever holds one short line. On a
+              phone that reserved a quarter of the width, top to bottom, and
+              the notes wrapped against it the entire way down. A restaurant
+              card with an address, a phone number, opening hours and what to
+              order lost a finger's width of every one of its fifteen lines to
+              hold up '12:00 – 13:20'.
+            */}
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[15px] font-semibold leading-6">{item.title}</span>
               {item.attachments.length > 0 && (
@@ -76,6 +88,20 @@ export default function ItemCard({
                   {item.attachments.length > 1 && item.attachments.length}
                 </span>
               )}
+              <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
+                {showTime && (
+                  <span className="text-[12px] font-medium tabular-nums text-neutral-500">
+                    {when}
+                  </span>
+                )}
+                {running && (
+                  <span
+                    className={`rounded-full ${tint.bar} px-2 py-0.5 text-[10px] font-semibold leading-4 text-white`}
+                  >
+                    On now
+                  </span>
+                )}
+              </span>
             </span>
 
             {/*
@@ -115,17 +141,6 @@ export default function ItemCard({
             )}
           </span>
         </span>
-      </span>
-
-      <span className="flex shrink-0 flex-col items-end gap-1">
-        {showTime && (
-          <span className="text-[12px] font-medium tabular-nums text-neutral-500">{when}</span>
-        )}
-        {running && (
-          <span className={`rounded-full ${tint.bar} px-2 py-0.5 text-[10px] font-semibold text-white`}>
-            On now
-          </span>
-        )}
       </span>
     </button>
   )
