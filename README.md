@@ -33,7 +33,7 @@ are in is the one thing you already know, and what the screen is opened to find
 out is what is coming. Tapping a date drops into the day. An item can be a whole
 day, and it can run from one date to another, which is what a trip actually is.
 A spanning item appears on every day it covers and says which day of it you are
-looking at. Items carry your own tags, a location, notes and attachments.
+looking at. Items carry your own tags, a location, links, notes and attachments.
 
 **Reminders** — due date and time, optionally running *until* a later date and
 time, optionally repeating daily or weekly inside that window. Alerts only fire
@@ -195,6 +195,11 @@ and it is already on YouTube — what the notebook was missing is not the video
 but which video went with which trip. Links are checked for scheme when they
 are stored rather than when they are drawn, because an `href` is somewhere code
 can run and a notebook is a file that gets exported and imported again.
+
+They are not the trip page's alone. The add and edit forms carry the same link
+field, because the booking confirmation arrives before the trip exists and a
+concert has a ticket page without being a trip at all — and the check on the
+way in is the store's, so both doors go through it.
 
 The one thing Travel stores of its own is the **wishlist**, because somewhere
 you have *not* been is not a schedule item at all.

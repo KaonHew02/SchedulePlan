@@ -2,11 +2,12 @@ import { useMemo, useState, type FormEvent } from 'react'
 import AttachmentStrip from '../components/Attachments'
 import CountrySelect from '../components/CountrySelect'
 import { DateField, Field, TextField, TimeField, Toggle } from '../components/FormFields'
+import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
 import { createTag, isTrip, useSchedule, useTags } from '../lib/store'
-import type { Attachment, Place, ScheduleDraft, ScheduleItem, TagId } from '../types'
+import type { Attachment, Place, ScheduleDraft, ScheduleItem, TagId, TripLink } from '../types'
 
 const FORM_ID = 'schedule-form'
 
@@ -49,6 +50,7 @@ export default function ScheduleForm({
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? prefill?.notes ?? '')
   const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? prefill?.attachments ?? [])
+  const [links, setLinks] = useState<TripLink[]>(item?.links ?? [])
   const [country, setCountry] = useState<string | null>(
     item?.place?.country ?? prefill?.place?.country ?? null,
   )
@@ -85,12 +87,13 @@ export default function ScheduleForm({
     }
     return seen.slice(0, 8)
   }, [schedule])
-  // Location, notes and files stay out of the way until they are wanted.
+  // Location, links, notes and files stay out of the way until they are wanted.
   const [showDetails, setShowDetails] = useState(
     Boolean(
       item?.location ||
         item?.notes ||
         item?.attachments?.length ||
+        item?.links?.length ||
         item?.place ||
         prefill?.place ||
         prefill?.attachments?.length,
@@ -134,6 +137,7 @@ export default function ScheduleForm({
         tag,
         place: country ? { country, city: city.trim() || null } : null,
         attachments: files,
+        links,
         trip_id: tripId,
       })
       // On success the parent closes this sheet.
@@ -304,6 +308,16 @@ export default function ScheduleForm({
               </div>
             </div>
 
+            {/*
+              Links before files, because one is usually why the other is not
+              there: the vlog and the booking page are the parts of a day that
+              live on somebody else's server, and pasting the address is the
+              whole of keeping them.
+            */}
+            <div className="mt-4">
+              <LinkEditor links={links} onChange={setLinks} />
+            </div>
+
             <div className="mt-4">
               <p className="pb-2 text-[13px] text-neutral-400">Attachments</p>
               <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
@@ -315,7 +329,7 @@ export default function ScheduleForm({
             onClick={() => setShowDetails(true)}
             className="mt-4 text-[14px] text-neutral-400"
           >
-            + Add location, notes or files
+            + Add location, links, notes or files
           </button>
         )}
       </form>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { FileViewer, Thumb } from '../components/Attachments'
-import { PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../components/Icons'
+import { LinkIcon, PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { daysBetween, longDate, relativeDay, timeRange } from '../lib/date'
 import { money } from '../lib/currency'
+import { hostLabel } from '../lib/links'
 import { lastDay, spansDays, useExpenses, useSettings, useTags } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { Attachment, ScheduleItem } from '../types'
@@ -81,6 +82,34 @@ export default function ScheduleDetail({
           <p className="mt-3 whitespace-pre-wrap text-[15px] leading-6 text-neutral-700">
             {item.notes}
           </p>
+        )}
+
+        {item.links.length > 0 && (
+          <div className="mt-4 border-t border-neutral-100">
+            {item.links.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                // noreferrer for the privacy, noopener because a tab opened
+                // this way can otherwise reach back through window.opener.
+                rel="noreferrer noopener"
+                className="flex items-center gap-3 border-b border-neutral-100 py-2.5"
+              >
+                <LinkIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] leading-6 text-brand-600">
+                    {link.label || hostLabel(link.url)}
+                  </span>
+                  {link.label && (
+                    <span className="block truncate text-[12px] leading-4 text-neutral-400">
+                      {hostLabel(link.url)}
+                    </span>
+                  )}
+                </span>
+              </a>
+            ))}
+          </div>
         )}
 
         {item.attachments.length > 0 && (

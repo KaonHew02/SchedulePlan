@@ -475,6 +475,28 @@ export const occupies = (item: ScheduleItem, day: string): boolean =>
 export const spansDays = (item: ScheduleItem): boolean =>
   item.end_date !== null && item.end_date > item.date
 
+/**
+ * Links as they should be stored.
+ *
+ * The scheme gate lives here rather than in the form, for the reason `safeUrl`
+ * gives: a stored link ends up in an `href`, and the notebook it is stored in
+ * travels. The form checks too, so this is the backstop rather than the first
+ * word — but it is the one that every path in has to go through.
+ *
+ * Ids are handed out here as well. A link added in a form has never been near
+ * the notebook, and two of them added in the same sitting can only agree on
+ * their numbering by asking the same counter, which is this one.
+ */
+function cleanLinks(links: TripLink[]): TripLink[] {
+  const clean: TripLink[] = []
+  for (const link of links) {
+    const url = safeUrl(link.url)
+    if (!url) throw new Error(`"${link.url}" does not look like a link.`)
+    clean.push({ id: nextId(clean), label: link.label.trim(), url })
+  }
+  return clean
+}
+
 function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
   const title = draft.title.trim()
   if (!title) throw new Error('Please give this a title.')
@@ -541,12 +563,12 @@ export function onDay(items: ScheduleItem[], day: string): ScheduleItem[] {
 export const store = {
   async createSchedule(draft: ScheduleDraft): Promise<ScheduleItem> {
     const db = readDb()
-    // The add form asks for neither; the trip page is what writes them.
+    // The plan is the trip page's alone; links can come from either.
     const item: ScheduleItem = {
       id: nextId(db.schedule),
       ...cleanScheduleDraft(draft),
       plan: null,
-      links: [],
+      links: cleanLinks(draft.links ?? []),
       trip_id: draft.trip_id ?? null,
     }
     await writeDb({ ...db, schedule: [...db.schedule, item] })
@@ -560,10 +582,12 @@ export const store = {
     const updated: ScheduleItem = {
       id,
       ...cleanScheduleDraft(draft),
-      // The form has no field for these, so saving it must not erase them:
-      // changing the time of a trip should not empty its plan.
+      // The form has no field for the plan, so saving it must not erase it:
+      // changing the time of a trip should not empty its itinerary. Links it
+      // does have — but a draft that leaves them out is saying nothing about
+      // them, which is not the same as saying there are none.
       plan: existing.plan,
-      links: existing.links,
+      links: draft.links ? cleanLinks(draft.links) : existing.links,
       trip_id: draft.trip_id ?? null,
     }
     await writeDb({

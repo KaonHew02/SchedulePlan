@@ -138,6 +138,11 @@ export interface ScheduleDraft {
   tag: TagId | null
   place: Place | null
   attachments: Attachment[]
+  /**
+   * The links on the item. Left out entirely — as the trip page leaves it —
+   * means "don't touch them"; an empty array means the form cleared them.
+   */
+  links?: TripLink[]
   /** Which trip this is a leg of. See `ScheduleItem.trip_id`. */
   trip_id?: number | null
 }
