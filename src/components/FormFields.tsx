@@ -152,10 +152,8 @@ export function TimeField({
           <TimePanel
             value={value}
             relativeTo={relativeTo}
-            onPick={(time) => {
-              onChange(time)
-              setOpen(false)
-            }}
+            onPick={onChange}
+            onDone={() => setOpen(false)}
             onClear={
               clearable
                 ? () => {

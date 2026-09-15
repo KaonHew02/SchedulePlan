@@ -13,6 +13,14 @@ import { addMinutes, nowTime } from '../lib/date'
  * So every tap here commits a whole time. Choose an hour and the minutes it
  * already had come with it; choose a minute and the hour does. There is no
  * half-entered state to lose.
+ *
+ * Committing and *closing* are two different things, though, and treating
+ * them as one made the hour column nearly useless: picking 16 shut the panel,
+ * so setting 16:45 meant opening the picker twice. A time is read left to
+ * right and set the same way, so an hour leaves the panel up with the minutes
+ * under your thumb, and the minute — the last thing anybody picks — closes
+ * it. Every pick is already saved by then, so dismissing it any other way
+ * loses nothing either.
  */
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'))
@@ -120,15 +128,25 @@ function Column({
 export function TimePanel({
   value,
   onPick,
+  onDone,
   onClear,
   /** A start time, when this field is the end of something. Drives the nudges. */
   relativeTo,
 }: {
   value: string
+  /** Commits a time. Called on every tap; does not close the panel. */
   onPick: (time: string) => void
+  /** The time is settled — close. Never fires without an `onPick` before it. */
+  onDone: () => void
   onClear?: () => void
   relativeTo?: string | null
 }) {
+  /** A whole time in one tap: commit it and get out of the way. */
+  const pickAndClose = (time: string) => {
+    onPick(time)
+    onDone()
+  }
+
   const [currentHour, currentMinute] = value ? value.split(':') : [null, null]
 
   // With nothing chosen yet, a tap on one column still has to produce a whole
@@ -145,6 +163,7 @@ export function TimePanel({
           selected={currentHour}
           restingAt={baseHour}
           onPick={(hour) => onPick(`${hour}:${baseMinute}`)}
+          /* No close here — the minutes are the other half of the job. */
         />
         <div className="my-3 w-px bg-neutral-100" />
         {/* No rounding on the way in any more: every minute is in the list,
@@ -155,7 +174,7 @@ export function TimePanel({
           values={MINUTES}
           selected={currentMinute}
           restingAt={baseMinute}
-          onPick={(minute) => onPick(`${baseHour}:${minute}`)}
+          onPick={(minute) => pickAndClose(`${baseHour}:${minute}`)}
         />
       </div>
 
@@ -165,7 +184,7 @@ export function TimePanel({
             <button
               key={minutes}
               type="button"
-              onClick={() => onPick(addMinutes(relativeTo, minutes))}
+              onClick={() => pickAndClose(addMinutes(relativeTo, minutes))}
               className="flex-1 rounded-lg py-1.5 text-[12px] font-medium text-neutral-500 hover:bg-neutral-100"
             >
               {minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
@@ -177,7 +196,7 @@ export function TimePanel({
       <div className="flex gap-1 border-t border-neutral-100 px-1 pt-1.5">
         <button
           type="button"
-          onClick={() => onPick(nowTime())}
+          onClick={() => pickAndClose(nowTime())}
           className="flex-1 rounded-lg py-1.5 text-[13px] font-medium text-neutral-600 hover:bg-neutral-100"
         >
           Now
