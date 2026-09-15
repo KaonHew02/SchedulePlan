@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import AttachmentStrip from '../components/Attachments'
 import CurrencySelect from '../components/CurrencySelect'
-import { DateField, Field } from '../components/FormFields'
+import { DateField, Field, NotesField } from '../components/FormFields'
 import { ChevronDown, ScanIcon } from '../components/Icons'
 import Popover from '../components/Popover'
 import Sheet from '../components/Sheet'
@@ -335,13 +335,7 @@ export default function ExpenseForm({
                   <ScheduleLink value={linked} date={date} onChange={setLinked} />
                 </Field>
                 <div className="py-3">
-                  <textarea
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    rows={2}
-                    placeholder="Notes"
-                    className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-neutral-300"
-                  />
+                  <NotesField value={notes} onChange={setNotes} />
                 </div>
               </div>
 

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { DateField, Field, Segmented, TimeField } from '../components/FormFields'
+import { DateField, Field, NotesField, Segmented, TimeField } from '../components/FormFields'
 import Sheet from '../components/Sheet'
 import { daysBetween, nextHalfHour, todayISO } from '../lib/date'
 import { createReminder, deleteReminder, updateReminder } from '../lib/store'
@@ -145,12 +145,10 @@ export default function ReminderForm({
         )}
 
         {showNotes ? (
-          <textarea
+          <NotesField
             value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            rows={2}
-            placeholder="Notes"
-            className="mt-3 w-full resize-none border-b border-neutral-100 bg-transparent pb-3 text-[15px] outline-none placeholder:text-neutral-300"
+            onChange={setNotes}
+            className="mt-3 border-b border-neutral-100 pb-3"
           />
         ) : (
           <button

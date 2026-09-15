@@ -66,7 +66,9 @@ export default function Sheet({ onClose, title, children, footer }: Props) {
         aria-modal="true"
         aria-label={title}
         style={floor ? { minHeight: floor } : undefined}
-        className="relative w-full sm:max-w-md max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-xl animate-sheet-up"
+        // max-w-lg, not md: on a phone the sheet is the screen either way, and
+        // on a desktop md is 448px of a 1900px screen to write a paragraph in.
+        className="relative w-full sm:max-w-lg max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-xl animate-sheet-up"
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>

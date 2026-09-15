@@ -257,6 +257,13 @@ export const ZoomIcon = ({ className = 'w-4 h-4' }: Props) => (
   </svg>
 )
 
+/** The corners pointing in: what ZoomIcon undoes. */
+export const ShrinkIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+  </svg>
+)
+
 export const LinkIcon = ({ className = 'w-4 h-4' }: Props) => (
   <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M10.5 13.5a3.7 3.7 0 0 0 5.4.3l2.6-2.6a3.7 3.7 0 0 0-5.2-5.2l-1.5 1.5" />

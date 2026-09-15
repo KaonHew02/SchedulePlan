@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import AttachmentStrip from '../components/Attachments'
 import CountrySelect from '../components/CountrySelect'
-import { DateField, Field, TextField, TimeField, Toggle } from '../components/FormFields'
+import { DateField, Field, NotesField, TextField, TimeField, Toggle } from '../components/FormFields'
 import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
@@ -298,13 +298,7 @@ export default function ScheduleForm({
                 </Field>
               )}
               <div className="py-3">
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Notes"
-                  className="w-full resize-none bg-transparent text-[15px] outline-none placeholder:text-neutral-300"
-                />
+                <NotesField value={notes} onChange={setNotes} />
               </div>
             </div>
 
