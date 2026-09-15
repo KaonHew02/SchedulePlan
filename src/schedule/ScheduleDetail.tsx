@@ -5,6 +5,7 @@ import Sheet from '../components/Sheet'
 import { daysBetween, longDate, relativeDay, timeRange } from '../lib/date'
 import { money } from '../lib/currency'
 import { hostLabel } from '../lib/links'
+import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useExpenses, useSettings, useTags } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { Attachment, ScheduleItem } from '../types'
@@ -78,9 +79,10 @@ export default function ScheduleDetail({
           </p>
         )}
 
+        {/* Same text, same shape as the card it was opened from. */}
         {item.notes && (
           <p className="mt-3 whitespace-pre-wrap text-[15px] leading-6 text-neutral-700">
-            {item.notes}
+            {reflow(item.notes)}
           </p>
         )}
 

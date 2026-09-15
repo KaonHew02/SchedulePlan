@@ -322,6 +322,7 @@ SchedulePlan/
       translate.ts              The translator chain, the voice lookup, and the
                                 starter phrasebook
       links.ts                  Making a pasted link safe to put in an href
+      notes.ts                  Dropping the line breaks a wrapper added, keeping the ones typed
       places.ts                 The country table, and the globe projection
       date.ts                   Date maths and formatting (no date library)
       tags.ts                   Default tags, categories, emoji choices

@@ -1,5 +1,6 @@
 import { PaperclipIcon, PinIcon } from '../components/Icons'
 import { dayOfSpan, daysBetween, minutesOf, nowTime, todayISO } from '../lib/date'
+import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useTags } from '../lib/store'
 import { tagEmoji, tintFor } from '../lib/tags'
 import type { ScheduleItem } from '../types'
@@ -112,6 +113,11 @@ export default function ItemCard({
               — every newline collapsed to a space — and then got cut after two
               lines of it. K writes these as a block to be read down, and the
               card was reflowing them into prose and then hiding most of it.
+
+              `reflow` is the other half of that, and not a retreat from it:
+              the lines somebody typed are kept, and the ones a wrapper put
+              there on the way in are taken out, so a paragraph pasted at forty
+              characters stops leaving two thirds of a desktop card blank.
             */}
             {item.notes && (
               <span
@@ -119,7 +125,7 @@ export default function ItemCard({
                   compact ? 'line-clamp-2' : ''
                 }`}
               >
-                {item.notes}
+                {reflow(item.notes)}
               </span>
             )}
 
