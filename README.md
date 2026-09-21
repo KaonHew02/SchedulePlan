@@ -105,7 +105,8 @@ becomes a line on the shared card, and one shared by only some of the table
 becomes a line each.
 
 **Travel** — countries, destinations and continents counted off the schedule,
-a goal to aim at, a globe you can spin with a dot on everywhere you have been,
+a goal to aim at, a globe you can spin with a dot on everywhere you have been
+— tap a country badge under it and the globe turns to face that country —
 every trip with what it cost, and a wishlist of where to go next. A wish holds
 what a trip holds: a note to write in, the links — the booking page, the video
 that put the idea there — and the files somebody sent you, on top of the

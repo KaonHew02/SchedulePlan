@@ -15,7 +15,8 @@ import { loadWorldMap, type WorldMap } from './worldmap'
  * nowhere else, and until it arrives the wireframe is what is on screen.
  *
  * Drag to spin, wheel or pinch to zoom, point at a country to be told which
- * one it is. Clipping to the near side is d3's: the far half of a polygon is
+ * one it is, tap one of the badges under it and the globe turns to face that
+ * country. Clipping to the near side is d3's: the far half of a polygon is
  * cut at the horizon and closed along it, which is what stops Brazil being
  * drawn flat across the Pacific.
  *
@@ -65,6 +66,21 @@ const BEEN_LIT = '#3F6212'
 const LIT_BORDER = '#2E2C43'
 
 const clamp = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+
+/** How long the globe takes to turn to a country it was asked to show. */
+const FLIGHT = 520
+
+/** Slow at both ends, quick through the middle — a turn, not a jump-cut. */
+const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
+
+/**
+ * Somebody who has asked not to be moved around is not moved around. The
+ * query is read at the moment of the tap rather than subscribed to, because
+ * the answer only matters for the half second a flight lasts.
+ */
+const stillPreferred = (): boolean =>
+  typeof window !== 'undefined' &&
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 
 const spread = (points: Iterable<{ x: number; y: number }>): number => {
   const [a, b] = [...points]
@@ -145,6 +161,47 @@ export default function Globe({
   const [hovered, setHovered] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
 
+  /*
+   * Turning the globe to face a country.
+   *
+   * A badge used to light its country and name it in the caption, and that is
+   * no use at all when the country is round the back: you tapped SG, were
+   * told Singapore, been there — and were shown the Atlantic. The globe has
+   * to come round.
+   *
+   * Animated rather than set, because a sphere that cuts instantly from one
+   * side of the world to the other says nothing about where the country is.
+   * Half a second of turning does, and it is the reason the map is a globe.
+   */
+  const flight = useRef<number | null>(null)
+  const stopFlight = () => {
+    if (flight.current !== null) cancelAnimationFrame(flight.current)
+    flight.current = null
+  }
+  useEffect(() => stopFlight, [])
+
+  function flyTo(lat: number, lon: number) {
+    stopFlight()
+    const from = view
+    // Longitudes wrap, so the way round is chosen rather than subtracted:
+    // 170°E to 170°W is twenty degrees east, not three hundred and forty west.
+    const turn = ((lon - from.lon + 540) % 360) - 180
+    const rise = lat - from.lat
+    if (Math.abs(turn) < 0.5 && Math.abs(rise) < 0.5) return
+    if (stillPreferred()) {
+      setView({ lat, lon })
+      return
+    }
+    const started = performance.now()
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / FLIGHT)
+      const e = ease(t)
+      setView({ lat: from.lat + rise * e, lon: from.lon + turn * e })
+      flight.current = t < 1 ? requestAnimationFrame(step) : null
+    }
+    flight.current = requestAnimationFrame(step)
+  }
+
   const been = useMemo(() => new Set(codes), [codes])
   const scale = RADIUS * zoom
 
@@ -213,6 +270,9 @@ export default function Globe({
           role="img"
           aria-label={`Globe showing ${visited.length} countries visited`}
           onPointerDown={(event) => {
+            // A hand on the globe outranks a turn it is in the middle of, or
+            // the two would fight over the view for the rest of the flight.
+            stopFlight()
             event.currentTarget.setPointerCapture(event.pointerId)
             pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
             travelled.current = false
@@ -404,12 +464,19 @@ export default function Globe({
               type="button"
               onClick={() => {
                 setPicked(place.code)
+                flyTo(place.lat, place.lon)
                 onPick?.(place.code)
               }}
               onPointerEnter={() => setHovered(place.code)}
               onPointerLeave={() => setHovered(null)}
-              title={place.name}
-              className="rounded-full transition-transform hover:scale-105"
+              title={`Show ${place.name} on the globe`}
+              aria-pressed={picked === place.code}
+              // The ring follows the tap, not the focus: a browser's own
+              // outline goes the moment you click anywhere else, and which
+              // country the globe is turned to outlives that by definition.
+              className={`rounded-md transition-transform hover:scale-105 ${
+                picked === place.code ? 'ring-2 ring-brand-400 ring-offset-1' : ''
+              }`}
             >
               <CountryBadge code={place.code} />
             </button>
