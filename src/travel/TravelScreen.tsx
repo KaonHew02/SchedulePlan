@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useFileUrl } from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
-import { ChevronRight, PinIcon, Plus } from '../components/Icons'
+import { ChevronRight, LinkIcon, PaperclipIcon, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
@@ -103,6 +103,27 @@ function WishCard({ wish, onOpen }: { wish: WishPlace; onOpen: () => void }) {
         <PinIcon className="h-3 w-3" />
         <span className="truncate">{countryOf(wish.country)?.name ?? wish.country}</span>
       </span>
+      {/*
+        What is inside, without opening it. A card that holds nothing but a
+        name and one that holds a page of notes, the booking and four photos
+        looked exactly alike, so the only way to find out was to open it.
+      */}
+      {(wish.links.length > 0 || wish.attachments.length > 0) && (
+        <span className="mt-0.5 flex items-center gap-2.5 text-[11px] tabular-nums text-neutral-400">
+          {wish.links.length > 0 && (
+            <span className="flex items-center gap-1">
+              <LinkIcon className="h-3 w-3" />
+              {wish.links.length}
+            </span>
+          )}
+          {wish.attachments.length > 0 && (
+            <span className="flex items-center gap-1">
+              <PaperclipIcon className="h-3 w-3" />
+              {wish.attachments.length}
+            </span>
+          )}
+        </span>
+      )}
     </button>
   )
 }
@@ -477,12 +498,15 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             notes: visiting.note,
             place: { country: visiting.country, city: null },
             allDay: true,
-            attachments: visiting.photo ? [visiting.photo] : [],
+            // The picture first, so the trip leads with the same image the
+            // wishlist card did.
+            attachments: [...(visiting.photo ? [visiting.photo] : []), ...visiting.attachments],
+            links: visiting.links,
           }}
           onClose={() => setVisiting(null)}
           onSave={async (draft: ScheduleDraft) => {
             await store.createSchedule(draft)
-            // The photo is on the schedule item now, so its bytes stay.
+            // The files are on the schedule item now, so their bytes stay.
             await deleteWish(visiting.id, true)
             setVisiting(null)
             onToast(`${visiting.name} added to your trips`)

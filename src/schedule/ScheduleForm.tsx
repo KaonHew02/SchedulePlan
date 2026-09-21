@@ -24,6 +24,11 @@ export interface SchedulePrefill {
   place?: Place | null
   allDay?: boolean
   attachments?: Attachment[]
+  /**
+   * The links the wish had. They are re-numbered on the way in like any
+   * other, so the ids they arrive with are only ever a shape.
+   */
+  links?: TripLink[]
 }
 
 export default function ScheduleForm({
@@ -50,7 +55,7 @@ export default function ScheduleForm({
   const [location, setLocation] = useState(item?.location ?? '')
   const [notes, setNotes] = useState(item?.notes ?? prefill?.notes ?? '')
   const [files, setFiles] = useState<Attachment[]>(item?.attachments ?? prefill?.attachments ?? [])
-  const [links, setLinks] = useState<TripLink[]>(item?.links ?? [])
+  const [links, setLinks] = useState<TripLink[]>(item?.links ?? prefill?.links ?? [])
   const [country, setCountry] = useState<string | null>(
     item?.place?.country ?? prefill?.place?.country ?? null,
   )
@@ -96,7 +101,8 @@ export default function ScheduleForm({
         item?.links?.length ||
         item?.place ||
         prefill?.place ||
-        prefill?.attachments?.length,
+        prefill?.attachments?.length ||
+        prefill?.links?.length,
     ),
   )
   const [error, setError] = useState<string | null>(null)

@@ -106,10 +106,12 @@ becomes a line each.
 
 **Travel** — countries, destinations and continents counted off the schedule,
 a goal to aim at, a globe you can spin with a dot on everywhere you have been,
-every trip with what it cost, and a wishlist of where to go next. Been to one
-of them? Open it and tap **I have been here**: it fills in the schedule form
-with the country and the picture already on it, and comes off the wishlist when
-you save. There is no "visited" flag, because having been somewhere is a
+every trip with what it cost, and a wishlist of where to go next. A wish holds
+what a trip holds: a note to write in, the links — the booking page, the video
+that put the idea there — and the files somebody sent you, on top of the
+picture the card is made of. Been to one of them? Open it and tap **I have been
+here**: it fills in the schedule form with the country, the note, the links and
+the files already on it, and comes off the wishlist when you save. There is no "visited" flag, because having been somewhere is a
 schedule item — which is what the counters read. Nothing is entered twice: see
 below.
 
@@ -202,7 +204,12 @@ concert has a ticket page without being a trip at all — and the check on the
 way in is the store's, so both doors go through it.
 
 The one thing Travel stores of its own is the **wishlist**, because somewhere
-you have *not* been is not a schedule item at all.
+you have *not* been is not a schedule item at all. It carries notes, links and
+attachments for the same reason the trip page does — the research happens
+before the trip exists, and it would otherwise live in another app until the
+day you go. They travel with it: **I have been here** hands them to the
+schedule item, which is why deleting the wish afterwards leaves the bytes
+alone.
 
 The globe is a wireframe, not a map. A world map with borders would be the
 largest thing in the bundle by a distance, and a dot at a country's centroid
@@ -465,7 +472,12 @@ holds. `version` is 2; a version 1 file still imports.
   "tags": [{ "id": "travel", "label": "Travel", "emoji": "✈️" }],
   "categories": [{ "id": "food-drink", "label": "Food & drink", "emoji": "🍽" }],
   "splits": [],
-  "wishlist": [{ "id": 1, "name": "Lofoten", "country": "NO", "note": null, "photo": null }],
+  "wishlist": [
+    {
+      "id": 1, "name": "Lofoten", "country": "NO", "note": null, "photo": null,
+      "attachments": [], "links": []
+    }
+  ],
   "settings": {
     "currency": "MYR", "autoDrive": false, "lastDriveSync": null,
     "manualRates": {}, "travelGoal": 50

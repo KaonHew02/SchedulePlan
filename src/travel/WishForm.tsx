@@ -1,16 +1,25 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { useFileUrl } from '../components/Attachments'
+import AttachmentStrip, { useFileUrl } from '../components/Attachments'
 import CountrySelect from '../components/CountrySelect'
-import { Field, TextField } from '../components/FormFields'
+import { Field, NotesField } from '../components/FormFields'
 import { CameraIcon, CheckIcon, Spinner, TrashIcon } from '../components/Icons'
+import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import { saveFile } from '../lib/files'
 import { deleteWish, saveWish } from '../lib/store'
-import type { Attachment, WishPlace } from '../types'
+import type { Attachment, TripLink, WishPlace } from '../types'
 
 const FORM_ID = 'wish-form'
 
-/** Somewhere you want to go, with a picture to remember why. */
+/**
+ * Somewhere you want to go, with a picture to remember why — and the rest of
+ * what you found out while you were looking it up.
+ *
+ * A wish is where a trip starts, so it collects what a trip collects: a note
+ * to write in, the booking page and the video, the brochure somebody sent.
+ * Holding them anywhere else means keeping the research and the place it is
+ * about in two apps until the day you go.
+ */
 export default function WishForm({
   wish,
   onClose,
@@ -33,6 +42,8 @@ export default function WishForm({
   const [country, setCountry] = useState<string | null>(wish?.country ?? null)
   const [note, setNote] = useState(wish?.note ?? '')
   const [photo, setPhoto] = useState<Attachment | null>(wish?.photo ?? null)
+  const [files, setFiles] = useState<Attachment[]>(wish?.attachments ?? [])
+  const [links, setLinks] = useState<TripLink[]>(wish?.links ?? [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const preview = useFileUrl(photo?.id ?? null)
@@ -42,7 +53,15 @@ export default function WishForm({
     setBusy(true)
     setError(null)
     try {
-      await saveWish({ id: wish?.id, name, country: country ?? '', note: note || null, photo })
+      await saveWish({
+        id: wish?.id,
+        name,
+        country: country ?? '',
+        note: note || null,
+        photo,
+        attachments: files,
+        links,
+      })
       onSaved(wish ? 'Updated' : 'Added to the wishlist')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save that.')
@@ -92,13 +111,26 @@ export default function WishForm({
           <Field label="Country">
             <CountrySelect value={country} onChange={setCountry} />
           </Field>
-          <Field label="Why">
-            <TextField label="Note" value={note} onChange={setNote} />
-          </Field>
+          {/*
+            Why used to be a line on the right of a label, which is a stamp to
+            write on: "Culture, Ice Cream, Dessert," was already running off
+            the end of it. The reason you want to go is the first sentence of
+            everything else you look up about the place, so it gets the box
+            that grows — the same one the schedule and the expenses write in.
+          */}
+          <div className="py-3">
+            <NotesField
+              value={note}
+              onChange={setNote}
+              placeholder="Why you want to go — and anything worth keeping"
+            />
+          </div>
         </div>
 
         <div className="mt-4">
-          <p className="pb-2 text-[13px] text-neutral-400">Picture</p>
+          <p className="pb-2 text-[13px] text-neutral-400">
+            Picture <span className="text-neutral-300">· the one on the card</span>
+          </p>
           {preview ? (
             <div className="relative">
               <img
@@ -128,6 +160,22 @@ export default function WishForm({
           )}
         </div>
 
+        {/*
+          Links before files, as in the schedule form: one is usually why the
+          other is not there. Half of wanting to go somewhere lives on
+          somebody else's server — the video that put the idea there, the
+          hotel page, the map pin — and pasting the address is the whole of
+          keeping it.
+        */}
+        <div className="mt-4">
+          <LinkEditor links={links} onChange={setLinks} />
+        </div>
+
+        <div className="mt-4">
+          <p className="pb-2 text-[13px] text-neutral-400">Attachments</p>
+          <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
+        </div>
+
         {wish && onBeenThere && (
           <>
             <button
@@ -140,7 +188,7 @@ export default function WishForm({
             </button>
             <p className="pt-2 text-[12px] leading-5 text-neutral-400">
               Puts it in the schedule as a trip — with the country, so it counts — and takes it
-              off the wishlist. The picture goes with it.
+              off the wishlist. The note, the links and the files go with it.
             </p>
           </>
         )}

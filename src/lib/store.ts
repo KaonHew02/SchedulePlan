@@ -290,6 +290,25 @@ function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index 
   }
 }
 
+/**
+ * Wishes written before a place could hold more than a picture.
+ *
+ * Notes, links and files are all missing from those rows, and the form, the
+ * card and the file sweep each read them as lists rather than null-checking
+ * every one. Filled here, once, the way `fillItem` does it.
+ */
+function fillWish(raw: Partial<WishPlace>, index = 0): WishPlace {
+  return {
+    id: typeof raw.id === 'number' ? raw.id : index + 1,
+    name: String(raw.name ?? ''),
+    country: String(raw.country ?? ''),
+    note: typeof raw.note === 'string' ? raw.note : null,
+    photo: raw.photo ?? null,
+    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    links: Array.isArray(raw.links) ? raw.links : [],
+  }
+}
+
 function coerce(parsed: Partial<Snapshot> | null): DB {
   return {
     schedule: Array.isArray(parsed?.schedule) ? parsed.schedule.map(fillItem) : [],
@@ -301,7 +320,7 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
         : DEFAULT_CATEGORIES,
     reminders: Array.isArray(parsed?.reminders) ? parsed.reminders.map(fillReminder) : [],
     splits: Array.isArray(parsed?.splits) ? parsed.splits.map(fillSplit) : [],
-    wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist : [],
+    wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist.map(fillWish) : [],
     // Absent from every backup written before the translator existed, which
     // is the whole reason this reads defensively rather than trusting it.
     phrases: Array.isArray(parsed?.phrases) ? parsed.phrases : [],
@@ -415,6 +434,14 @@ const orphaned = (before: Attachment[], after: Attachment[]): string[] => {
   const kept = new Set(after.map((file) => file.id))
   return before.filter((file) => !kept.has(file.id)).map((file) => file.id)
 }
+
+/**
+ * Every file a wish owns. The cover picture is one of them — it is a separate
+ * field because the card needs to know which one it is, not because its bytes
+ * live anywhere else.
+ */
+const wishFiles = (wish: WishPlace | undefined): Attachment[] =>
+  wish ? [...(wish.photo ? [wish.photo] : []), ...(wish.attachments ?? [])] : []
 
 // ----------------------------------------------------------------- schedule
 
@@ -907,6 +934,10 @@ export async function saveWish(
     country: wish.country.toUpperCase(),
     note: wish.note?.trim() || null,
     photo: wish.photo ?? null,
+    attachments: wish.attachments ?? [],
+    // Through the same gate a schedule item's links go through, and for the
+    // same reason: this is where ids are handed out.
+    links: cleanLinks(wish.links ?? []),
   }
   await writeDb({
     ...db,
@@ -914,25 +945,26 @@ export async function saveWish(
       ? db.wishlist.map((row) => (row.id === saved.id ? saved : row))
       : [...db.wishlist, saved],
   })
-  if (existing?.photo && existing.photo.id !== saved.photo?.id) {
-    void deleteFiles([existing.photo.id])
-  }
+  // Anything the edit dropped — a replaced picture as much as a removed file
+  // — is unreachable now, so let the bytes go.
+  void deleteFiles(orphaned(wishFiles(existing), wishFiles(saved)))
   return saved
 }
 
 /**
  * Take a place off the wishlist.
  *
- * `keepPhoto` is for the one case where the picture is not going anywhere:
- * marking a wish as visited hands the photo to the schedule item it becomes,
- * so letting the bytes go here would leave that item pointing at nothing.
+ * `keepFiles` is for the one case where they are not going anywhere: marking
+ * a wish as visited hands its picture and everything attached to it over to
+ * the schedule item it becomes, so letting the bytes go here would leave that
+ * item pointing at nothing.
  */
-export async function deleteWish(id: number, keepPhoto = false): Promise<void> {
+export async function deleteWish(id: number, keepFiles = false): Promise<void> {
   const db = readDb()
   const existing = db.wishlist.find((row) => row.id === id)
   if (!existing) return
   await writeDb({ ...db, wishlist: db.wishlist.filter((row) => row.id !== id) })
-  if (existing.photo && !keepPhoto) void deleteFiles([existing.photo.id])
+  if (!keepFiles) void deleteFiles(wishFiles(existing).map((file) => file.id))
 }
 
 // ----------------------------------------------------------------- settings
@@ -971,7 +1003,7 @@ function attachmentIds(data: Pick<Snapshot, 'schedule' | 'expenses' | 'wishlist'
     for (const file of expense.attachments ?? []) ids.add(file.id)
   }
   for (const wish of data.wishlist ?? []) {
-    if (wish.photo) ids.add(wish.photo.id)
+    for (const file of wishFiles(wish)) ids.add(file.id)
   }
   return [...ids]
 }

@@ -81,8 +81,25 @@ export interface WishPlace {
   id: number
   name: string
   country: string
+  /**
+   * Why you want to go, and whatever else is worth keeping: the season to go
+   * in, what the flight costs, the name of the place somebody recommended.
+   *
+   * Prose rather than a line. It was a one-line field for as long as it was
+   * only ever going to hold a reason, and a reason turns out to be the first
+   * sentence of a page of research.
+   */
   note: string | null
+  /** The cover picture — the one the wishlist card is made of. */
   photo: Attachment | null
+  /**
+   * Everything else that came with it: the brochure, a screenshot of the map,
+   * the itinerary somebody sent. Kept apart from `photo` because the card
+   * shows one picture and a PDF is not one.
+   */
+  attachments: Attachment[]
+  /** The booking page, the video, the map pin. See `TripLink`. */
+  links: TripLink[]
 }
 
 export interface ScheduleItem {
