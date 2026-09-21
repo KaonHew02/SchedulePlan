@@ -297,8 +297,15 @@ export interface Settings {
    * agree with each other. Empty for every currency left on the default.
    */
   quoteUnits: Record<string, number>
-  /** How many countries you are aiming for. Drives the Travel progress bar. */
+  /** How many countries you are aiming for. */
   travelGoal: number
+  /**
+   * How many *places* you are aiming for, which is the other half of the same
+   * question: Da Nang and Hoi An are one country and two places, and a
+   * hundred places is a different ambition from fifty countries. Absent from
+   * settings saved before this existed, which the defaults merge covers.
+   */
+  placeGoal: number
 }
 
 export type ViewMode = 'day' | 'week' | 'month'

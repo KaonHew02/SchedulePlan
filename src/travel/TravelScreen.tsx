@@ -128,6 +128,59 @@ function WishCard({ wish, onOpen }: { wish: WishPlace; onOpen: () => void }) {
   )
 }
 
+/**
+ * One goal, and how far along it you are.
+ *
+ * There are two of them because they are two different ambitions. Fifty
+ * countries is breadth — somewhere new on the map. A hundred places is depth
+ * as well: Da Nang and Hoi An are one country and two places, and a second
+ * week in Vietnam that only ever moves you an hour down the coast should show
+ * as something rather than as nothing.
+ *
+ * One number covering both would have to average them, and an average of two
+ * unlike things is a number nobody can act on. Each bar wears the colour of
+ * the ring above it, so which is which needs no reading.
+ */
+function GoalBar({
+  value,
+  of,
+  label,
+  colour,
+  ink,
+}: {
+  value: number
+  of: number
+  label: string
+  colour: string
+  /** Text on the badge: the two fills are nowhere near the same lightness. */
+  ink: string
+}) {
+  const share = of > 0 ? Math.min(1, value / of) : 0
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-baseline gap-2">
+        <span className="flex-1 text-[13px] leading-5 text-neutral-600">
+          <span className="font-medium tabular-nums text-neutral-900">{value}</span> of{' '}
+          <span className="tabular-nums">{of}</span> {label}
+        </span>
+        <span
+          className="rounded-full px-2.5 py-1 text-[13px] font-semibold tabular-nums"
+          style={{ backgroundColor: colour, color: ink }}
+        >
+          {Math.round(share * 100)}%
+        </span>
+      </div>
+      <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-neutral-100">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: colour }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function TravelScreen({ onToast }: { onToast: (message: string) => void }) {
   const schedule = useSchedule()
   const expenses = useExpenses()
@@ -141,6 +194,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
   const [openTripId, setOpenTripId] = useState<number | null>(null)
   const [editingGoal, setEditingGoal] = useState(false)
   const [goalDraft, setGoalDraft] = useState(String(settings.travelGoal))
+  const [placeDraft, setPlaceDraft] = useState(String(settings.placeGoal))
 
   const today = todayISO()
 
@@ -241,10 +295,6 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
   const here = trips.find((trip) => occupies(trip, today))
   const next = [...trips].reverse().find((trip) => trip.date > today)
-  const goalShare = settings.travelGoal
-    ? Math.min(1, stats.countries.length / settings.travelGoal)
-    : 0
-
   // Looked up from the live list, so a plan typed on the page is on screen the
   // moment it is saved — and marking something Not a trip while its own page
   // is open drops back here instead of leaving a page for a trip that is gone.
@@ -295,7 +345,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         <div className="flex justify-between gap-2">
           <Ring
             value={stats.destinations}
-            of={Math.max(settings.travelGoal * 2, 1)}
+            of={Math.max(settings.placeGoal, 1)}
             label="destinations"
             colour="#A3E635"
             track="#F0F0F5"
@@ -316,51 +366,85 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           />
         </div>
 
-        <div className="mt-6 flex items-center gap-2">
-          <p className="flex-1 text-[14px] leading-5 text-neutral-600">
-            Which makes your travel goal completed by
-          </p>
-          <span className="rounded-full bg-[#A3E635] px-2.5 py-1 text-[13px] font-semibold tabular-nums">
-            {Math.round(goalShare * 100)}%
-          </span>
-        </div>
-        <div className="mt-2 h-3 overflow-hidden rounded-full bg-neutral-100">
-          <div
-            className="h-full rounded-full bg-[#A3E635] transition-all"
-            style={{ width: `${Math.max(2, goalShare * 100)}%` }}
-          />
-        </div>
+        <p className="mt-6 text-[14px] leading-5 text-neutral-600">
+          Which makes your travel goals completed by
+        </p>
+        <GoalBar
+          value={stats.countries.length}
+          of={settings.travelGoal}
+          label="countries"
+          colour="#6C5CE7"
+          ink="#FFFFFF"
+        />
+        <GoalBar
+          value={stats.destinations}
+          of={settings.placeGoal}
+          label="places"
+          colour="#A3E635"
+          ink="#1C1917"
+        />
 
         {editingGoal ? (
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-[13px] text-neutral-500">Aiming for</span>
-            <input
-              autoFocus
-              value={goalDraft}
-              onChange={(event) => setGoalDraft(event.target.value)}
-              inputMode="numeric"
-              aria-label="Countries to aim for"
-              className="w-16 rounded-lg bg-neutral-100 px-2 py-1 text-center text-[14px] tabular-nums outline-none"
-            />
-            <span className="text-[13px] text-neutral-500">countries</span>
-            <button
-              onClick={() => {
-                const goal = Math.max(1, Math.min(250, Number(goalDraft) || 50))
-                updateSettings({ travelGoal: goal })
-                setGoalDraft(String(goal))
-                setEditingGoal(false)
-              }}
-              className="ml-auto rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
-            >
-              Set
-            </button>
+          <div className="mt-3 rounded-2xl bg-neutral-50 p-3">
+            <div className="flex items-center gap-2">
+              <label htmlFor="goal-countries" className="flex-1 text-[13px] text-neutral-600">
+                Countries to aim for
+              </label>
+              <input
+                id="goal-countries"
+                autoFocus
+                value={goalDraft}
+                onChange={(event) => setGoalDraft(event.target.value)}
+                inputMode="numeric"
+                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
+              />
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label htmlFor="goal-places" className="flex-1 text-[13px] text-neutral-600">
+                Places to aim for
+              </label>
+              <input
+                id="goal-places"
+                value={placeDraft}
+                onChange={(event) => setPlaceDraft(event.target.value)}
+                inputMode="numeric"
+                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
+              />
+            </div>
+            <div className="mt-2.5 flex items-end gap-2">
+              <p className="flex-1 text-[12px] leading-4 text-neutral-400">
+                A place is a city: Da Nang and Hoi An are two of them, and going back to
+                either one does not add a third. Somewhere with only a country on it counts
+                once.
+              </p>
+              <button
+                onClick={() => {
+                  const countries = Math.max(1, Math.min(250, Number(goalDraft) || 50))
+                  const places = Math.max(1, Math.min(1000, Number(placeDraft) || 100))
+                  updateSettings({ travelGoal: countries, placeGoal: places })
+                  setGoalDraft(String(countries))
+                  setPlaceDraft(String(places))
+                  setEditingGoal(false)
+                }}
+                className="shrink-0 rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
+              >
+                Set
+              </button>
+            </div>
           </div>
         ) : (
           <button
-            onClick={() => setEditingGoal(true)}
-            className="mt-1.5 text-[12px] text-neutral-400"
+            onClick={() => {
+              // Re-read on the way in. The drafts were seeded at first render,
+              // and a goal changed since then would otherwise be offered back
+              // as the number it used to be.
+              setGoalDraft(String(settings.travelGoal))
+              setPlaceDraft(String(settings.placeGoal))
+              setEditingGoal(true)
+            }}
+            className="mt-2 text-[12px] text-neutral-400"
           >
-            {stats.countries.length} of {settings.travelGoal} countries · change the goal
+            Change the goals
           </button>
         )}
 

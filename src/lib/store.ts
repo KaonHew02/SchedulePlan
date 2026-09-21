@@ -95,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   manualRates: {},
   quoteUnits: {},
   travelGoal: 50,
+  placeGoal: 100,
 }
 
 const EMPTY: DB = {

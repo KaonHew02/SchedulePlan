@@ -105,7 +105,7 @@ becomes a line on the shared card, and one shared by only some of the table
 becomes a line each.
 
 **Travel** — countries, destinations and continents counted off the schedule,
-a goal to aim at, a globe you can spin with a dot on everywhere you have been
+two goals to aim at, a globe you can spin with a dot on everywhere you have been
 — tap a country badge under it and the globe turns to face that country —
 every trip with what it cost, and a wishlist of where to go next. A wish holds
 what a trip holds: a note to write in, the links — the booking page, the video
@@ -182,6 +182,13 @@ spending, and lists them as stops on its page. The shape is borrowed from
 Counting and listing are deliberately different: the list shows trips, the
 counters and the globe read every visit including the legs. Otherwise joining
 two rows would quietly delete a destination.
+
+**Two goals, because they are two ambitions.** Countries is breadth: somewhere
+new on the map. Places is depth as well — a place is a *city*, so Da Nang and
+Hoi An are one country and two places, and a second week in Vietnam that only
+moves you an hour down the coast shows as something rather than as nothing.
+Going back to Da Nang does not add a third; a visit carrying only a country
+counts once. Both are settable, and default to 50 and 100.
 
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
 days it covers, and its files — which can be added right there, rather than
@@ -481,7 +488,7 @@ holds. `version` is 2; a version 1 file still imports.
   ],
   "settings": {
     "currency": "MYR", "autoDrive": false, "lastDriveSync": null,
-    "manualRates": {}, "travelGoal": 50
+    "manualRates": {}, "travelGoal": 50, "placeGoal": 100
   },
   "files": [{ "id": "1f2e…", "dataUrl": "data:image/jpeg;base64,…" }]
 }
