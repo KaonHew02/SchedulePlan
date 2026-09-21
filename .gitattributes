@@ -1,0 +1,4 @@
+# A backup is a byte-exact export. core.autocrlf would rewrite its line
+# endings on checkout, so the file you restore would no longer hash the
+# same as the file the app wrote. Leave these alone.
+backups/*.json -text
