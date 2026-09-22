@@ -11,6 +11,13 @@ import { countryOf } from '../lib/places'
  *
  * The tint comes from the continent, which means a wall of them still groups
  * by region at a glance.
+ *
+ * A badge can carry a number — how many places in that country. It goes
+ * inside the pill rather than beside it. Beside it, the figure sat on the
+ * page background in a different colour to the badge it belonged to, and
+ * read as a separate thing that happened to be nearby; with the selected
+ * badge's ring drawn round the pair, it looked like a mistake. Inside, on a
+ * paler patch of the badge's own tint, it is plainly part of the badge.
  */
 
 const CONTINENT_TINT: Record<string, string> = {
@@ -25,9 +32,12 @@ const CONTINENT_TINT: Record<string, string> = {
 export default function CountryBadge({
   code,
   size = 'md',
+  count,
 }: {
   code: string | null | undefined
   size?: 'sm' | 'md' | 'lg'
+  /** A figure to carry inside the badge. Left off, the badge is just a code. */
+  count?: number
 }) {
   const country = countryOf(code)
   const tint = country ? CONTINENT_TINT[country.continent] : 'bg-neutral-100 text-neutral-500'
@@ -41,9 +51,16 @@ export default function CountryBadge({
   return (
     <span
       title={country?.name ?? undefined}
-      className={`inline-flex shrink-0 items-center justify-center rounded-md font-semibold tracking-wide ${tint} ${scale}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-md font-semibold tracking-wide ${tint} ${scale}`}
     >
       {country?.code ?? '··'}
+      {count !== undefined && (
+        // Pulled back into the badge's own padding, so a badge with a number
+        // is barely wider than one without and a row of them stays even.
+        <span className="-mr-0.5 rounded bg-white/70 px-1 text-[0.9em] tabular-nums">
+          {count}
+        </span>
+      )}
     </span>
   )
 }

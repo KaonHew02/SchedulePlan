@@ -386,7 +386,14 @@ export default function Globe({
         >
           <defs>
             {/* Zoom makes the sphere bigger, not the window. Without this the
-                magnified half of the world spills across the whole card. */}
+                magnified half of the world spills across the whole card.
+
+                Every group that uses this clips on the outside and moves on
+                the inside, never both at once. An element's own transform
+                applies to its clip path as well, so a group translated to the
+                centre AND clipped to a circle at the centre gets clipped to a
+                circle at (268, 268) — off the bottom-right corner of a 268
+                viewBox, which keeps nothing at all. */}
             <clipPath id={clip}>
               <circle cx={CENTRE} cy={CENTRE} r={RADIUS} />
             </clipPath>
@@ -401,10 +408,12 @@ export default function Globe({
           />
 
           {lines && (
-            <g transform={`translate(${CENTRE} ${CENTRE})`} clipPath={`url(#${clip})`}>
-              {lines.map((path, index) => (
-                <path key={index} d={path} fill="none" stroke="#CFCBE8" strokeWidth="1" />
-              ))}
+            <g clipPath={`url(#${clip})`}>
+              <g transform={`translate(${CENTRE} ${CENTRE})`}>
+                {lines.map((path, index) => (
+                  <path key={index} d={path} fill="none" stroke="#CFCBE8" strokeWidth="1" />
+                ))}
+              </g>
             </g>
           )}
 
@@ -443,42 +452,55 @@ export default function Globe({
 
           <circle cx={CENTRE} cy={CENTRE} r={RADIUS} fill="none" stroke={EDGE} strokeWidth="1" />
 
-          <g transform={`translate(${CENTRE} ${CENTRE})`} clipPath={`url(#${clip})`}>
-            {dots.map(({ country: place, point }) => {
-              // Singapore has no outline to light, so its dot does the job:
-              // same cue, the size a 2.8px mark can manage.
-              const lit = place.code === shown
-              return (
-                <g
-                  key={place.code}
-                  onPointerEnter={() => setHovered(place.code)}
-                  onPointerLeave={() =>
-                    setHovered((was) => (was === place.code ? null : was))
-                  }
-                  onClick={() => {
-                    if (travelled.current) return
-                    setPicked(place.code)
-                    onPick?.(place.code)
-                  }}
-                >
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={lit ? 6.5 : 4.5}
-                    fill="#FFFFFF"
-                    opacity="0.85"
-                  />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={lit ? 4.2 : 2.8}
-                    fill={lit ? BEEN_LIT : '#84CC16'}
-                    stroke={lit ? LIT_BORDER : 'none'}
-                    strokeWidth="1"
-                  />
-                </g>
-              )
-            })}
+          {/*
+            The countries with no outline, and for a long time with nothing
+            else either.
+
+            This group carried the transform and the clip together, so the
+            clip landed off the corner of the viewBox and took every dot with
+            it. Singapore was in the DOM the whole time — lit, at the exact
+            centre of the globe, painted nowhere. Tapping SG turned the world
+            to face it and showed an empty sea, which is the same complaint
+            the flight was supposed to have answered.
+          */}
+          <g clipPath={`url(#${clip})`}>
+            <g transform={`translate(${CENTRE} ${CENTRE})`}>
+              {dots.map(({ country: place, point }) => {
+                // Singapore has no outline to light, so its dot does the job:
+                // same cue, the size a 2.8px mark can manage.
+                const lit = place.code === shown
+                return (
+                  <g
+                    key={place.code}
+                    onPointerEnter={() => setHovered(place.code)}
+                    onPointerLeave={() =>
+                      setHovered((was) => (was === place.code ? null : was))
+                    }
+                    onClick={() => {
+                      if (travelled.current) return
+                      setPicked(place.code)
+                      onPick?.(place.code)
+                    }}
+                  >
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={lit ? 6.5 : 4.5}
+                      fill="#FFFFFF"
+                      opacity="0.85"
+                    />
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={lit ? 4.2 : 2.8}
+                      fill={lit ? BEEN_LIT : '#84CC16'}
+                      stroke={lit ? LIT_BORDER : 'none'}
+                      strokeWidth="1"
+                    />
+                  </g>
+                )
+              })}
+            </g>
           </g>
         </svg>
 
@@ -561,19 +583,14 @@ export default function Globe({
                 // The ring follows the tap, not the focus: a browser's own
                 // outline goes the moment you click anywhere else, and which
                 // country the globe is turned to outlives that by definition.
-                className={`flex items-center gap-1 rounded-md transition-transform hover:scale-105 ${
+                className={`rounded-md transition-transform hover:scale-105 ${
                   picked === place.code ? 'ring-2 ring-brand-400 ring-offset-1' : ''
                 }`}
               >
-                <CountryBadge code={place.code} />
                 {/* The tally, broken up. A row reading MY 3 · VN 2 · SG 1 is
                     the destinations ring with the answer to 'where' in it,
                     and it costs one character per country. */}
-                {count > 0 && (
-                  <span className="pr-0.5 text-[11px] tabular-nums text-neutral-500">
-                    {count}
-                  </span>
-                )}
+                <CountryBadge code={place.code} count={count > 0 ? count : undefined} />
               </button>
             )
           })}
