@@ -10,8 +10,17 @@ currency, a converter, a bill split that works out who owes whom, a scanner
 that reads a receipt or a booking with no account and no API key, and a Travel
 screen that counts where you have been.
 
-Seven tabs — Schedule, Travel, Expenses, Reminders, Currency, Translate, More.
-Everything else lives behind **More**.
+Six tabs — Schedule, Travel, Reminders, Currency, Translate, More. Everything
+else lives behind **More**.
+
+**Expenses is parked.** `MONEY` in `lib/features.ts` is `false`, which takes
+out the tab, the bill split, the receipt scanner, the spend on a schedule item
+and the cost of a trip. Nothing is deleted and nothing recorded is lost —
+expenses and splits already in the notebook are still read, written and
+exported, they just have nowhere on screen. Setting the flag back to `true`
+brings all of it back exactly as it was. Currency is *not* part of it: the
+converter and the home-currency setting stay, because a rate is worth looking
+up whether or not anything is being tracked.
 
 ---
 
@@ -40,7 +49,7 @@ time, optionally repeating daily or weekly inside that window. Alerts only fire
 while a tab is open; there is no server to send them otherwise, and the screen
 says so.
 
-**Expenses** — what you spent, in whatever currency you spent it, grouped by
+**Expenses** *(parked — see above)* — what you spent, in whatever currency you spent it, grouped by
 month with a breakdown by category. Anything paid in a foreign currency keeps
 the original amount, the currency and the rate **frozen at the moment you saved
 it**, so a rate that moves next week never restates what last week's dinner

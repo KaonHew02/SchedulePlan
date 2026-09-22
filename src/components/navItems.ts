@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { MONEY } from '../lib/features'
 import type { Screen } from '../types'
 import {
   BellIcon,
@@ -25,11 +26,17 @@ import {
  * on the trip these two were built for, the till and the person behind it are
  * the same thirty seconds. Seven is one more than the bottom bar was drawn
  * for — see BottomNav for what that costs.
+ *
+ * With Expenses parked it is six, which is what the bottom bar was drawn for
+ * in the first place. Filtered rather than removed, so the entry and its
+ * place in the order both survive being switched off.
  */
 export const NAV: { id: Screen; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { id: 'schedule', label: 'Schedule', Icon: CalendarIcon },
   { id: 'travel', label: 'Travel', Icon: GlobeIcon },
-  { id: 'expenses', label: 'Expenses', Icon: WalletIcon },
+  ...(MONEY
+    ? [{ id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon }]
+    : []),
   { id: 'reminders', label: 'Reminders', Icon: BellIcon },
   { id: 'currency', label: 'Currency', Icon: SwapIcon },
   { id: 'translate', label: 'Translate', Icon: TranslateIcon },

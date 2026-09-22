@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import Fab from '../components/Fab'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
 import ExpenseForm from '../expenses/ExpenseForm'
+import { MONEY } from '../lib/features'
 import {
   addDays,
   addMonths,
@@ -277,7 +278,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
         />
       )}
 
-      {expenseFor && (
+      {MONEY && expenseFor && (
         <ExpenseForm
           expense={null}
           defaultDate={expenseFor.date > todayISO() ? expenseFor.date : todayISO()}

@@ -4,6 +4,7 @@ import CountryBadge from '../components/CountryBadge'
 import { ChevronLeft, LinkIcon, Plus, TrashIcon } from '../components/Icons'
 import { money } from '../lib/currency'
 import { daysBetween, rangeLabel } from '../lib/date'
+import { MONEY } from '../lib/features'
 import { hostLabel, safeUrl } from '../lib/links'
 import { placeLabel } from '../lib/places'
 import {
@@ -180,7 +181,7 @@ export default function TripScreen({
                 {days > 1 && ` · ${days} days`}
               </span>
             </span>
-            {spent > 0 && (
+            {MONEY && spent > 0 && (
               <span className="shrink-0 text-right">
                 <span className="block text-[15px] font-medium tabular-nums">
                   {money(spent, settings.currency)}

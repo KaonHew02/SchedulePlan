@@ -4,6 +4,7 @@ import CurrencySelect from '../components/CurrencySelect'
 import DataSheet from '../components/DataSheet'
 import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
+import { MONEY } from '../lib/features'
 import LabelsScreen from '../tools/LabelsScreen'
 import ScanScreen from '../tools/ScanScreen'
 import { updateSettings, useSettings } from '../lib/store'
@@ -92,12 +93,14 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
             hint="The chips on the add form"
             onClick={() => setPage('tags')}
           />
-          <Row
-            icon={WalletIcon}
-            label="Expense categories"
-            hint="How spending is grouped"
-            onClick={() => setPage('categories')}
-          />
+          {MONEY && (
+            <Row
+              icon={WalletIcon}
+              label="Expense categories"
+              hint="How spending is grouped"
+              onClick={() => setPage('categories')}
+            />
+          )}
         </div>
 
         </div>

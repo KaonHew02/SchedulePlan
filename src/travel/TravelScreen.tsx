@@ -4,6 +4,7 @@ import CountryBadge from '../components/CountryBadge'
 import { ChevronRight, LinkIcon, PaperclipIcon, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
+import { MONEY } from '../lib/features'
 import { CONTINENTS, cityKey, countryOf, placeLabel, type ContinentCode } from '../lib/places'
 import {
   deleteWish,
@@ -519,7 +520,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                       </span>
                     </span>
                   </button>
-                  {spent > 0 && (
+                  {MONEY && spent > 0 && (
                     <span className="shrink-0 text-[13px] tabular-nums text-neutral-500">
                       {money(spent, settings.currency)}
                     </span>

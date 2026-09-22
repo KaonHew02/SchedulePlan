@@ -6,6 +6,7 @@ import SideNav from './components/SideNav'
 import Toast from './components/Toast'
 import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
+import { MONEY } from './lib/features'
 import RemindersScreen from './reminders/RemindersScreen'
 import TranslateScreen from './translate/TranslateScreen'
 import MoreScreen from './screens/MoreScreen'
@@ -69,7 +70,7 @@ export default function App() {
           <div className={`min-w-0 flex-1 ${CONTENT}`}>
             {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
             {screen === 'travel' && <TravelScreen onToast={setToast} />}
-            {screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
+            {MONEY && screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
             {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
             {screen === 'currency' && <CurrencyScreen />}
             {screen === 'translate' && <TranslateScreen onToast={setToast} />}

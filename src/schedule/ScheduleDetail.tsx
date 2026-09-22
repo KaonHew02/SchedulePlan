@@ -4,6 +4,7 @@ import { LinkIcon, PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../c
 import Sheet from '../components/Sheet'
 import { daysBetween, longDate, relativeDay, timeRange } from '../lib/date'
 import { money } from '../lib/currency'
+import { MONEY } from '../lib/features'
 import { hostLabel } from '../lib/links'
 import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useExpenses, useSettings, useTags } from '../lib/store'
@@ -127,6 +128,7 @@ export default function ScheduleDetail({
           </div>
         )}
 
+        {MONEY && (
         <div className="mt-4 rounded-xl bg-neutral-50 px-4 py-3">
           <div className="flex items-center gap-2">
             <WalletIcon className="h-4 w-4 text-neutral-400" />
@@ -155,6 +157,7 @@ export default function ScheduleDetail({
             </button>
           </div>
         </div>
+        )}
 
         {tagLabel(tags, item.tag) && (
           <p className="mt-4 text-[13px] text-neutral-400">{tagLabel(tags, item.tag)}</p>
