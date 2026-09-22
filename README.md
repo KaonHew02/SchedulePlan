@@ -105,9 +105,11 @@ becomes a line on the shared card, and one shared by only some of the table
 becomes a line each.
 
 **Travel** — countries, destinations and continents counted off the schedule,
-two goals to aim at, a globe you can spin with a dot on everywhere you have been
-— tap a country badge under it and the globe turns to face that country —
-every trip with what it cost, and a wishlist of where to go next. A wish holds
+two goals to aim at, a globe you can spin with everywhere you have been marked
+on it — tap a country badge under it and the globe turns to that country and
+comes in close enough to see it, and the badge carries how many places you have
+been there, so the destinations ring is broken down into the countries it came
+from — every trip with what it cost, and a wishlist of where to go next. A wish holds
 what a trip holds: a note to write in, the links — the booking page, the video
 that put the idea there — and the files somebody sent you, on top of the
 picture the card is made of. Been to one of them? Open it and tap **I have been

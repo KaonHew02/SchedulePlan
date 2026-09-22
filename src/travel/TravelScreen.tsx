@@ -250,20 +250,37 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
     return map
   }, [schedule])
 
+  /*
+   * The counters, and the same counters broken down by country.
+   *
+   * The destinations ring is a total, and a total is the one thing a globe
+   * cannot point at: fourteen places is not somewhere. So the per-country
+   * tally is kept alongside it rather than derived twice — the ring is the
+   * sum of it, which is the guarantee that the badge under the globe and the
+   * number above it can never drift apart.
+   */
   const stats = useMemo(() => {
-    const countries = new Set<string>()
-    const destinations = new Set<string>()
+    const byCountry = new Map<string, Set<string>>()
     const continents = new Set<ContinentCode>()
     for (const visit of visits) {
-      countries.add(visit.place.country)
+      const code = visit.place.country
       // A destination is a place, not a visit — three trips to Kyoto is one.
-      destinations.add(`${visit.place.country}:${(visit.place.city ?? '').toLowerCase()}`)
-      const found = countryOf(visit.place.country)
+      const seen = byCountry.get(code) ?? new Set<string>()
+      seen.add((visit.place.city ?? '').toLowerCase())
+      byCountry.set(code, seen)
+      const found = countryOf(code)
       if (found) continents.add(found.continent)
     }
+    const places: Record<string, number> = {}
+    let destinations = 0
+    for (const [code, seen] of byCountry) {
+      places[code] = seen.size
+      destinations += seen.size
+    }
     return {
-      countries: [...countries],
-      destinations: destinations.size,
+      countries: [...byCountry.keys()],
+      destinations,
+      places,
       continents: [...continents],
     }
   }, [visits])
@@ -449,7 +466,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         )}
 
         <div className="mt-6">
-          <Globe codes={stats.countries} />
+          <Globe codes={stats.countries} places={stats.places} />
         </div>
 
         </div>

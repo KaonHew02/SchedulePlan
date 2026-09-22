@@ -16,7 +16,7 @@ import { loadWorldMap, type WorldMap } from './worldmap'
  *
  * Drag to spin, wheel or pinch to zoom, point at a country to be told which
  * one it is, tap one of the badges under it and the globe turns to face that
- * country. Clipping to the near side is d3's: the far half of a polygon is
+ * country and comes in close enough to see it. Clipping to the near side is d3's: the far half of a polygon is
  * cut at the horizon and closed along it, which is what stops Brazil being
  * drawn flat across the Pacific.
  *
@@ -70,6 +70,43 @@ const clamp = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
 /** How long the globe takes to turn to a country it was asked to show. */
 const FLIGHT = 520
 
+/**
+ * As close as a flight will ever come in.
+ *
+ * Fitting a country exactly would put Singapore at 8x with nothing on screen
+ * but Johor, and a country with no coastline in view is not a country you can
+ * place. Stopping short leaves the neighbours in the frame, which is the
+ * thing that says *where* rather than merely *which*.
+ */
+const CLOSE = 6
+
+/**
+ * The share of the window's radius the country is aimed to take up.
+ *
+ * The first pass filled it, and a country touching all four edges is a
+ * country you cannot see the shape of. The quarter left over is where the
+ * coastline and the neighbours go, and they are most of what tells you the
+ * globe turned to the right place.
+ */
+const FILL = 0.78
+
+/**
+ * How far to zoom to hold a country of this angular radius.
+ *
+ * The window at zoom z shows a cap of angular radius asin(1/z). Give the
+ * country a little more room than it needs and invert: z = 1/sin(r/FILL).
+ * Past about 1.2 radians the cap is most of a hemisphere and the sine stops
+ * being worth inverting, which is the cap on the argument.
+ *
+ * No radius means a country the map file does not carry — Singapore is one
+ * of eighteen. Those stay a dot however far in you go, so they just go all
+ * the way, and the neighbours do the work of saying where.
+ */
+const fitZoom = (radius: number | undefined): number =>
+  radius === undefined
+    ? CLOSE
+    : Math.min(CLOSE, clamp(1 / Math.sin(Math.min(1.2, radius / FILL))))
+
 /** Slow at both ends, quick through the middle — a turn, not a jump-cut. */
 const ease = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
 
@@ -89,10 +126,20 @@ const spread = (points: Iterable<{ x: number; y: number }>): number => {
 
 export default function Globe({
   codes,
+  places = {},
   onPick,
 }: {
   /** Country codes visited, most recent first. */
   codes: string[]
+  /**
+   * Distinct destinations in each country, by code.
+   *
+   * The rings above the globe count the whole world at once — fourteen
+   * places, four countries — and that is the one number the globe cannot
+   * show you, because it is not attached to anywhere. Which four, and how
+   * much of the fourteen each one was, is the question a map is for.
+   */
+  places?: Record<string, number>
   onPick?: (code: string) => void
 }) {
   const clip = useId().replace(/:/g, '')
@@ -172,6 +219,11 @@ export default function Globe({
    * Animated rather than set, because a sphere that cuts instantly from one
    * side of the world to the other says nothing about where the country is.
    * Half a second of turning does, and it is the reason the map is a globe.
+   *
+   * Turning alone was not enough either. At 1x the whole globe is 252px, so
+   * SG came round to the middle and was still a 3px dot on a continent: K
+   * tapped it, the map did something too small to notice, and the country
+   * never appeared. So the flight closes in as well as turns.
    */
   const flight = useRef<number | null>(null)
   const stopFlight = () => {
@@ -180,23 +232,40 @@ export default function Globe({
   }
   useEffect(() => stopFlight, [])
 
-  function flyTo(lat: number, lon: number) {
+  function flyTo(lat: number, lon: number, to: number) {
     stopFlight()
     const from = view
+    const fromZoom = zoom
     // Longitudes wrap, so the way round is chosen rather than subtracted:
     // 170°E to 170°W is twenty degrees east, not three hundred and forty west.
     const turn = ((lon - from.lon + 540) % 360) - 180
     const rise = lat - from.lat
-    if (Math.abs(turn) < 0.5 && Math.abs(rise) < 0.5) return
+    // Zoom is a ratio, not a difference: 1→2 and 4→8 are the same amount of
+    // closing in. It is also why the test for 'already there' had to grow a
+    // third clause — tapping the country you are centred on used to return
+    // here having done nothing at all, which was the whole complaint.
+    const closer = to / fromZoom
+    if (Math.abs(turn) < 0.5 && Math.abs(rise) < 0.5 && Math.abs(closer - 1) < 0.02) return
     if (stillPreferred()) {
       setView({ lat, lon })
+      setZoom(to)
       return
     }
+    /*
+     * A long turn pulls back before it comes in again.
+     *
+     * Held at 6x across half a world, the near side is a grey blur going
+     * past at speed and you arrive with no idea what you crossed. Lifting
+     * out of the zoom mid-turn and settling back into it is how a map moves
+     * between two cities, and it costs the same half second.
+     */
+    const lift = Math.min(1.1, Math.hypot(turn, rise) / 70)
     const started = performance.now()
     const step = (now: number) => {
       const t = Math.min(1, (now - started) / FLIGHT)
       const e = ease(t)
       setView({ lat: from.lat + rise * e, lon: from.lon + turn * e })
+      setZoom(clamp(fromZoom * closer ** e * Math.exp(-lift * Math.sin(Math.PI * e))))
       flight.current = t < 1 ? requestAnimationFrame(step) : null
     }
     flight.current = requestAnimationFrame(step)
@@ -448,6 +517,15 @@ export default function Globe({
             <span className={been.has(country.code) ? 'text-lime-600' : 'text-neutral-400'}>
               {been.has(country.code) ? '· been there' : '· not yet'}
             </span>
+            {/* The country's own share of the destinations ring. Only where
+                there is one to show: '· 0 places' under a country you have
+                never been to is a line of text saying nothing. */}
+            {(places[country.code] ?? 0) > 0 && (
+              <span className="tabular-nums text-neutral-400">
+                · {places[country.code]}{' '}
+                {places[country.code] === 1 ? 'place' : 'places'}
+              </span>
+            )}
           </>
         ) : (
           <span className="text-neutral-400">
@@ -458,29 +536,47 @@ export default function Globe({
 
       {visited.length > 0 && (
         <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-          {visited.slice(0, 14).map((place) => (
-            <button
-              key={place.code}
-              type="button"
-              onClick={() => {
-                setPicked(place.code)
-                flyTo(place.lat, place.lon)
-                onPick?.(place.code)
-              }}
-              onPointerEnter={() => setHovered(place.code)}
-              onPointerLeave={() => setHovered(null)}
-              title={`Show ${place.name} on the globe`}
-              aria-pressed={picked === place.code}
-              // The ring follows the tap, not the focus: a browser's own
-              // outline goes the moment you click anywhere else, and which
-              // country the globe is turned to outlives that by definition.
-              className={`rounded-md transition-transform hover:scale-105 ${
-                picked === place.code ? 'ring-2 ring-brand-400 ring-offset-1' : ''
-              }`}
-            >
-              <CountryBadge code={place.code} />
-            </button>
-          ))}
+          {visited.slice(0, 14).map((place) => {
+            const count = places[place.code] ?? 0
+            return (
+              <button
+                key={place.code}
+                type="button"
+                onClick={() => {
+                  setPicked(place.code)
+                  // The shape's own centre where there is a shape, the atlas
+                  // point where there is not.
+                  const frame = world?.frame.get(place.code)
+                  flyTo(frame?.lat ?? place.lat, frame?.lon ?? place.lon, fitZoom(frame?.radius))
+                  onPick?.(place.code)
+                }}
+                onPointerEnter={() => setHovered(place.code)}
+                onPointerLeave={() => setHovered(null)}
+                title={
+                  count > 0
+                    ? `${place.name} — ${count} ${count === 1 ? 'place' : 'places'}`
+                    : `Show ${place.name} on the globe`
+                }
+                aria-pressed={picked === place.code}
+                // The ring follows the tap, not the focus: a browser's own
+                // outline goes the moment you click anywhere else, and which
+                // country the globe is turned to outlives that by definition.
+                className={`flex items-center gap-1 rounded-md transition-transform hover:scale-105 ${
+                  picked === place.code ? 'ring-2 ring-brand-400 ring-offset-1' : ''
+                }`}
+              >
+                <CountryBadge code={place.code} />
+                {/* The tally, broken up. A row reading MY 3 · VN 2 · SG 1 is
+                    the destinations ring with the answer to 'where' in it,
+                    and it costs one character per country. */}
+                {count > 0 && (
+                  <span className="pr-0.5 text-[11px] tabular-nums text-neutral-500">
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
           {visited.length > 14 && (
             <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[12px] text-neutral-500">
               +{visited.length - 14}
