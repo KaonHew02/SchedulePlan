@@ -189,8 +189,13 @@ two rows would quietly delete a destination.
 new on the map. Places is depth as well — a place is a *city*, so Da Nang and
 Hoi An are one country and two places, and a second week in Vietnam that only
 moves you an hour down the coast shows as something rather than as nothing.
-Going back to Da Nang does not add a third; a visit carrying only a country
-counts once. Both are settable, and default to 50 and 100.
+Going back to Da Nang does not add a third, and neither do two spellings of
+it — case, stray spaces and accents are folded, so Hoi An and Hội An are one
+town. A visit carrying only a country is *somewhere in that country*: it
+counts as one place when it is all you have there, and as none when the
+cities are recorded alongside it, because the Vietnam row that Da Nang and
+Hoi An hang off is the trip they were both part of and not a third place on
+it. Both goals are settable, and default to 50 and 100.
 
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
 days it covers, and its files — which can be added right there, rather than

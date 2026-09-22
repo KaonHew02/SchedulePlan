@@ -4,7 +4,7 @@ import CountryBadge from '../components/CountryBadge'
 import { ChevronRight, LinkIcon, PaperclipIcon, PinIcon, Plus } from '../components/Icons'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
-import { CONTINENTS, countryOf, placeLabel, type ContinentCode } from '../lib/places'
+import { CONTINENTS, cityKey, countryOf, placeLabel, type ContinentCode } from '../lib/places'
 import {
   deleteWish,
   isTrip,
@@ -266,7 +266,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
       const code = visit.place.country
       // A destination is a place, not a visit — three trips to Kyoto is one.
       const seen = byCountry.get(code) ?? new Set<string>()
-      seen.add((visit.place.city ?? '').toLowerCase())
+      seen.add(cityKey(visit.place.city))
       byCountry.set(code, seen)
       const found = countryOf(code)
       if (found) continents.add(found.continent)
@@ -274,8 +274,22 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
     const places: Record<string, number> = {}
     let destinations = 0
     for (const [code, seen] of byCountry) {
-      places[code] = seen.size
-      destinations += seen.size
+      /*
+       * A visit that named no city is 'somewhere in this country', and it
+       * counts as a place only when it is all there is.
+       *
+       * It used to count as one either way, which quietly added a phantom.
+       * A Vietnam trip made of a parent row carrying the country and two
+       * legs carrying the cities came out as three places — Da Nang, Hoi An,
+       * and the trip they were both part of. K went to two.
+       *
+       * Still one place when it stands alone, which is the case the rule was
+       * written for: a week in Japan with nowhere typed in is not nowhere.
+       */
+      const named = seen.size - (seen.has('') ? 1 : 0)
+      const count = Math.max(1, named)
+      places[code] = count
+      destinations += count
     }
     return {
       countries: [...byCountry.keys()],

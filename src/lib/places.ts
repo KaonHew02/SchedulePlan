@@ -292,6 +292,31 @@ export function placeLabel(place: { country: string; city: string | null } | nul
   return place.city ? `${place.city}, ${name}` : name
 }
 
+/**
+ * What makes two cities the same city, for counting.
+ *
+ * A name is typed fresh each time it is entered, and case, stray spaces and
+ * accents all wander between one typing and the next. Hoi An and Hội An are
+ * the same town, and counting them twice walks the places goal ahead of
+ * where anybody has actually been.
+ *
+ * The stroked letters are folded by hand because NFD will not do it: Đ is a
+ * letter in its own right, not a D with a mark on top, so it survives the
+ * decomposition that catches every other accent in Đà Nẵng.
+ *
+ * An empty key means a visit that named no city at all, which the counting
+ * treats as 'somewhere in this country' rather than as a place of its own.
+ */
+export function cityKey(city: string | null | undefined): string {
+  return (city ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
 // ------------------------------------------------------------- projection
 
 const RAD = Math.PI / 180
