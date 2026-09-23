@@ -373,7 +373,9 @@ where Sports and Personal come out the same green is doing nothing for anybody.
 ```
 SchedulePlan/
   .github/workflows/pages.yml   Builds and publishes on every push to main
-  docs/                         DEPLOY, DRIVE, RUNNING
+  docs/                         DEPLOY, DRIVE, RUNNING, and the project
+                                proposal (PROPOSAL.md, with Word and PDF
+                                editions generated from it)
   public/                       favicon.svg, logo-mark.svg
   src/
     App.tsx                     The responsive shell: the six screens, and the

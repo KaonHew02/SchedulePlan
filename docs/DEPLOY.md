@@ -71,9 +71,10 @@ server in a static repo would only confuse. It is in git history at commit
 
 **Export and the Drive sync are what make this survivable.** Export writes one
 `scheduleplan-YYYY-MM-DD.json`; Import reads it back, here or on another
-machine. Import *replaces* rather than merges — merging two schedules means
-guessing which entries are the same, and guessing wrong quietly duplicates a
-day — so it states what is in the file and what is about to go, and waits.
+machine. Import *adds* to the notebook and skips the rows it already has —
+same day, same title, same time — so importing your own backup twice changes
+nothing. **Replace** is the one that swaps the whole notebook for the file, and
+it states what is in the file and what is about to go, and waits.
 
 ## The scanners, and the API key that is not there
 
