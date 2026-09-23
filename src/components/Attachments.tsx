@@ -37,8 +37,21 @@ export type FileState = 'loading' | 'ready' | 'missing'
  * import — the row still says "11 attachments" and every one of them opens
  * nothing. Without this the screen cannot tell that apart from a PDF, and
  * draws the same grey page icon for both.
+ *
+ * `as` relabels the bytes before the URL is made, and it is a security
+ * measure rather than a convenience. An object URL has this app's origin, and
+ * a browser draws it by the blob's *own* type, not by what the record says it
+ * is — so an "attachment" from an imported file whose record says PDF and
+ * whose bytes say web page would, opened in a frame, run as SchedulePlan with
+ * the whole notebook in reach. Relabelled as a PDF it can only ever be a PDF,
+ * or a PDF that fails to open. Never hand an unrelabelled object URL to an
+ * iframe, a new tab or `window.open`; an `<img>` is the one place any bytes
+ * are harmless, because an image cannot run script.
  */
-export function useStoredFile(id: string | null): { url: string | null; state: FileState } {
+export function useStoredFile(
+  id: string | null,
+  as?: string,
+): { url: string | null; state: FileState } {
   const [url, setUrl] = useState<string | null>(null)
   const [state, setState] = useState<FileState>(id ? 'loading' : 'ready')
 
@@ -59,7 +72,7 @@ export function useStoredFile(id: string | null): { url: string | null; state: F
           setState('missing')
           return
         }
-        created = URL.createObjectURL(blob)
+        created = URL.createObjectURL(as ? new Blob([blob], { type: as }) : blob)
         setUrl(created)
         setState('ready')
       },
@@ -71,7 +84,7 @@ export function useStoredFile(id: string | null): { url: string | null; state: F
       if (created) URL.revokeObjectURL(created)
       setUrl(null)
     }
-  }, [id])
+  }, [id, as])
 
   return { url, state }
 }
@@ -82,8 +95,8 @@ export function useStoredFile(id: string | null): { url: string | null; state: F
  * Object URLs are a leak by default: the browser holds the blob alive until
  * the document is discarded or the URL is revoked by hand.
  */
-export function useFileUrl(id: string | null): string | null {
-  return useStoredFile(id).url
+export function useFileUrl(id: string | null, as?: string): string | null {
+  return useStoredFile(id, as).url
 }
 
 /**
@@ -293,7 +306,10 @@ export function FileViewer({
   /** Absent when the viewer is read-only. */
   onText?: (text: string) => void
 }) {
-  const url = useFileUrl(file.id)
+  // A PDF is the one thing drawn in a frame, so it is the one thing that has
+  // to be relabelled — see `useStoredFile`. Everything else goes in an <img>,
+  // is read as text, or is only ever downloaded.
+  const url = useFileUrl(file.id, isPdf(file.type) ? 'application/pdf' : undefined)
   const [reading, setReading] = useState<OcrProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)

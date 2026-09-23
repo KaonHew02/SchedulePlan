@@ -110,7 +110,7 @@ const PROVIDERS = [
   {
     name: 'Google',
     url: (text: string, from: string, to: string) =>
-      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(text)}`,
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(from)}&tl=${encodeURIComponent(to)}&dt=t&q=${encodeURIComponent(text)}`,
     read: (body: unknown): string | null => {
       // [[["translated","source",...], ...], ...] — a long sentence comes back
       // split into several rows that have to be put back together in order.
@@ -126,7 +126,7 @@ const PROVIDERS = [
       // first, on the assumption the service wanted them: it does not — it
       // takes RFC3066 — and stripping turned zh-TW into zh, so the fallback
       // quietly answered Traditional Chinese in Simplified.
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`,
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(from)}|${encodeURIComponent(to)}`,
     read: (body: unknown): string | null => {
       const data = (body as { responseData?: { translatedText?: string } })?.responseData
       const text = data?.translatedText?.trim()

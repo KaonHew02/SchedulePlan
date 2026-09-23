@@ -15,9 +15,10 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { DB_KEY, RECORDS, idbGet, idbPut, persist } from './idb'
+import { DB_KEY, FILES, RECORDS, idbGet, idbKeys, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
 import { safeUrl } from './links'
+import * as safe from './sanitize'
 import { divideCents } from './split'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, TRAVEL_TAG, makeTagId } from './tags'
 import type {
@@ -152,64 +153,69 @@ export function onSaved(handler: () => void): () => void {
 
 // ---------------------------------------------------------------- start up
 
+/*
+ * Every fill* below reads a row that may have come from a file somebody else
+ * wrote, so each field is checked for its type rather than trusted for it —
+ * see sanitize.ts for why a wrong type is worse than a missing one.
+ */
+
 /**
  * Backups written before multi-day items existed have no end_date and no
  * all_day. Reading one must not produce an item the rest of the app then has
  * to null-check forever, so the gaps are filled here, once.
  */
 function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
+  const place = raw.place as unknown
+  const country = safe.isRecord(place) ? safe.countryCode(place.country) : null
   return {
-    id: typeof raw.id === 'number' ? raw.id : index + 1,
-    date: String(raw.date ?? ''),
-    end_date: typeof raw.end_date === 'string' ? raw.end_date : null,
+    id: safe.positiveId(raw.id) ?? index + 1,
+    date: safe.text(raw.date),
+    end_date: safe.dateOrNull(raw.end_date),
     all_day: raw.all_day === true,
-    start_time: typeof raw.start_time === 'string' ? raw.start_time : '00:00',
-    end_time: typeof raw.end_time === 'string' ? raw.end_time : null,
-    title: String(raw.title ?? ''),
-    location: typeof raw.location === 'string' ? raw.location : null,
-    notes: typeof raw.notes === 'string' ? raw.notes : null,
-    tag: typeof raw.tag === 'string' ? raw.tag : null,
+    start_time: safe.time(raw.start_time, '00:00'),
+    end_time: safe.timeOrNull(raw.end_time),
+    title: safe.text(raw.title),
+    location: safe.textOrNull(raw.location),
+    notes: safe.textOrNull(raw.notes),
+    tag: safe.textOrNull(raw.tag),
     // Backups from before Travel existed have no place at all.
-    place:
-      raw.place && typeof raw.place.country === 'string'
-        ? { country: raw.place.country, city: raw.place.city ?? null }
-        : null,
-    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    place: country && safe.isRecord(place) ? { country, city: safe.textOrNull(place.city) } : null,
+    attachments: safe.attachments(raw.attachments),
     // All absent from every backup written before the trip page existed.
-    plan: typeof raw.plan === 'string' ? raw.plan : null,
-    links: Array.isArray(raw.links) ? raw.links : [],
-    trip_id: typeof raw.trip_id === 'number' ? raw.trip_id : null,
+    plan: safe.textOrNull(raw.plan),
+    links: safe.links(raw.links),
+    trip_id: safe.positiveId(raw.trip_id),
   }
 }
 
 function fillReminder(raw: Partial<Reminder>, index = 0): Reminder {
   return {
-    id: typeof raw.id === 'number' ? raw.id : index + 1,
-    title: String(raw.title ?? ''),
-    date: String(raw.date ?? ''),
-    time: typeof raw.time === 'string' ? raw.time : '09:00',
-    end_date: typeof raw.end_date === 'string' ? raw.end_date : null,
-    end_time: typeof raw.end_time === 'string' ? raw.end_time : null,
+    id: safe.positiveId(raw.id) ?? index + 1,
+    title: safe.text(raw.title),
+    date: safe.text(raw.date),
+    time: safe.time(raw.time, '09:00'),
+    end_date: safe.dateOrNull(raw.end_date),
+    end_time: safe.timeOrNull(raw.end_time),
     repeat: raw.repeat === 'daily' || raw.repeat === 'weekly' ? raw.repeat : 'none',
-    notes: typeof raw.notes === 'string' ? raw.notes : null,
+    notes: safe.textOrNull(raw.notes),
     done: raw.done === true,
   }
 }
 
 function fillExpense(raw: Partial<Expense>, index = 0): Expense {
   return {
-    id: typeof raw.id === 'number' ? raw.id : index + 1,
-    date: String(raw.date ?? ''),
-    title: String(raw.title ?? ''),
-    amount: Number(raw.amount) || 0,
-    currency: typeof raw.currency === 'string' ? raw.currency : DEFAULT_SETTINGS.currency,
-    category: typeof raw.category === 'string' ? raw.category : null,
-    original_amount: typeof raw.original_amount === 'number' ? raw.original_amount : null,
-    original_currency: typeof raw.original_currency === 'string' ? raw.original_currency : null,
-    exchange_rate: typeof raw.exchange_rate === 'number' ? raw.exchange_rate : null,
-    schedule_id: typeof raw.schedule_id === 'number' ? raw.schedule_id : null,
-    notes: typeof raw.notes === 'string' ? raw.notes : null,
-    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+    id: safe.positiveId(raw.id) ?? index + 1,
+    date: safe.text(raw.date),
+    title: safe.text(raw.title),
+    amount: safe.finite(raw.amount),
+    currency: safe.currencyCode(raw.currency) ?? DEFAULT_SETTINGS.currency,
+    category: safe.textOrNull(raw.category),
+    original_amount: typeof raw.original_amount === 'number' ? safe.finite(raw.original_amount) : null,
+    original_currency: safe.currencyCode(raw.original_currency),
+    exchange_rate: safe.finite(raw.exchange_rate) > 0 ? safe.finite(raw.exchange_rate) : null,
+    schedule_id: safe.positiveId(raw.schedule_id),
+    notes: safe.textOrNull(raw.notes),
+    attachments: safe.attachments(raw.attachments),
   }
 }
 
@@ -235,11 +241,11 @@ function fillExpense(raw: Partial<Expense>, index = 0): Expense {
  * who it always was.
  */
 function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index = 0): BillSplit {
-  const people: SplitPerson[] = Array.isArray(raw.people) ? raw.people : []
+  const people: SplitPerson[] = safe.splitPeople(raw.people)
   const ids = people.map((person) => person.id)
 
-  let lines: SplitLine[] = Array.isArray(raw.lines) ? raw.lines : []
-  let paidBy = typeof raw.paidBy === 'string' ? raw.paidBy : ''
+  let lines: SplitLine[] = safe.splitLines(raw.lines)
+  let paidBy = safe.text(raw.paidBy)
 
   if (!Array.isArray(raw.lines) && Array.isArray(raw.entries)) {
     const converted: SplitLine[] = []
@@ -250,18 +256,21 @@ function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index 
     }
 
     for (const entry of raw.entries) {
-      const amount = Number(entry?.amount) || 0
-      const label = String(entry?.label ?? '')
-      if (entry?.paidBy) fronted.set(entry.paidBy, (fronted.get(entry.paidBy) ?? 0) + amount)
+      if (!safe.isRecord(entry)) continue
+      const amount = safe.finite(Number(entry.amount))
+      const label = safe.text(entry.label)
+      if (typeof entry.paidBy === 'string') {
+        fronted.set(entry.paidBy, (fronted.get(entry.paidBy) ?? 0) + amount)
+      }
 
-      if (entry?.custom) {
+      if (safe.isRecord(entry.custom)) {
         for (const [id, value] of Object.entries(entry.custom)) {
-          if (ids.includes(id) && value) push(label, Number(value) || 0, id)
+          if (ids.includes(id) && value) push(label, safe.finite(Number(value)), id)
         }
         continue
       }
 
-      const sharers = Array.isArray(entry?.shares) && entry.shares.length
+      const sharers = Array.isArray(entry.shares) && entry.shares.length
         ? entry.shares.filter((id) => ids.includes(id))
         : ids
       if (sharers.length === 0 || sharers.length === ids.length) {
@@ -279,15 +288,15 @@ function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index 
   }
 
   return {
-    id: typeof raw.id === 'number' ? raw.id : index + 1,
-    title: String(raw.title ?? ''),
-    date: String(raw.date ?? ''),
-    currency: typeof raw.currency === 'string' ? raw.currency : DEFAULT_SETTINGS.currency,
+    id: safe.positiveId(raw.id) ?? index + 1,
+    title: safe.text(raw.title),
+    date: safe.text(raw.date),
+    currency: safe.currencyCode(raw.currency) ?? DEFAULT_SETTINGS.currency,
     people,
     lines,
     paidBy: ids.includes(paidBy) ? paidBy : (ids[0] ?? ''),
-    expense_id: typeof raw.expense_id === 'number' ? raw.expense_id : null,
-    expense_person: typeof raw.expense_person === 'string' ? raw.expense_person : null,
+    expense_id: safe.positiveId(raw.expense_id),
+    expense_person: safe.textOrNull(raw.expense_person),
   }
 }
 
@@ -300,32 +309,57 @@ function fillSplit(raw: Partial<BillSplit> & { entries?: LegacyEntry[] }, index 
  */
 function fillWish(raw: Partial<WishPlace>, index = 0): WishPlace {
   return {
-    id: typeof raw.id === 'number' ? raw.id : index + 1,
-    name: String(raw.name ?? ''),
-    country: String(raw.country ?? ''),
-    note: typeof raw.note === 'string' ? raw.note : null,
-    photo: raw.photo ?? null,
-    attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
-    links: Array.isArray(raw.links) ? raw.links : [],
+    id: safe.positiveId(raw.id) ?? index + 1,
+    name: safe.text(raw.name),
+    country: safe.countryCode(raw.country) ?? '',
+    note: safe.textOrNull(raw.note),
+    photo: safe.attachment(raw.photo),
+    attachments: safe.attachments(raw.attachments),
+    links: safe.links(raw.links),
   }
+}
+
+/**
+ * Settings field by field. Spreading the file's object over the defaults, as
+ * this used to, kept whatever types the file had — a home currency of `{}`
+ * was one bad import away from a converter that could not draw.
+ */
+function fillSettings(raw: unknown): Settings {
+  const given = safe.isRecord(raw) ? raw : {}
+  return {
+    currency: safe.currencyCode(given.currency) ?? DEFAULT_SETTINGS.currency,
+    autoDrive: given.autoDrive === true,
+    lastDriveSync: safe.textOrNull(given.lastDriveSync),
+    manualRates: safe.rateMap(given.manualRates),
+    quoteUnits: safe.rateMap(given.quoteUnits),
+    travelGoal: safe.goal(given.travelGoal, DEFAULT_SETTINGS.travelGoal),
+    placeGoal: safe.goal(given.placeGoal, DEFAULT_SETTINGS.placeGoal),
+  }
+}
+
+/** The rows of a list that are objects at all, each filled; a bare `null` row is dropped. */
+function rows<T>(value: unknown, fill: (raw: never, index: number) => T): T[] {
+  if (!Array.isArray(value)) return []
+  const kept: T[] = []
+  value.forEach((raw, index) => {
+    if (safe.isRecord(raw)) kept.push(fill(raw as never, index))
+  })
+  return kept
 }
 
 function coerce(parsed: Partial<Snapshot> | null): DB {
   return {
-    schedule: Array.isArray(parsed?.schedule) ? parsed.schedule.map(fillItem) : [],
-    expenses: Array.isArray(parsed?.expenses) ? parsed.expenses.map(fillExpense) : [],
-    tags: Array.isArray(parsed?.tags) && parsed.tags.length ? parsed.tags : DEFAULT_TAGS,
-    categories:
-      Array.isArray(parsed?.categories) && parsed.categories.length
-        ? parsed.categories
-        : DEFAULT_CATEGORIES,
-    reminders: Array.isArray(parsed?.reminders) ? parsed.reminders.map(fillReminder) : [],
-    splits: Array.isArray(parsed?.splits) ? parsed.splits.map(fillSplit) : [],
-    wishlist: Array.isArray(parsed?.wishlist) ? parsed.wishlist.map(fillWish) : [],
+    schedule: rows(parsed?.schedule, fillItem),
+    expenses: rows(parsed?.expenses, fillExpense),
+    tags: safe.tags(parsed?.tags, DEFAULT_TAGS),
+    categories: safe.tags(parsed?.categories, DEFAULT_CATEGORIES),
+    reminders: rows(parsed?.reminders, fillReminder),
+    splits: rows(parsed?.splits, fillSplit),
+    wishlist: rows(parsed?.wishlist, fillWish),
     // Absent from every backup written before the translator existed, which
     // is the whole reason this reads defensively rather than trusting it.
-    phrases: Array.isArray(parsed?.phrases) ? parsed.phrases : [],
-    settings: { ...DEFAULT_SETTINGS, ...(parsed?.settings ?? {}) },
+    phrases: safe.phrases(parsed?.phrases),
+    settings: fillSettings(parsed?.settings),
   }
 }
 
@@ -416,16 +450,7 @@ function writeDb(next: DB): Promise<void> {
 
 const readDb = (): DB => cache
 
-/** Rejects 31 February and friends, which a regex alone lets through. */
-function isRealDate(iso: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
-  if (!match) return false
-  const [, year, month, day] = match.map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
-}
-
-const isTime = (value: string) => /^\d{2}:\d{2}$/.test(value)
+const { isRealDate, isTime } = safe
 
 function nextId(rows: { id: number }[]): number {
   return rows.reduce((max, row) => Math.max(max, row.id), 0) + 1
@@ -1042,21 +1067,61 @@ export function countIn(data: Partial<Snapshot>): number {
  */
 /** Everything both ways in are agreed on: it is a backup, and it is readable. */
 function validateSnapshot(candidate: unknown): Partial<Snapshot> {
-  const data = candidate as Partial<Snapshot> | null
-  if (!data || typeof data !== 'object' || !Array.isArray(data.schedule)) {
+  if (!safe.isRecord(candidate) || !Array.isArray(candidate.schedule)) {
     throw new Error("That file isn't a SchedulePlan backup.")
   }
+  const data = candidate as Partial<Snapshot>
   if (data.format && data.format !== FORMAT) {
-    throw new Error(`That file is a ${data.format} backup, not a SchedulePlan one.`)
+    throw new Error(`That file is a ${String(data.format)} backup, not a SchedulePlan one.`)
   }
 
-  for (const [index, raw] of data.schedule.entries()) {
-    const item = raw as Partial<ScheduleItem>
-    if (!item || typeof item.title !== 'string' || typeof item.date !== 'string') {
+  for (const [index, raw] of data.schedule!.entries()) {
+    const item = raw as unknown
+    if (!safe.isRecord(item) || typeof item.title !== 'string' || typeof item.date !== 'string') {
       throw new Error(`Entry ${index + 1} in that file is missing a title or a date.`)
     }
+    // Refused rather than repaired: there is no guessing which day was meant,
+    // and a date that does not exist stops every screen that draws it.
+    if (!isRealDate(item.date)) {
+      throw new Error(`Entry ${index + 1} in that file has "${item.date}" as its date.`)
+    }
+  }
+  for (const [index, raw] of (Array.isArray(data.reminders) ? data.reminders : []).entries()) {
+    const reminder = raw as unknown
+    if (safe.isRecord(reminder) && !isRealDate(reminder.date)) {
+      throw new Error(`Reminder ${index + 1} in that file has no real date.`)
+    }
+  }
+  for (const [index, raw] of (Array.isArray(data.expenses) ? data.expenses : []).entries()) {
+    const expense = raw as unknown
+    if (safe.isRecord(expense) && !isRealDate(expense.date)) {
+      throw new Error(`Expense ${index + 1} in that file has no real date.`)
+    }
+  }
+  if (data.files !== undefined && !Array.isArray(data.files)) {
+    throw new Error("That file's attachments aren't readable.")
   }
   return data
+}
+
+/**
+ * The attachment bytes a backup carries, checked before any are written.
+ *
+ * Only `data:` URLs are fetched — see `isDataUrl` — and only under an id the
+ * app could have made. `overwrite` is false for Import: a file you are handed
+ * adds to the notebook, and that includes never putting new bytes under an id
+ * that already has some. Every attachment id is printed in every export, so
+ * without this, a file built from one of your old backups could swap a photo
+ * already in your notebook for a different picture under the same name.
+ */
+async function writeIncomingFiles(files: unknown, overwrite: boolean): Promise<void> {
+  if (!Array.isArray(files)) return
+  const existing = overwrite ? new Set<string>() : new Set(await idbKeys(FILES).catch(() => []))
+  for (const file of files) {
+    if (!safe.isRecord(file) || !safe.isFileId(file.id) || !safe.isDataUrl(file.dataUrl)) continue
+    if (existing.has(file.id)) continue
+    await writeFileFromDataUrl(file.id, file.dataUrl)
+  }
 }
 
 export async function restore(candidate: unknown): Promise<number> {
@@ -1064,11 +1129,7 @@ export async function restore(candidate: unknown): Promise<number> {
 
   // Bytes first. A record pointing at an attachment that failed to land is a
   // broken thumbnail forever, so fail before anything is replaced.
-  for (const file of data.files ?? []) {
-    if (file?.id && typeof file.dataUrl === 'string') {
-      await writeFileFromDataUrl(file.id, file.dataUrl)
-    }
-  }
+  await writeIncomingFiles(data.files, true)
 
   const next = coerce(data)
   next.schedule = next.schedule.sort(byTimeline)
@@ -1107,11 +1168,7 @@ export async function mergeIn(candidate: unknown): Promise<{ added: number; skip
 
   // Bytes first, as in `restore`: a record pointing at an attachment that
   // failed to land is a broken thumbnail forever.
-  for (const file of data.files ?? []) {
-    if (file?.id && typeof file.dataUrl === 'string') {
-      await writeFileFromDataUrl(file.id, file.dataUrl)
-    }
-  }
+  await writeIncomingFiles(data.files, false)
 
   const db = readDb()
   const incoming = coerce(data)

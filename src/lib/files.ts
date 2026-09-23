@@ -12,6 +12,7 @@
  */
 
 import { FILES, idbDelete, idbGet, idbKeys, idbPut } from './idb'
+import { isDataUrl } from './sanitize'
 import type { Attachment } from '../types'
 
 /** Long edge, in pixels, that a stored photo is reduced to. */
@@ -268,7 +269,13 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
+/**
+ * Bytes out of a backup file. `fetch` is only the decoder here: it is given a
+ * `data:` URL or nothing, because the string came out of a file somebody may
+ * have written, and an http one would be a request to wherever they chose.
+ */
 export async function writeFileFromDataUrl(id: string, dataUrl: string): Promise<void> {
+  if (!isDataUrl(dataUrl)) throw new Error('That attachment is not stored inside the file.')
   const response = await fetch(dataUrl)
   await idbPut(FILES, id, await response.blob())
 }

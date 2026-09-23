@@ -14,6 +14,7 @@
  */
 
 import { todayISO } from './date'
+import { rateMap } from './sanitize'
 import type { RateTable } from '../types'
 
 const CACHE_KEY = 'scheduleplan:rates'
@@ -249,7 +250,8 @@ export function readCache(): RateTable | null {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const table = JSON.parse(raw) as RateTable
-    return table?.rates && table.base ? table : null
+    if (!table?.rates || !table.base || typeof table.fetchedAt !== 'string') return null
+    return { ...table, rates: rateMap(table.rates) }
   } catch {
     return null
   }
@@ -285,10 +287,16 @@ export async function fetchRates(base: string, force = false): Promise<RateTable
       const response = await fetch(provider.url(base))
       if (!response.ok) throw new Error(`${provider.name} returned ${response.status}`)
       const table = provider.read((await response.json()) as Record<string, unknown>)
-      if (!table?.rates) throw new Error(`${provider.name} sent nothing usable`)
+      // Only positive numbers under currency codes are kept. A feed is a
+      // stranger's server: a rate of zero, a string or a negative number would
+      // turn every figure on the converter into confident nonsense.
+      const rates = rateMap(table?.rates)
+      if (!table || Object.keys(rates).length === 0) {
+        throw new Error(`${provider.name} sent nothing usable`)
+      }
       // Some providers leave the base out of its own table; the rest of the
       // maths is much simpler if 1 base = 1 base is written down.
-      table.rates = { ...table.rates, [base]: 1 }
+      table.rates = { ...rates, [base]: 1 }
       table.base = base
       writeCache(table)
       return table
