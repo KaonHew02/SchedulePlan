@@ -290,6 +290,46 @@ room it is using and when Drive last saw a copy.
 
 The reasoning behind all of this is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
+## What security means for a page with no server
+
+**The code cannot be hidden, and nothing is lost by that.** A browser has to
+be handed a script to run it, so anyone who opens the site can read the
+JavaScript and change their own copy of the page from the console — every
+website works this way, banks included. What they change is *their* tab. The
+notebook lives in each visitor's own browser, so somebody editing the page on
+their laptop reaches nothing on your phone; there is no server for them to
+change and no account for them to get into. Blocking right-click or F12 slows
+a visitor down but stops nobody who can open `view-source:`, and the
+repository is public in any case.
+
+What is worth defending is the notebook itself, and there are exactly two ways
+something foreign gets into it:
+
+- **A file you import.** Import is meant for files other people hand you, so it
+  treats every one as hostile. `sanitize.ts` coerces every field to the type
+  the screens expect — a wrong type would otherwise break the app on every
+  open — drops links that are not http or https, fetches attachment bytes only
+  out of the file itself, and never lets an imported file overwrite bytes
+  already in the notebook. A PDF is always shown *as* a PDF: an object URL
+  runs with the app's own access, and a web page labelled as a PDF would
+  otherwise run as SchedulePlan.
+- **Code on the page that is not ours.** The built site carries a Content
+  Security Policy (in `vite.config.ts`) listing the servers the app may load
+  code from and send data to. Anything that got in some other way cannot run
+  inline, cannot load more code, and cannot post the notebook anywhere off the
+  list.
+
+The built site also puts speed bumps on the way to the tools (`tamper.ts`):
+F12, Ctrl+Shift+I and view-source do nothing, and a mouse right-click on the
+page opens no menu. They stop the casual poke, not a programmer, and they are
+written down as exactly that. Right-click still works on text fields, links,
+pictures and selected text, and a phone's long-press is never touched, because
+copying a booking reference out of a note matters more than the speed bump.
+
+The console itself is the one door left that matters, and only its owner can
+open it — so the built site prints a warning there, for the day somebody says
+"paste this in".
+
 ## Name, logo and colour
 
 The mark deliberately does not use the letters. It is a globe with a plane
@@ -353,6 +393,11 @@ SchedulePlan/
       translate.ts              The translator chain, the voice lookup, and the
                                 starter phrasebook
       links.ts                  Making a pasted link safe to put in an href
+      sanitize.ts               Making a notebook that came from a file safe
+                                to keep: every field typed, every link and
+                                attachment checked
+      tamper.ts                 Speed bumps on the way to the dev tools, and
+                                the console warning (built site only)
       notes.ts                  Dropping the line breaks a wrapper added, keeping the ones typed
       places.ts                 The country table, and the globe projection
       date.ts                   Date maths and formatting (no date library)

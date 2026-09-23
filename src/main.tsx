@@ -2,7 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initStore } from './lib/store'
+import { installSpeedBumps } from './lib/tamper'
 import './index.css'
+
+// Built site only: in development the tools and the console are for working in.
+if (import.meta.env.PROD) installSpeedBumps()
 
 const root = createRoot(document.getElementById('root')!)
 

@@ -54,3 +54,10 @@ npm run preview
 
 Serves the built `dist/` — worth a look before pushing if you changed anything
 about the build.
+
+It is also the only place the **security policy** runs. The built page
+carries a Content Security Policy that lists every server the app may talk to
+(see `vite.config.ts`); `npm run dev` leaves it out, because the dev server
+itself works by doing what the policy forbids. So a feature that reaches a new
+server works in dev and fails on the live site. If you add one, check it here
+and add its origin to the policy — the browser console names what it refused.
