@@ -42,7 +42,11 @@ are in is the one thing you already know, and what the screen is opened to find
 out is what is coming. Tapping a date drops into the day. An item can be a whole
 day, and it can run from one date to another, which is what a trip actually is.
 A spanning item appears on every day it covers and says which day of it you are
-looking at. Items carry your own tags, a location, links, notes and attachments.
+looking at. An item can **repeat** — every day, week, month or year in one tap,
+or a custom rule: every *n* of them, on chosen weekdays, until a date or for
+good. It is one row with a rule on it, unrolled when a view draws its days, so
+changing the class's time changes every week of it. Items carry your own tags,
+a location, links, notes and attachments.
 
 **Reminders** — due date and time, optionally running *until* a later date and
 time, optionally repeating daily or weekly inside that window. Alerts only fire
@@ -387,6 +391,8 @@ SchedulePlan/
       split.ts                  Share division and settlement minimisation
       reminders.ts              When a reminder with a window or a repeat is
                                 actually due
+      repeat.ts                 Unrolling a repeating schedule item into the
+                                days it lands on, and saying the rule in words
       autosave.ts               The Drive Auto switch, and its one honest limit
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
@@ -410,7 +416,7 @@ SchedulePlan/
     screens/                    ScheduleScreen, MoreScreen
     schedule/                   DayStrip, DayView, WeekView, MonthView,
                                 MonthGrid, ItemCard, ScheduleForm,
-                                ScheduleDetail
+                                RepeatField, ScheduleDetail
     travel/                     TravelScreen, TripScreen, Globe, WishForm
     translate/                  TranslateScreen
     expenses/                   ExpensesScreen, ExpenseForm, ExpenseDetail,
@@ -428,6 +434,10 @@ catch the rare one they did not, and the notebook is a personal one with an
 Export and a Drive copy behind it. The one thing still guarded is **Replace**
 in the backup bar, which is not a record at all — it overwrites the whole
 notebook with another copy of it.
+
+A repeating item asks one question, and it is not "are you sure": *only this
+day, or every time?* Those are two different deletions. Only this day takes
+the date out of the rule and keeps everything else.
 
 ### The pickers are ours, not the browser's
 

@@ -135,7 +135,7 @@ export default function MonthGrid({
                 ) : (
                   list.map((item) => (
                     <span
-                      key={item.id}
+                      key={`${item.id}:${item.date}`}
                       // Untagged takes neutral-400 rather than the card's own
                       // neutral-300 bar: a bar has a whole card edge to be
                       // seen along, a 6px dot on white has nothing.

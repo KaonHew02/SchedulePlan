@@ -15,7 +15,16 @@ import {
   todayISO,
   weekTitle,
 } from '../lib/date'
-import { createExpense, inRange, lastDay, onDay, store, useSchedule } from '../lib/store'
+import { firstOccurrence, occurrences } from '../lib/repeat'
+import {
+  createExpense,
+  inRange,
+  lastDay,
+  onDay,
+  store,
+  storedItem,
+  useSchedule,
+} from '../lib/store'
 import DayStrip from '../schedule/DayStrip'
 import DayView from '../schedule/DayView'
 import ItemCard from '../schedule/ItemCard'
@@ -40,17 +49,33 @@ function rangeFor(view: ViewMode, anchor: string): { start: string; end: string 
   return { start: grid[0], end: grid[grid.length - 1] }
 }
 
-/** Still to come: not finished, soonest first. */
+/**
+ * Still to come: not finished, soonest first.
+ *
+ * A repeat is here once, as the next time it comes round. Five Fridays of
+ * badminton would fill the list and say nothing the first one does not.
+ */
 function upcoming(schedule: ScheduleItem[], limit: number): ScheduleItem[] {
   const today = todayISO()
   const now = nowTime()
-  return schedule
-    .filter((item) => {
-      const ends = lastDay(item)
-      if (ends > today) return true
-      if (ends < today) return false
-      return item.all_day || (item.end_time ?? item.start_time) >= now
-    })
+  const notOver = (item: ScheduleItem) => {
+    const ends = lastDay(item)
+    if (ends > today) return true
+    if (ends < today) return false
+    return item.all_day || (item.end_time ?? item.start_time) >= now
+  }
+  const next: ScheduleItem[] = []
+  for (const item of schedule) {
+    // Only today's can be over while still ending today, so this reads two
+    // at most — the one that finished this morning and the one after it.
+    for (const time of occurrences(item, today)) {
+      if (notOver(time)) {
+        next.push(time)
+        break
+      }
+    }
+  }
+  return next
     .sort(
       (a, b) =>
         a.date.localeCompare(b.date) ||
@@ -135,10 +160,26 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   }
 
   async function save(draft: ScheduleDraft) {
-    if (form?.item) await store.updateSchedule(form.item.id, draft)
-    else await store.createSchedule(draft)
-    // Land on the saved date so the item is visible straight away.
-    setAnchor(draft.date)
+    const saved = form?.item
+      ? await store.updateSchedule(form.item.id, draft)
+      : await store.createSchedule(draft)
+    // Land on the saved date so the item is visible straight away. For a
+    // repeat that is the next time it comes round from the day on screen —
+    // staying put if it is already there — rather than the day it first
+    // began, which for a birthday is decades back. One that finished before
+    // the day on screen goes back to where it started.
+    if (saved.repeat) {
+      const coming = occurrences(saved, anchor).next().value
+      setAnchor(
+        coming
+          ? coming.date > anchor
+            ? coming.date
+            : anchor
+          : (firstOccurrence(saved)?.date ?? saved.date),
+      )
+    } else {
+      setAnchor(saved.date)
+    }
     setForm(null)
     onToast(form?.item ? 'Updated' : 'Added')
   }
@@ -147,6 +188,13 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
     await store.deleteSchedule(id)
     setDetail(null)
     onToast('Deleted')
+  }
+
+  /** Just this time round, out of a repeat. */
+  async function skip(item: ScheduleItem) {
+    await store.skipDay(item.id, item.date)
+    setDetail(null)
+    onToast('Removed from this day')
   }
 
   async function saveExpense(draft: ExpenseDraft) {
@@ -258,10 +306,12 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
           item={detail}
           onClose={() => setDetail(null)}
           onEdit={() => {
-            setForm({ item: detail })
+            // The row, not the copy that was tapped: editing a repeat edits all of it.
+            setForm({ item: storedItem(detail) })
             setDetail(null)
           }}
           onDelete={() => remove(detail.id)}
+          onSkip={detail.repeat ? () => skip(detail) : undefined}
           onAddExpense={() => {
             setExpenseFor(detail)
             setDetail(null)

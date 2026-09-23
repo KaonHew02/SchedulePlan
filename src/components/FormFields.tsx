@@ -31,10 +31,10 @@ export function Field({
  * here was a native date/time field made invisible and laid over a chip, and
  * it brought the whole native picker's behaviour with it.
  */
-const chip =
+export const chip =
   'relative flex items-center gap-2 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] tabular-nums transition-colors hover:bg-neutral-200/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40'
 
-const chipOpen = 'bg-neutral-200/70 ring-2 ring-brand-500/40'
+export const chipOpen = 'bg-neutral-200/70 ring-2 ring-brand-500/40'
 
 /** 'Today, 10 Sep' — the year only shows when it isn't this one. */
 export function dateLabel(iso: string): string {

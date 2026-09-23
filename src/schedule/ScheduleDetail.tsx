@@ -1,8 +1,18 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FileViewer, Thumb } from '../components/Attachments'
-import { LinkIcon, PencilIcon, PinIcon, Plus, TrashIcon, WalletIcon } from '../components/Icons'
+import {
+  LinkIcon,
+  PencilIcon,
+  PinIcon,
+  Plus,
+  RepeatIcon,
+  TrashIcon,
+  WalletIcon,
+} from '../components/Icons'
+import Popover from '../components/Popover'
 import Sheet from '../components/Sheet'
-import { daysBetween, longDate, relativeDay, timeRange } from '../lib/date'
+import { daysBetween, longDate, relativeDay, shortDate, timeRange } from '../lib/date'
+import { describeRepeat } from '../lib/repeat'
 import { money } from '../lib/currency'
 import { MONEY } from '../lib/features'
 import { hostLabel } from '../lib/links'
@@ -17,29 +27,36 @@ export default function ScheduleDetail({
   onClose,
   onEdit,
   onDelete,
+  onSkip,
   onAddExpense,
 }: {
+  /** For a repeat, the copy for the day it was opened on — see `inRange`. */
   item: ScheduleItem
   onClose: () => void
   onEdit: () => void
   onDelete: () => Promise<void>
+  /** Takes just this day out of a repeat. Only given for one that repeats. */
+  onSkip?: () => Promise<void>
   onAddExpense: () => void
 }) {
   const tags = useTags()
   const settings = useSettings()
   const expenses = useExpenses().filter((expense) => expense.schedule_id === item.id)
   const [deleting, setDeleting] = useState(false)
+  const [choosing, setChoosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Attachment | null>(null)
+  const deleteButton = useRef<HTMLButtonElement>(null)
 
   const spans = spansDays(item)
   const spent = expenses.reduce((total, expense) => total + expense.amount, 0)
 
-  async function remove() {
+  async function remove(action: () => Promise<void>) {
+    setChoosing(false)
     setDeleting(true)
     setError(null)
     try {
-      await onDelete()
+      await action()
       // On success the parent closes this sheet.
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete. Please try again.')
@@ -70,6 +87,14 @@ export default function ScheduleDetail({
         {spans && (
           <p className="mt-0.5 text-[13px] text-neutral-400">
             {daysBetween(item.date, lastDay(item))} days
+          </p>
+        )}
+        {/* Read from the series' first day, not this copy's: "on the 31st"
+            is still true of the one that fell on 30 April. */}
+        {item.repeat && (
+          <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-neutral-400">
+            <RepeatIcon className="h-3.5 w-3.5" />
+            {describeRepeat(item.repeat, item.series ?? item.date)}
           </p>
         )}
 
@@ -175,10 +200,14 @@ export default function ScheduleDetail({
           </button>
           {/* One tap. Delete means delete — a second tap that only says
               "are you sure" is a step on every real deletion to catch the
-              rare accidental one. */}
+              rare accidental one. A repeat is the exception, and not for
+              the sake of asking: "this Friday" and "every Friday" are two
+              different deletions, and only you know which one you meant. */}
           <button
-            onClick={remove}
+            ref={deleteButton}
+            onClick={() => (onSkip ? setChoosing((was) => !was) : remove(onDelete))}
             disabled={deleting}
+            aria-expanded={onSkip ? choosing : undefined}
             className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-5 py-3 text-[15px] font-medium text-red-600 disabled:opacity-40"
           >
             <TrashIcon />
@@ -186,6 +215,27 @@ export default function ScheduleDetail({
           </button>
         </div>
       </Sheet>
+
+      {choosing && onSkip && (
+        <Popover anchor={deleteButton} label="Delete which" onClose={() => setChoosing(false)}>
+          <div className="w-[220px] p-1.5">
+            <button
+              type="button"
+              onClick={() => remove(onSkip)}
+              className="w-full rounded-xl px-3 py-2 text-left text-[14px] transition-colors hover:bg-neutral-100"
+            >
+              Only {shortDate(item.date)}
+            </button>
+            <button
+              type="button"
+              onClick={() => remove(onDelete)}
+              className="w-full rounded-xl px-3 py-2 text-left text-[14px] text-red-600 transition-colors hover:bg-neutral-100"
+            >
+              Every time it repeats
+            </button>
+          </div>
+        </Popover>
+      )}
 
       {viewing && <FileViewer file={viewing} onClose={() => setViewing(null)} />}
     </>

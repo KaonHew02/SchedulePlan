@@ -44,7 +44,7 @@ export default function MonthView({
       ) : (
         <div className="space-y-2 px-4 pb-4">
           {selectedItems.map((item) => (
-            <ItemCard key={item.id} item={item} day={anchor} onOpen={onOpen} />
+            <ItemCard key={`${item.id}:${item.date}`} item={item} day={anchor} onOpen={onOpen} />
           ))}
         </div>
       )}

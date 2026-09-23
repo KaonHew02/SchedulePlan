@@ -1,4 +1,4 @@
-import { PaperclipIcon, PinIcon } from '../components/Icons'
+import { PaperclipIcon, PinIcon, RepeatIcon } from '../components/Icons'
 import { dayOfSpan, daysBetween, minutesOf, nowTime, todayISO } from '../lib/date'
 import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useTags } from '../lib/store'
@@ -83,6 +83,9 @@ export default function ItemCard({
             */}
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[15px] font-semibold leading-6">{item.title}</span>
+              {item.repeat && (
+                <RepeatIcon className="h-3 w-3 shrink-0 text-neutral-400" />
+              )}
               {item.attachments.length > 0 && (
                 <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-neutral-400">
                   <PaperclipIcon className="h-3 w-3" />

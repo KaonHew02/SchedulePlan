@@ -26,7 +26,16 @@
  */
 
 import { safeUrl } from './links'
-import type { Attachment, Phrase, SplitLine, SplitPerson, Tag, TripLink } from '../types'
+import type {
+  Attachment,
+  Phrase,
+  RepeatUnit,
+  ScheduleRepeat,
+  SplitLine,
+  SplitPerson,
+  Tag,
+  TripLink,
+} from '../types'
 
 /** A plain JSON object, as opposed to null, an array or a primitive. */
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -162,6 +171,53 @@ export function links(value: unknown): TripLink[] {
     kept.push({ id, label: text(raw.label), url })
   }
   return kept
+}
+
+// ------------------------------------------------------------------ repeat
+
+const REPEAT_UNITS: readonly RepeatUnit[] = ['day', 'week', 'month', 'year']
+
+/** The most units apart a repeat can be. Past this it is a date, not a rhythm. */
+export const MAX_EVERY = 99
+
+/**
+ * A schedule item's repeat rule, or null when there is not a usable one.
+ *
+ * `date` is the item's own first day. A rule whose until date is before it
+ * never comes round at all, and an item that never comes round is a row the
+ * notebook holds and no screen shows — so it is read as happening once, which
+ * is the most the file can have meant. Skipped days outside the run are only
+ * clutter and go.
+ */
+export function repeat(value: unknown, date: string): ScheduleRepeat | null {
+  if (!isRecord(value) || !REPEAT_UNITS.includes(value.unit as RepeatUnit)) return null
+  const unit = value.unit as RepeatUnit
+  const until = dateOrNull(value.until)
+  if (until && until < date) return null
+  const every =
+    Number.isSafeInteger(value.every) && (value.every as number) >= 1
+      ? Math.min(value.every as number, MAX_EVERY)
+      : 1
+  const weekdays =
+    unit === 'week' && Array.isArray(value.weekdays)
+      ? [
+          ...new Set(
+            value.weekdays.filter(
+              (day): day is number => Number.isInteger(day) && day >= 0 && day <= 6,
+            ),
+          ),
+        ].sort((a, b) => a - b)
+      : []
+  const skip = Array.isArray(value.skip)
+    ? [
+        ...new Set(
+          value.skip.filter(
+            (day): day is string => isRealDate(day) && day >= date && (!until || day <= until),
+          ),
+        ),
+      ].sort()
+    : []
+  return { unit, every, weekdays, until, skip }
 }
 
 // -------------------------------------------------------------------- tags

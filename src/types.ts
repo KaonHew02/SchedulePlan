@@ -140,6 +140,46 @@ export interface ScheduleItem {
    * right, which is what everything written before this field existed was.
    */
   trip_id: number | null
+  /** How it comes back. Null for something that happens once. */
+  repeat: ScheduleRepeat | null
+  /**
+   * Never stored. Set only on the copies `inRange` makes of a repeating item,
+   * one for each time it comes round, and it is the date the series itself
+   * starts on — so a copy can be told from the row it came from, and is not
+   * unrolled a second time by whatever reads the list next.
+   */
+  series?: string
+}
+
+/** What a repeat counts in. */
+export type RepeatUnit = 'day' | 'week' | 'month' | 'year'
+
+/**
+ * How a schedule item comes back — badminton every Friday, a birthday every
+ * September.
+ *
+ * Kept as a rule on the one row and unrolled when a view asks for a stretch
+ * of days, never written out as copies. Copies would need an end (a birthday
+ * does not have one), and changing the time of the class would mean finding
+ * and changing forty rows instead of one.
+ */
+export interface ScheduleRepeat {
+  unit: RepeatUnit
+  /** Every how many units: 1 is every week, 2 is every other week. */
+  every: number
+  /**
+   * For a weekly repeat, the days it lands on — 0 is Monday, 6 is Sunday.
+   * Empty means the weekday of the item's own date, which is all a plain
+   * "every week" is. Ignored for every other unit.
+   */
+  weekdays: number[]
+  /** The last day a repeat may start on. Null keeps going. */
+  until: string | null
+  /**
+   * Days taken out of the run: the one week the class is cancelled, without
+   * losing every other week with it.
+   */
+  skip: string[]
 }
 
 /** What the form sends when creating or editing an item. */
@@ -162,6 +202,11 @@ export interface ScheduleDraft {
   links?: TripLink[]
   /** Which trip this is a leg of. See `ScheduleItem.trip_id`. */
   trip_id?: number | null
+  /**
+   * How it comes back. Left out means "don't touch it", the same as links:
+   * the scanner and the wishlist make items without ever asking.
+   */
+  repeat?: ScheduleRepeat | null
 }
 
 /** How often a reminder comes back between its start and its until date. */

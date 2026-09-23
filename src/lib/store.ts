@@ -18,6 +18,7 @@ import { useSyncExternalStore } from 'react'
 import { DB_KEY, FILES, RECORDS, idbGet, idbKeys, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
 import { safeUrl } from './links'
+import { firstOccurrence, unitName, unroll } from './repeat'
 import * as safe from './sanitize'
 import { divideCents } from './split'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, TRAVEL_TAG, makeTagId } from './tags'
@@ -31,6 +32,7 @@ import type {
   ReminderDraft,
   ScheduleDraft,
   ScheduleItem,
+  ScheduleRepeat,
   Settings,
   SplitLine,
   SplitPerson,
@@ -167,9 +169,10 @@ export function onSaved(handler: () => void): () => void {
 function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
   const place = raw.place as unknown
   const country = safe.isRecord(place) ? safe.countryCode(place.country) : null
+  const date = safe.text(raw.date)
   return {
     id: safe.positiveId(raw.id) ?? index + 1,
-    date: safe.text(raw.date),
+    date,
     end_date: safe.dateOrNull(raw.end_date),
     all_day: raw.all_day === true,
     start_time: safe.time(raw.start_time, '00:00'),
@@ -185,6 +188,8 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
     plan: safe.textOrNull(raw.plan),
     links: safe.links(raw.links),
     trip_id: safe.positiveId(raw.trip_id),
+    // Absent from everything written before items could repeat.
+    repeat: safe.repeat(raw.repeat, date),
   }
 }
 
@@ -592,6 +597,33 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
   }
 }
 
+/**
+ * A repeat as the form sent it. The form keeps these in range already; this
+ * is the check every way in has to get past, and it says what was wrong
+ * where `safe.repeat` would quietly make do.
+ */
+function cleanRepeat(rule: ScheduleRepeat | null, date: string): ScheduleRepeat | null {
+  if (!rule) return null
+  if (!Number.isInteger(rule.every) || rule.every < 1 || rule.every > safe.MAX_EVERY) {
+    throw new Error(`A repeat can be every 1 to ${safe.MAX_EVERY} ${unitName(rule.unit, 2)}.`)
+  }
+  if (rule.until && !isRealDate(rule.until)) throw new Error('That repeat end is not a real date.')
+  if (rule.until && rule.until < date) throw new Error('The repeat ends before it starts.')
+  return safe.repeat(rule, date)
+}
+
+/**
+ * Refuse a row that no screen would ever show: a repeat on Mondays and
+ * Wednesdays that starts on a Tuesday and stops the same day never comes
+ * round at all, and saving it would look like the Save button ate it.
+ */
+function mustOccur(item: ScheduleItem): ScheduleItem {
+  if (item.repeat && !firstOccurrence(item)) {
+    throw new Error('That repeat never lands on a day before it ends.')
+  }
+  return item
+}
+
 /** Whole-day things sort above timed ones, then by time. */
 const byTimeline = (a: ScheduleItem, b: ScheduleItem) =>
   a.date.localeCompare(b.date) ||
@@ -603,27 +635,45 @@ export function useSchedule(): ScheduleItem[] {
   return useSyncExternalStore(subscribe, () => readDb().schedule)
 }
 
-/** Items touching a date range, in the order the timeline shows them. */
+/**
+ * Items touching a date range, in the order the timeline shows them.
+ *
+ * A repeating item comes back once for every time it lands in the range, each
+ * a copy moved to that date (see repeat.ts). So the same id can be in here
+ * more than once, and a list keyed on it needs the date as well.
+ */
 export function inRange(items: ScheduleItem[], start: string, end: string): ScheduleItem[] {
-  return items.filter((item) => item.date <= end && lastDay(item) >= start).sort(byTimeline)
+  return items.flatMap((item) => unroll(item, start, end)).sort(byTimeline)
 }
 
-/** Items on one day, spanning ones included, in timeline order. */
+/**
+ * Items on one day, spanning ones included, in timeline order.
+ *
+ * Safe to hand either the notebook or what `inRange` already returned: a copy
+ * is never unrolled twice.
+ */
 export function onDay(items: ScheduleItem[], day: string): ScheduleItem[] {
-  return items.filter((item) => occupies(item, day)).sort(byTimeline)
+  return inRange(items, day, day)
+}
+
+/** The row itself, for a copy `inRange` made of it. Editing always edits the series. */
+export function storedItem(item: ScheduleItem): ScheduleItem {
+  return readDb().schedule.find((row) => row.id === item.id) ?? item
 }
 
 export const store = {
   async createSchedule(draft: ScheduleDraft): Promise<ScheduleItem> {
     const db = readDb()
+    const clean = cleanScheduleDraft(draft)
     // The plan is the trip page's alone; links can come from either.
-    const item: ScheduleItem = {
+    const item: ScheduleItem = mustOccur({
       id: nextId(db.schedule),
-      ...cleanScheduleDraft(draft),
+      ...clean,
       plan: null,
       links: cleanLinks(draft.links ?? []),
       trip_id: draft.trip_id ?? null,
-    }
+      repeat: cleanRepeat(draft.repeat ?? null, clean.date),
+    })
     await writeDb({ ...db, schedule: [...db.schedule, item] })
     return item
   },
@@ -632,9 +682,10 @@ export const store = {
     const db = readDb()
     const existing = db.schedule.find((item) => item.id === id)
     if (!existing) throw new Error('That schedule item no longer exists.')
-    const updated: ScheduleItem = {
+    const clean = cleanScheduleDraft(draft)
+    const updated: ScheduleItem = mustOccur({
       id,
-      ...cleanScheduleDraft(draft),
+      ...clean,
       // The form has no field for the plan, so saving it must not erase it:
       // changing the time of a trip should not empty its itinerary. Links it
       // does have — but a draft that leaves them out is saying nothing about
@@ -642,7 +693,13 @@ export const store = {
       plan: existing.plan,
       links: draft.links ? cleanLinks(draft.links) : existing.links,
       trip_id: draft.trip_id ?? null,
-    }
+      // The same goes for the repeat. It is read against the new date either
+      // way, because moving the start can leave an until date behind it.
+      repeat:
+        draft.repeat === undefined
+          ? safe.repeat(existing.repeat, clean.date)
+          : cleanRepeat(draft.repeat, clean.date),
+    })
     await writeDb({
       ...db,
       schedule: db.schedule.map((item) => (item.id === id ? updated : item)),
@@ -670,6 +727,27 @@ export const store = {
       ),
     })
     void deleteFiles(existing.attachments.map((file) => file.id))
+  },
+
+  /**
+   * Take one day out of a repeat and leave the rest of it alone — the week
+   * the class is off. Nothing is deleted: the row, its files and its expenses
+   * all belong to the series, and the series is still on.
+   */
+  async skipDay(id: number, day: string): Promise<void> {
+    const db = readDb()
+    const existing = db.schedule.find((item) => item.id === id)
+    if (!existing) throw new Error('That schedule item no longer exists.')
+    const rule = existing.repeat
+    if (!rule) throw new Error('That item does not repeat.')
+    await writeDb({
+      ...db,
+      schedule: db.schedule.map((item) =>
+        item.id === id
+          ? { ...item, repeat: { ...rule, skip: [...new Set([...rule.skip, day])].sort() } }
+          : item,
+      ),
+    })
   },
 }
 

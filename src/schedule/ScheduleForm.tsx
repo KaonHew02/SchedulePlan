@@ -6,8 +6,18 @@ import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
+import { describeRepeat } from '../lib/repeat'
 import { createTag, isTrip, useSchedule, useTags } from '../lib/store'
-import type { Attachment, Place, ScheduleDraft, ScheduleItem, TagId, TripLink } from '../types'
+import type {
+  Attachment,
+  Place,
+  ScheduleDraft,
+  ScheduleItem,
+  ScheduleRepeat,
+  TagId,
+  TripLink,
+} from '../types'
+import RepeatField from './RepeatField'
 
 const FORM_ID = 'schedule-form'
 
@@ -61,6 +71,7 @@ export default function ScheduleForm({
   )
   const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
   const [tripId, setTripId] = useState<number | null>(item?.trip_id ?? null)
+  const [repeat, setRepeat] = useState<ScheduleRepeat | null>(item?.repeat ?? null)
   const schedule = useSchedule()
 
   /*
@@ -117,6 +128,8 @@ export default function ScheduleForm({
   function moveStart(next: string) {
     setDate(next)
     if (endDate && endDate < next) setEndDate('')
+    // The same for a repeat's last day, which would otherwise end it before it began.
+    if (repeat?.until && repeat.until < next) setRepeat({ ...repeat, until: null })
   }
 
   async function submit(event: FormEvent) {
@@ -145,6 +158,7 @@ export default function ScheduleForm({
         attachments: files,
         links,
         trip_id: tripId,
+        repeat,
       })
       // On success the parent closes this sheet.
     } catch (err) {
@@ -220,7 +234,17 @@ export default function ScheduleForm({
               </Field>
             </>
           )}
+
+          <RepeatField value={repeat} date={date} onChange={setRepeat} />
         </div>
+
+        {/* The rule in words, so a custom one can be checked before it is
+            saved rather than by paging through the months afterwards. */}
+        {repeat && (
+          <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
+            {describeRepeat(repeat, date)}
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {tags.map(({ id, label, emoji }) => (

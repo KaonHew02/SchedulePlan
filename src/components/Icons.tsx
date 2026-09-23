@@ -270,3 +270,10 @@ export const LinkIcon = ({ className = 'w-4 h-4' }: Props) => (
     <path d="M13.5 10.5a3.7 3.7 0 0 0-5.4-.3l-2.6 2.6a3.7 3.7 0 0 0 5.2 5.2l1.5-1.5" />
   </svg>
 )
+
+/** Two arrows chasing each other round: something that comes back. */
+export const RepeatIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
+  </svg>
+)

@@ -74,7 +74,7 @@ export default function DayView({
   return (
     <div className="space-y-2.5 px-4 pb-4 pt-1">
       {items.map((item, index) => (
-        <Fragment key={item.id}>
+        <Fragment key={`${item.id}:${item.date}`}>
           {index === nowAt && <NowLine time={now} />}
           <div className="flex gap-3">
             <div className="w-12 shrink-0 pt-3 text-right">
