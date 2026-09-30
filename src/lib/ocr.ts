@@ -431,6 +431,8 @@ export interface ItineraryDraft {
   start_time: string | null
   end_time: string | null
   location: string | null
+  /** Steps that belong to the item but have no time of their own. */
+  notes: string | null
 }
 
 /** Words that mean this line is a thing that happens, not a footer. */
@@ -484,17 +486,35 @@ const wordLength = (text: string): number =>
  * over the heading above it, which is what makes a flat list of bookings work
  * as well as a day-by-day plan.
  *
+ * With `notes` on, the lines in between are kept too. A plan written by hand
+ * is mostly steps with no times of their own — 晚餐, muster drill, the night
+ * view from the deck — and dropping them leaves a day with nothing in it. So
+ * each goes into the notes of the item above it, and one with no item above
+ * it on that day starts an all-day item of its own. Only text someone chose
+ * to paste gets this: the reader's output from a photo is too noisy to keep
+ * every line of.
+ *
  * Nothing here is saved. The screen lists what it found with a tick beside
  * each one, and only the ticked ones become items.
  */
-export function parseItinerary(text: string, fallbackDate: string): ItineraryDraft[] {
+export function parseItinerary(
+  text: string,
+  fallbackDate: string,
+  { notes = false }: { notes?: boolean } = {},
+): ItineraryDraft[] {
   const lines = halfWidth(text)
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 2 && !NOISE.test(line))
+    // Short lines are arrows and stray marks, except that 晚餐 is two
+    // characters long and a whole step of the evening.
+    .filter((line) => (line.length > 2 || wordLength(line) >= 4) && !NOISE.test(line))
 
   const drafts: ItineraryDraft[] = []
   let currentDate = fallbackDate
+  /** The item a line with no time of its own belongs to. */
+  let current: ItineraryDraft | null = null
+  // Lines before the first date or time are the page's title, not a step.
+  let started = false
 
   for (const line of lines) {
     const lineDate = findDate(line)
@@ -505,8 +525,14 @@ export function parseItinerary(text: string, fallbackDate: string): ItineraryDra
 
     // A line that is only a date is a heading for the lines beneath it.
     const isHeading = Boolean(lineDate) && wordLength(withoutDate) < 4
-    if (lineDate) currentDate = lineDate
-    if (isHeading) continue
+    if (lineDate) {
+      currentDate = lineDate
+      started = true
+    }
+    if (isHeading) {
+      current = null
+      continue
+    }
 
     const times = withoutDate.match(TIME_PATTERN) ?? []
     const start = times[0] ? findTime(times[0]) : null
@@ -521,20 +547,40 @@ export function parseItinerary(text: string, fallbackDate: string): ItineraryDra
       .replace(/\s{2,}/g, ' ')
       .trim()
 
-    // Without a time and without a date this is just prose from the page.
-    if (!start && !lineDate) continue
+    // Without a time and without a date this is prose from the page — or,
+    // with notes on and a day under way, a step of that day's plan.
+    if (!start && !lineDate) {
+      if (!notes || !started || wordLength(line) < 2) continue
+      if (current) {
+        current.notes = current.notes ? `${current.notes}\n${line}` : line
+      } else {
+        current = {
+          title: line.slice(0, 80),
+          date: currentDate,
+          start_time: null,
+          end_time: null,
+          location: null,
+          notes: null,
+        }
+        drafts.push(current)
+      }
+      continue
+    }
+    started = true
     if (wordLength(title) < 3) continue
 
     // 'Dinner at Sakura, Bukit Bintang' — the tail after 'at' is a place.
     const place = /\b(?:at|in|@)\s+([A-Z][\w'&.\- ]{2,40})$/.exec(title)
 
-    drafts.push({
+    current = {
       title: (place ? title.slice(0, place.index) : title).trim().slice(0, 80) || title.slice(0, 80),
       date: currentDate,
       start_time: start,
       end_time: end,
       location: place ? place[1].trim() : null,
-    })
+      notes: null,
+    }
+    drafts.push(current)
   }
 
   return drafts

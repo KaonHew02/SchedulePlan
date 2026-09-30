@@ -20,8 +20,10 @@ import type { Attachment } from '../types'
  * ticked, edited and confirmed first, and untick-all is one tap away.
  *
  * Text can also be pasted in instead of photographed. Handwriting is beyond
- * the reader here, but not beyond the phone: iOS and Android both read it off
- * a photo well, and what they copy goes through the same parser as a scan.
+ * the reader here, but not beyond the phone: an iPhone's Scan Text reads a
+ * page straight into the box, Android's camera copies text off one, and what
+ * they give goes through the same parser as a scan — keeping the steps with no
+ * time of their own as the notes of their day.
  */
 
 interface Row extends ItineraryDraft {
@@ -75,7 +77,9 @@ export default function ScanScreen({
       setRows(drafts.map((draft, index) => ({ ...draft, key: index, keep: true })))
       if (!found.trim()) setError('No text could be made out on that page.')
       else if (drafts.length === 0) {
-        setError('Text was read, but nothing in it looked like a dated appointment.')
+        setError(
+          "Text was read, but nothing in it looked like a dated appointment. If the page is handwritten, this reader can't read it: tap Paste text instead, and let your iPhone's Scan Text read it.",
+        )
       }
     } catch (err) {
       setError(
@@ -89,14 +93,16 @@ export default function ScanScreen({
   function readPasted() {
     const found = pasted.trim()
     if (!found) return
-    const drafts = parseItinerary(found, todayISO())
+    // Pasted text is what someone chose to keep, so the steps without times
+    // are kept too, as the notes of their day.
+    const drafts = parseItinerary(found, todayISO(), { notes: true })
     setAttachment(null)
     setText(found)
     setFromPaste(true)
     setRows(drafts.map((draft, index) => ({ ...draft, key: index, keep: true })))
     setError(
       drafts.length === 0
-        ? 'Nothing in that looked like a dated appointment. Each one needs a time on its line, like 09:00, or a date.'
+        ? 'Nothing in that has a date or a time to go by. Add a line with the date, like 2/10/2026, and try again.'
         : null,
     )
   }
@@ -117,6 +123,13 @@ export default function ScanScreen({
   async function addChosen() {
     const chosen = rows.filter((row) => row.keep)
     if (chosen.length === 0) return
+    // Checked before anything is written: a row that fails halfway down the
+    // list would leave the ones above it saved, and a second try would add
+    // them twice.
+    if (chosen.some((row) => !row.title.trim())) {
+      setError('Every ticked row needs a title.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -126,10 +139,12 @@ export default function ScanScreen({
           end_date: null,
           all_day: !row.start_time,
           start_time: row.start_time ?? '00:00',
-          end_time: row.end_time,
+          // A start moved past the end on this screen makes the end meaningless.
+          end_time:
+            row.start_time && row.end_time && row.end_time > row.start_time ? row.end_time : null,
           title: row.title,
           location: row.location,
-          notes: null,
+          notes: row.notes?.trim() || null,
           tag: null,
           place: null,
           // The page itself goes with the first item only. Pointing several
@@ -187,7 +202,7 @@ export default function ScanScreen({
             </p>
 
             <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
-              Or paste the text
+              Handwritten? Scan or paste the text
             </h2>
             <textarea
               value={pasted}
@@ -198,8 +213,9 @@ export default function ScanScreen({
               className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-none transition-colors focus:border-brand-300 placeholder:text-neutral-300"
             />
             <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-              For handwriting, your phone reads it far better than this page can: open the photo,
-              press and hold the writing, and copy it.
+              Tap the box, choose Scan Text (on newer iPhones it is under AutoFill), point the
+              camera at the page and tap Insert. Your iPhone reads it itself, handwriting included,
+              so nothing is uploaded. Steps without a time go into the notes of their day.
             </p>
             <button
               onClick={readPasted}
@@ -335,6 +351,15 @@ export default function ScanScreen({
                           <p className="mt-1 truncate text-[12px] text-neutral-400">
                             {row.location}
                           </p>
+                        )}
+                        {row.notes !== null && (
+                          <textarea
+                            value={row.notes}
+                            onChange={(event) => edit(row.key, { notes: event.target.value })}
+                            rows={Math.min(8, row.notes.split('\n').length)}
+                            aria-label="Notes"
+                            className="mt-1.5 w-full resize-y rounded-lg bg-neutral-50 px-2.5 py-1.5 text-[13px] leading-5 text-neutral-600 outline-none"
+                          />
                         )}
                       </div>
                     </div>

@@ -159,7 +159,11 @@ It reads printed English and Simplified Chinese — English first, because with
 Chinese first it misread the digits on a till slip in testing. It does not read
 handwriting in either. For a handwritten page, the document scanner takes
 pasted text instead: the phone's own text recognition handles handwriting
-well, and what it copies goes through the same itinerary parser as a scan.
+well — on an iPhone, Scan Text reads the page straight into the box — and
+what it gives goes through the same itinerary parser as a scan. Pasted text
+keeps the lines a scan would drop: a step with no time of its own goes into
+the notes of the item above it, so a day planned by hand arrives as one item
+with its steps, not as nothing.
 
 Which is why **nothing it reads is ever saved on its own.** A scanned receipt
 fills in a form you check; a scanned itinerary produces a list with a tick
