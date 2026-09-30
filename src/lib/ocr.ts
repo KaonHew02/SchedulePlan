@@ -29,10 +29,22 @@ type Worker = {
 let worker: Worker | null = null
 let starting: Promise<Worker> | null = null
 
+/**
+ * English first, then Simplified Chinese.
+ *
+ * With English alone, every Chinese character is forced into the Latin letters
+ * it most resembles, and a page of 上船日 comes back as 'FIR TRE SHES'. The
+ * order matters too. Tried both ways on the same pages, Chinese first read
+ * Chinese no better overall, and on a monospaced till slip it read 14/09/2026
+ * as 14/69/2626 and 31.00 as 31.06. English first read every receipt exactly
+ * as English alone did, and costs 1.7 MB more on the first scan.
+ */
+const LANGUAGES = 'eng+chi_sim'
+
 const SAY: Record<string, string> = {
   'loading tesseract core': 'Loading the reader',
   'initializing tesseract': 'Loading the reader',
-  'loading language traineddata': 'Loading English',
+  'loading language traineddata': 'Loading English and Chinese',
   'initializing api': 'Getting ready',
   'recognizing text': 'Reading the page',
 }
@@ -53,7 +65,7 @@ async function getWorker(onProgress?: (progress: OcrProgress) => void): Promise<
       throw new Error("Couldn't load the text reader. Check your connection and try again.")
     }
 
-    const created = await createWorker('eng', 1, {
+    const created = await createWorker(LANGUAGES, 1, {
       logger: (message) => {
         onProgress?.({
           status: SAY[message.status] ?? 'Working',
@@ -71,7 +83,7 @@ async function getWorker(onProgress?: (progress: OcrProgress) => void): Promise<
   return starting
 }
 
-/** Let the WASM worker and its ~12MB of language data go. */
+/** Let the WASM worker and its ~14MB of language data go. */
 export async function releaseOcr(): Promise<void> {
   const current = worker
   worker = null
@@ -83,6 +95,16 @@ export async function releaseOcr(): Promise<void> {
   }
 }
 
+/**
+ * A space between two Chinese characters, which Tesseract puts in and nobody
+ * writes: it reads 上船日 as '上 船 日', and 云顶梦号 as '云顶 梦 号'.
+ */
+const CJK_GAP =
+  /([\p{Script=Han}\u3000-\u303f\uff00-\uffef])[ \t]+(?=[\p{Script=Han}\u3000-\u303f\uff00-\uffef])/gu
+
+/** The same inside a date, where it reads 2026年10月2日 as '2026 年 10 月 2 日'. */
+const DATE_GAP = /(\d)[ \t]+(?=[年月日号號])|([年月])[ \t]+(?=\d)/g
+
 export async function readText(
   source: Blob,
   onProgress?: (progress: OcrProgress) => void,
@@ -91,7 +113,7 @@ export async function readText(
   onProgress?.({ status: 'Reading the page', progress: 0 })
   const result = await engine.recognize(source)
   onProgress?.({ status: 'Done', progress: 1 })
-  return result.data.text ?? ''
+  return (result.data.text ?? '').replace(CJK_GAP, '$1').replace(DATE_GAP, '$1$2')
 }
 
 // ------------------------------------------------------------------ money
@@ -195,6 +217,13 @@ export function findDate(text: string): string | null {
   const numeric = /\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/.exec(text)
   if (numeric) {
     const iso = validISO(Number(numeric[1]), Number(numeric[2]), Number(numeric[3]))
+    if (iso) return iso
+  }
+
+  // 2026年10月2日: year, month, day, each with its own word after it.
+  const chinese = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号號]?/.exec(text)
+  if (chinese) {
+    const iso = validISO(Number(chinese[1]), Number(chinese[2]), Number(chinese[3]))
     if (iso) return iso
   }
 
@@ -408,16 +437,44 @@ export interface ItineraryDraft {
 const NOISE =
   /^(page\s*\d|terms|conditions|booking\s*reference|confirmation\s*(number|code)?|printed|issued|please|thank)/i
 
-/** Every way findDate can recognise a date, so one can be cut out of a line. */
+/**
+ * Every way findDate can recognise a date, so one can be cut out of a line —
+ * and the weekday that rides along with one, Tuesday or (周五), which would
+ * otherwise be left behind as the title of an appointment.
+ */
 const DATE_FORMS = [
   /\b\d{4}[-/.]\d{1,2}[-/.]\d{1,2}\b/g,
+  /\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*[日号號]?/g,
   /\b\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\b/g,
   /\b\d{1,2}\s*[-\s]\s*[A-Za-z]{3,9}\.?\s*[-,\s]\s*\d{2,4}\b/g,
   /\b[A-Za-z]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b/g,
+  /\b(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?\b\.?/gi,
+  // The reader returns a full-width bracket as 〈 about as often as it does (.
+  /[(〈]?\s*(?:星期|礼拜|禮拜|周|週)[一二三四五六日天]\s*[)〉]?|[(〈][一二三四五六日][)〉]/g,
 ]
 
 const stripDates = (line: string): string =>
   DATE_FORMS.reduce((text, form) => text.replace(form, ' '), line)
+
+/**
+ * Full-width digits and punctuation back to the ordinary ones, because that is
+ * how Chinese is typed: '１５：００' is 15:00 and '（周五）' is (周五), and
+ * nothing that looks for a time or a bracket would see them otherwise.
+ */
+const halfWidth = (text: string): string =>
+  text
+    .replace(/[\uff01-\uff5e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/\u3000/g, ' ')
+
+/**
+ * How much of a line is words, measured in Latin letters.
+ *
+ * A Chinese character is a word or most of one, so it counts twice: 晚餐 is as
+ * much of a title as 'Lunch' is, where two stray letters left over from a date
+ * are not a title at all.
+ */
+const wordLength = (text: string): number =>
+  (text.match(/\p{L}/gu) ?? []).length + (text.match(/\p{Script=Han}/gu) ?? []).length
 
 /**
  * Turn a booking confirmation or a typed plan into draft schedule items.
@@ -431,7 +488,7 @@ const stripDates = (line: string): string =>
  * each one, and only the ticked ones become items.
  */
 export function parseItinerary(text: string, fallbackDate: string): ItineraryDraft[] {
-  const lines = text
+  const lines = halfWidth(text)
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 2 && !NOISE.test(line))
@@ -447,7 +504,7 @@ export function parseItinerary(text: string, fallbackDate: string): ItineraryDra
     const withoutDate = lineDate ? stripDates(line) : line
 
     // A line that is only a date is a heading for the lines beneath it.
-    const isHeading = Boolean(lineDate) && withoutDate.replace(/[^A-Za-z]/g, '').length < 4
+    const isHeading = Boolean(lineDate) && wordLength(withoutDate) < 4
     if (lineDate) currentDate = lineDate
     if (isHeading) continue
 
@@ -466,7 +523,7 @@ export function parseItinerary(text: string, fallbackDate: string): ItineraryDra
 
     // Without a time and without a date this is just prose from the page.
     if (!start && !lineDate) continue
-    if (title.replace(/[^A-Za-z]/g, '').length < 3) continue
+    if (wordLength(title) < 3) continue
 
     // 'Dinner at Sakura, Bukit Bintang' — the tail after 'at' is a place.
     const place = /\b(?:at|in|@)\s+([A-Z][\w'&.\- ]{2,40})$/.exec(title)

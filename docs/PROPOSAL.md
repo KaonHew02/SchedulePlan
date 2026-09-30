@@ -280,7 +280,7 @@ Result: Travel lists **one trip** spanning 14–18 September with three stops, a
 | SN-3 | `185,000` and `185.000` both mean a hundred and eighty-five thousand. A separator followed by three digits groups thousands; with one or two digits it is a decimal point | Getting this wrong turns a Vietnamese lunch into 185 dong |
 | SN-4 | A time written with a dot only counts as a time if it has am or pm beside it | A looser pattern reads `24.00` as a clock time and deletes every price |
 | SN-5 | The other amounts on the slip are offered as one-tap alternatives | The total is the field most likely to be wrong, and the most costly one to get wrong without noticing |
-| SN-6 | The engine runs in the browser and is fetched on the first scan only (about 12 MB) | No document leaves the device, and sessions that never scan never pay for it |
+| SN-6 | The engine runs in the browser and is fetched on the first scan only (about 14 MB) | No document leaves the device, and sessions that never scan never pay for it |
 
 ### Bill split rules (parked with Expenses)
 
@@ -487,7 +487,7 @@ flowchart LR
 | World map geometry (110m) | 108 KB | n/a | First time Travel opens |
 | Flag images | One small SVG per country, 186 in all | n/a | Only the flags on screen |
 | OCR loader | 16 KB | 7 KB | First scan |
-| OCR engine and English data | About 12 MB, from jsDelivr | n/a | First scan |
+| OCR engine, English and Chinese data | About 14 MB, from jsDelivr | n/a | First scan |
 
 Schedule, the screen opened every day, loads none of the map, none of the projection library and none of the OCR engine.
 

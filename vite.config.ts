@@ -18,7 +18,7 @@ import react from '@vitejs/plugin-react'
  *   accounts.google.com/gsi     Drive sign-in (Google's documented CSP set)
  *   www.googleapis.com          Drive read and write
  *   cdn.jsdelivr.net            the OCR engine, its WebAssembly core and the
- *                               English data — fetched on first scan
+ *                               English and Chinese data — fetched on first scan
  *   'wasm-unsafe-eval'          compiling that WebAssembly; it allows wasm
  *                               only, not eval() of JavaScript
  *   open.er-api.com,

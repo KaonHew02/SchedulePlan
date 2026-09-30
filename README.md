@@ -153,7 +153,13 @@ The reading itself is **Tesseract compiled to WebAssembly, running in your
 browser**. That is a deliberate choice over a cloud OCR or an AI model: a
 static site has nowhere to keep an API key, and a key shipped to the browser is
 a key someone else can spend. The trade is that it is less accurate than a paid
-model, and that it is a ~12MB download the first time you use it.
+model, and that it is a ~14MB download the first time you use it.
+
+It reads printed English and Simplified Chinese — English first, because with
+Chinese first it misread the digits on a till slip in testing. It does not read
+handwriting in either. For a handwritten page, the document scanner takes
+pasted text instead: the phone's own text recognition handles handwriting
+well, and what it copies goes through the same itinerary parser as a scan.
 
 Which is why **nothing it reads is ever saved on its own.** A scanned receipt
 fills in a form you check; a scanned itinerary produces a list with a tick

@@ -137,7 +137,7 @@ export default function ReceiptScan({
             <span className="text-[14px] font-medium">Take or choose a photo</span>
           </button>
           <p className="pb-2 pt-3 text-[12px] leading-5 text-neutral-400">
-            The reader is a ~12 MB download the first time you use it, and it stays for the rest
+            The reader is a ~14 MB download the first time you use it, and it stays for the rest
             of the session.
           </p>
         </>

@@ -94,11 +94,11 @@ What that costs instead:
 
 - **Accuracy.** It is meaningfully worse than a paid cloud model, especially on
   a crumpled thermal receipt.
-- **A ~12 MB download** the first time per session, which the screens warn
+- **A ~14 MB download** the first time per session, which the screens warn
   about before you start.
-- **A CDN dependency** — `cdn.jsdelivr.net` for the worker and
-  `tessdata.projectnaptha.com` for the English data. Offline, scanning fails
-  with a plain message; everything else keeps working.
+- **A CDN dependency** — `cdn.jsdelivr.net` for the worker and the English
+  and Chinese data. Offline, scanning fails with a plain message; everything
+  else keeps working.
 
 The rule that makes the accuracy affordable: **nothing a scanner reads is ever
 saved on its own.** A receipt fills in a form you correct, with the other

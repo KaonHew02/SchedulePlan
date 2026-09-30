@@ -18,6 +18,10 @@ import type { Attachment } from '../types'
  * where the care goes: a parser looking at OCR output will misread times and
  * invent entries, so nothing it finds is written anywhere. Every row is
  * ticked, edited and confirmed first, and untick-all is one tap away.
+ *
+ * Text can also be pasted in instead of photographed. Handwriting is beyond
+ * the reader here, but not beyond the phone: iOS and Android both read it off
+ * a photo well, and what they copy goes through the same parser as a scan.
  */
 
 interface Row extends ItineraryDraft {
@@ -39,6 +43,8 @@ export default function ScanScreen({
   const [rows, setRows] = useState<Row[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [pasted, setPasted] = useState('')
+  const [fromPaste, setFromPaste] = useState(false)
   const preview = useFileUrl(attachment?.id ?? null)
 
   async function handle(file: File) {
@@ -46,6 +52,7 @@ export default function ScanScreen({
     setRows([])
     setText('')
     setAttachment(null)
+    setFromPaste(false)
     setProgress({ status: 'Flattening the page', progress: 0 })
 
     let saved: Attachment
@@ -77,6 +84,30 @@ export default function ScanScreen({
     } finally {
       setProgress(null)
     }
+  }
+
+  function readPasted() {
+    const found = pasted.trim()
+    if (!found) return
+    const drafts = parseItinerary(found, todayISO())
+    setAttachment(null)
+    setText(found)
+    setFromPaste(true)
+    setRows(drafts.map((draft, index) => ({ ...draft, key: index, keep: true })))
+    setError(
+      drafts.length === 0
+        ? 'Nothing in that looked like a dated appointment. Each one needs a time on its line, like 09:00, or a date.'
+        : null,
+    )
+  }
+
+  /** Back to the start, with whatever was pasted still in the box. */
+  function startOver() {
+    setAttachment(null)
+    setFromPaste(false)
+    setText('')
+    setRows([])
+    setError(null)
   }
 
   function edit(key: number, patch: Partial<Row>) {
@@ -137,7 +168,7 @@ export default function ScanScreen({
       </header>
 
       <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
-        {!attachment && !progress && (
+        {!attachment && !fromPaste && !progress && (
           <>
             <p className="pb-4 pt-1 text-[14px] leading-6 text-neutral-500">
               Photograph a booking, an itinerary or any printed page. It is straightened and read
@@ -151,8 +182,32 @@ export default function ScanScreen({
               <span className="text-[14px] font-medium">Take or choose a photo</span>
             </button>
             <p className="pt-3 text-[12px] leading-5 text-neutral-400">
-              The reader is a ~12 MB download the first time, then it stays for the session.
+              It reads printed English and Chinese. The reader is a ~14 MB download the first
+              time, then it stays for the session.
             </p>
+
+            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+              Or paste the text
+            </h2>
+            <textarea
+              value={pasted}
+              onChange={(event) => setPasted(event.target.value)}
+              rows={5}
+              placeholder={'2 Oct 2026\n10:00 Check in at Marina Bay Cruise Centre\n13:00 Muster drill'}
+              aria-label="Text to look for appointments in"
+              className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-none transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+            />
+            <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
+              For handwriting, your phone reads it far better than this page can: open the photo,
+              press and hold the writing, and copy it.
+            </p>
+            <button
+              onClick={readPasted}
+              disabled={!pasted.trim()}
+              className="mt-3 w-full rounded-full border border-neutral-200 py-2.5 text-[15px] font-medium disabled:opacity-40"
+            >
+              Find appointments
+            </button>
           </>
         )}
 
@@ -169,32 +224,52 @@ export default function ScanScreen({
           </div>
         )}
 
-        {attachment && !progress && (
+        {(attachment || fromPaste) && !progress && (
           <>
-            <div className="flex gap-3">
-              {preview && (
-                <img
-                  src={preview}
-                  alt="The scanned page"
-                  className="h-32 w-24 shrink-0 rounded-xl border border-neutral-200 object-cover"
-                />
-              )}
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {attachment ? (
+              <div className="flex gap-3">
+                {preview && (
+                  <img
+                    src={preview}
+                    alt="The scanned page"
+                    className="h-32 w-24 shrink-0 rounded-xl border border-neutral-200 object-cover"
+                  />
+                )}
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <button
+                    onClick={download}
+                    className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600"
+                  >
+                    Save the scan
+                  </button>
+                  <button
+                    onClick={() => input.current?.click()}
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
+                  >
+                    <ScanIcon className="h-3.5 w-3.5" />
+                    Scan another
+                  </button>
+                  <button
+                    onClick={startOver}
+                    className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
+                  >
+                    Paste text instead
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="min-w-0 flex-1 text-[14px] text-neutral-500">
+                  From the text you pasted
+                </p>
                 <button
-                  onClick={download}
+                  onClick={startOver}
                   className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600"
                 >
-                  Save the scan
-                </button>
-                <button
-                  onClick={() => input.current?.click()}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
-                >
-                  <ScanIcon className="h-3.5 w-3.5" />
-                  Scan another
+                  Edit the text
                 </button>
               </div>
-            </div>
+            )}
 
             {error && (
               <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-[13px] leading-5 text-amber-800">
@@ -278,13 +353,14 @@ export default function ScanScreen({
                       : `Add ${chosenCount} to the schedule`}
                 </button>
                 <p className="pt-2 text-[12px] leading-5 text-neutral-400">
-                  Check each date and time first — a reader working off a photo gets them wrong
-                  often enough to matter. The scan itself is kept with the first one.
+                  {fromPaste
+                    ? 'Check each date and time first — a line with no date above it goes on today.'
+                    : 'Check each date and time first — a reader working off a photo gets them wrong often enough to matter. The scan itself is kept with the first one.'}
                 </p>
               </>
             )}
 
-            {text && (
+            {text && !fromPaste && (
               <details className="mt-6">
                 <summary className="cursor-pointer text-[13px] text-neutral-400">
                   All the text it read
@@ -305,7 +381,7 @@ export default function ScanScreen({
           </>
         )}
 
-        {!attachment && error && (
+        {!attachment && !fromPaste && error && (
           <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-[13px] leading-5 text-amber-800">
             {error}
           </p>
