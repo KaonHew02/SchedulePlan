@@ -157,7 +157,7 @@ export default function TripScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-5 pb-3 pt-4 lg:px-8">
           <button onClick={onBack} aria-label="Back to Travel" className="-ml-2 p-2 text-neutral-400">
             <ChevronLeft />
@@ -235,7 +235,7 @@ export default function TripScreen({
             rows={8}
             placeholder={'Day 1 — land, check in, bridge at night\nDay 2 — Hoi An, back for dinner\nBook the Ba Na Hills ticket before Friday'}
             aria-label="The plan for this trip"
-            className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-7 outline-none transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+            className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-7 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
           />
           <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
             Saved as you go. This is the trip's own page — it does not show up in the diary
@@ -270,7 +270,7 @@ export default function TripScreen({
                 placeholder="Paste the link"
                 inputMode="url"
                 aria-label="Link address"
-                className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-none ring-1 ring-neutral-200 placeholder:text-neutral-300"
+                className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
               />
               <input
                 value={label}
@@ -278,7 +278,7 @@ export default function TripScreen({
                 onKeyDown={(event) => event.key === 'Enter' && void addLink()}
                 placeholder="What is it? (optional)"
                 aria-label="What the link is"
-                className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-none ring-1 ring-neutral-200 placeholder:text-neutral-300"
+                className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
               />
               {linkError && (
                 <p className="pt-2 text-[12px] leading-5 text-amber-700">{linkError}</p>

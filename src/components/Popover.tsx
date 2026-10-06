@@ -100,7 +100,7 @@ export default function Popover({ anchor, onClose, children, label }: Props) {
         // 0,0 for one frame and then snapping into place reads as a glitch.
         visibility: position ? 'visible' : 'hidden',
       }}
-      className="fixed z-[60] rounded-2xl border border-neutral-200 bg-white shadow-xl animate-pop-in"
+      className="fixed z-60 rounded-2xl border border-neutral-200 bg-white shadow-xl animate-pop-in"
     >
       {children}
     </div>,

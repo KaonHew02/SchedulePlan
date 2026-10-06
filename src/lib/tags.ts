@@ -97,7 +97,7 @@ const TINTS: Tint[] = [
   { bg: 'bg-[#FDECEF]', bar: 'bg-[#F43F5E]', text: 'text-[#BE123C]' },
   { bg: 'bg-[#FDF2E0]', bar: 'bg-[#F59E0B]', text: 'text-[#B45309]' },
   { bg: 'bg-[#E5F7EE]', bar: 'bg-[#10B981]', text: 'text-[#047857]' },
-  { bg: 'bg-[#EEEBFD]', bar: 'bg-[#6C5CE7]', text: 'text-[#4A3BB8]' },
+  { bg: 'bg-[#EEEBFD]', bar: 'bg-brand-500', text: 'text-brand-700' },
   { bg: 'bg-[#E3F5F9]', bar: 'bg-[#06B6D4]', text: 'text-[#0E7490]' },
   { bg: 'bg-[#FDEBE3]', bar: 'bg-[#FB7185]', text: 'text-[#9F1239]' },
 ]

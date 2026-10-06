@@ -344,7 +344,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="px-5 pb-2 pt-4 lg:px-8">
           <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Travel</h1>
           <p className="flex items-center gap-1.5 pt-0.5 text-[13px] text-neutral-500">
@@ -428,7 +428,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                 value={goalDraft}
                 onChange={(event) => setGoalDraft(event.target.value)}
                 inputMode="numeric"
-                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
+                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-hidden ring-1 ring-neutral-200"
               />
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -440,7 +440,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                 value={placeDraft}
                 onChange={(event) => setPlaceDraft(event.target.value)}
                 inputMode="numeric"
-                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
+                className="w-16 rounded-lg bg-white px-2 py-1 text-center text-[14px] tabular-nums outline-hidden ring-1 ring-neutral-200"
               />
             </div>
             <div className="mt-2.5 flex items-end gap-2">

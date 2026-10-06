@@ -60,7 +60,7 @@ export default function HolidaySettings() {
               value={region ?? ''}
               onChange={(event) => updateSettings({ holidayRegion: event.target.value || null })}
               aria-label="State or region"
-              className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-none transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
+              className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
             >
               <option value="">Whole country</option>
               {regions.map(([code, name]) => (

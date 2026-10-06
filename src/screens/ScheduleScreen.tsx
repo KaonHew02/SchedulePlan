@@ -103,7 +103,7 @@ function ViewToggle({
           key={mode}
           onClick={() => onChange(mode)}
           className={`flex-1 rounded-full px-4 py-1.5 text-[13px] capitalize transition-colors ${
-            view === mode ? 'bg-white font-medium shadow-sm' : 'text-neutral-500'
+            view === mode ? 'bg-white font-medium shadow-xs' : 'text-neutral-500'
           }`}
         >
           {mode}
@@ -217,7 +217,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4 lg:px-8">
           <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
             {title}

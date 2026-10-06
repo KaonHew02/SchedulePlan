@@ -242,7 +242,7 @@ export default function CurrencyScreen() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
           <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Currency</h1>
           <button
@@ -270,7 +270,7 @@ export default function CurrencyScreen() {
               onChange={(event) => setAmount(event.target.value)}
               inputMode="decimal"
               aria-label="Amount to convert"
-              className="min-w-0 flex-1 bg-transparent text-[26px] font-semibold tabular-nums tracking-tight outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[26px] font-semibold tabular-nums tracking-tight outline-hidden"
             />
             <CurrencySelect value={from} onChange={setFrom} label="Convert from" />
           </div>
@@ -314,7 +314,7 @@ export default function CurrencyScreen() {
                   onChange={(event) => setManualDraft(event.target.value)}
                   inputMode="decimal"
                   aria-label={`${inTerms} per ${unitLabel(priced, lots)} ${priced}`}
-                  className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-none ring-1 ring-neutral-200"
+                  className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-hidden ring-1 ring-neutral-200"
                 />
                 <span className="shrink-0 text-[13px] text-neutral-500">{inTerms}</span>
                 <button

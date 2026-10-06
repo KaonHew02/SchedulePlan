@@ -97,7 +97,7 @@ export default function ReminderForm({
           onChange={(event) => setTitle(event.target.value)}
           autoFocus={!reminder}
           placeholder="Remind me to..."
-          className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
+          className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">

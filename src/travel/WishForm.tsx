@@ -104,7 +104,7 @@ export default function WishForm({
           onChange={(event) => setName(event.target.value)}
           autoFocus={!wish}
           placeholder="Where do you want to go?"
-          className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
+          className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
@@ -142,7 +142,7 @@ export default function WishForm({
                 type="button"
                 onClick={() => setPhoto(null)}
                 aria-label="Remove the picture"
-                className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-red-600 shadow"
+                className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-red-600 shadow-sm"
               >
                 <TrashIcon />
               </button>

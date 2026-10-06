@@ -57,7 +57,7 @@ export default function CountryBadge({
       {count !== undefined && (
         // Pulled back into the badge's own padding, so a badge with a number
         // is barely wider than one without and a row of them stays even.
-        <span className="-mr-0.5 rounded bg-white/70 px-1 text-[0.9em] tabular-nums">
+        <span className="-mr-0.5 rounded-sm bg-white/70 px-1 text-[0.9em] tabular-nums">
           {count}
         </span>
       )}

@@ -115,7 +115,7 @@ export default function LinkEditor({
             placeholder="Paste the link"
             inputMode="url"
             aria-label="Link address"
-            className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-none ring-1 ring-neutral-200 placeholder:text-neutral-300"
+            className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
           />
           <input
             value={label}
@@ -127,7 +127,7 @@ export default function LinkEditor({
             }}
             placeholder="What is it? (optional)"
             aria-label="What the link is"
-            className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-none ring-1 ring-neutral-200 placeholder:text-neutral-300"
+            className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
           />
           {error && <p className="pt-2 text-[12px] leading-5 text-amber-700">{error}</p>}
           <div className="flex items-center gap-2 pt-2">

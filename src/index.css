@@ -1,6 +1,74 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './palette.css';
+
+/*
+  What tailwind.config.js used to say. Tailwind 4 keeps its theme in CSS: a
+  variable here is a set of utilities — --color-brand-500 is bg-brand-500,
+  text-brand-500 and the rest.
+*/
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial,
+    sans-serif;
+
+  /* The one accent. Everything that used to be blue-600 is brand-500: the
+     chosen day, the toggle, the add button, a primary action. */
+  --color-brand-50: #f3f1fe;
+  --color-brand-100: #e8e5fb;
+  --color-brand-200: #d5cff8;
+  --color-brand-300: #b8adf3;
+  --color-brand-400: #9384ee;
+  --color-brand-500: #6c5ce7;
+  --color-brand-600: #5b4bd6;
+  --color-brand-700: #4a3bb8;
+
+  /* The page behind the app column, from 640px up. */
+  --color-canvas: #dedbf5;
+  /* The ground inside the column, behind white cards. */
+  --color-page: #f7f7fb;
+
+  --radius-card: 1.25rem;
+}
+
+/*
+  A border with no colour of its own: Tailwind 4 draws it in the text's
+  colour, Tailwind 3 drew it light grey. Kept grey, so a bare `border` still
+  looks as it did. To drop this, give every such border a colour first.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility pb-safe-5 {
+  /* Like pb-5, but clearing the home indicator too. Plain `pb-5 pb-safe`
+     would not stack: the later rule simply wins and the padding goes. */
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility pb-safe-7 {
+  padding-bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+}
 
 @layer base {
   html {
@@ -34,33 +102,13 @@
   button {
     -webkit-tap-highlight-color: transparent;
   }
-}
 
-@layer utilities {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  /* Like pb-5, but clearing the home indicator too. Plain `pb-5 pb-safe`
-     would not stack: the later rule simply wins and the padding goes. */
-  .pb-safe-5 {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .pb-safe-7 {
-    padding-bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .mb-safe {
-    margin-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .no-scrollbar {
-    scrollbar-width: none;
+  /* Tailwind 4 gives buttons the browser's own arrow; 3 gave them the hand.
+     On a laptop the hand is what says a thing can be clicked, and every
+     chip, row and toggle in this app is a button. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 }
 

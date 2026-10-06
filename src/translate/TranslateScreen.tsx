@@ -115,7 +115,7 @@ function LanguagePicker({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
               aria-label="Search languages"
-              className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-none placeholder:text-neutral-400"
+              className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
             />
             <div className="no-scrollbar max-h-[228px] overflow-y-auto">
               {matches.length === 0 && (
@@ -360,7 +360,7 @@ export default function TranslateScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center px-5 pb-3 pt-4 lg:px-8">
           <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Translate</h1>
         </div>
@@ -395,7 +395,7 @@ export default function TranslateScreen({
               rows={2}
               placeholder={`Type in ${languageOf(from)?.native ?? ''}`}
               aria-label="What to translate"
-              className="mt-3 w-full resize-none bg-transparent text-[17px] leading-7 outline-none placeholder:text-neutral-300"
+              className="mt-3 w-full resize-none bg-transparent text-[17px] leading-7 outline-hidden placeholder:text-neutral-300"
             />
 
             <div className="mt-1 flex items-center gap-2">

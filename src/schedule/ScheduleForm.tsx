@@ -191,7 +191,7 @@ export default function ScheduleForm({
           onChange={(e) => setTitle(e.target.value)}
           autoFocus={!item}
           placeholder="What are you doing?"
-          className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
+          className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
@@ -316,7 +316,7 @@ export default function ScheduleForm({
                       setTripId(event.target.value ? Number(event.target.value) : null)
                     }
                     aria-label="The trip this is part of"
-                    className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-none transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
+                    className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
                   >
                     <option value="">Its own trip</option>
                     {joinable.map((row) => (

@@ -201,7 +201,7 @@ export default function ReceiptScan({
                   inputMode="decimal"
                   aria-label="Amount"
                   placeholder="0.00"
-                  className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-none placeholder:text-neutral-300"
+                  className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-hidden placeholder:text-neutral-300"
                 />
                 <CurrencySelect value={currency} onChange={setCurrency} />
               </span>

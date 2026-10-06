@@ -19,7 +19,7 @@ The product exists because a trip gets scattered across four apps that do not kn
 | Primary user | One frequent short-haul traveller based in Malaysia, travelling South East Asia |
 | Delivered | Schedule, Travel, Reminders, Currency, Translate, and More (scanner, labels, backup); version 0.2 |
 | Parked | Expenses, Bill split and Receipt scan: finished and working, switched off by one flag |
-| Stack | React 19 · TypeScript 5.7 · Vite 6 · Tailwind 3.4 · IndexedDB · GitHub Pages |
+| Stack | React 19 · TypeScript 5.7 · Vite 6 · Tailwind 4 · IndexedDB · GitHub Pages |
 | Security | Content Security Policy on the built page · every imported file sanitised · no source maps |
 | Dependencies | Six runtime packages, no API keys, no backend, no analytics |
 | Running cost | RM 0 a month, because hosting, storage and every service it calls are free or the user's own |
@@ -664,7 +664,7 @@ The mark is a globe with a plane flying round it, drawn with circles, an ellipse
 | Tag tints | Seven pastels, blue to rose | Card fills by the tag's position in the list; untagged cards stay grey |
 | Continent tints | Amber, rose, violet, sky, lime, teal | Country badges, so a wall of them still groups by region |
 
-The accent is defined once, as `brand` in `tailwind.config.js`, and nothing in `src/` names a raw blue or purple. It moved from blue to purple in one pass precisely because it had never been spelled out in more than one place.
+The accent is defined once, as `brand` in the `@theme` block of `src/index.css`, and nothing in `src/` names a raw blue or purple. It moved from blue to purple in one pass precisely because it had never been spelled out in more than one place.
 
 ### Layout
 
@@ -699,7 +699,7 @@ Content is capped at 1,500 px and centred. The width is filled with **more conte
 | Framework | React 19 | Derived views re-compute on render, which makes founding rule 2 cheap |
 | Language | TypeScript 5.7 | The counting rules are the product, and a wrong type there is a wrong number |
 | Build | Vite 6 | Dynamic imports become separate assets without configuration, and the CSP is added at build time |
-| Styling | Tailwind 3.4 | No stylesheet to keep in step with the markup, and one place for the accent |
+| Styling | Tailwind 4 | No stylesheet to keep in step with the markup, and one place for the accent |
 | Storage | IndexedDB | Survives a reload and holds files, which localStorage cannot |
 | Map | `d3-geo`, `topojson-client`, `world-atlas` | Orthographic projection and 110m borders, fetched on demand and self-hosted |
 | OCR | `tesseract.js` 7 (WebAssembly) | Reads a booking in the browser, so no document leaves the device |

@@ -175,7 +175,7 @@ export default function ScheduleDetail({
             <button
               type="button"
               onClick={onAddExpense}
-              className="ml-auto flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[13px] font-medium shadow-sm"
+              className="ml-auto flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[13px] font-medium shadow-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               Add

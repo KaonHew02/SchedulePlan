@@ -224,7 +224,7 @@ export default function ExpenseForm({
             onChange={(event) => setTitle(event.target.value)}
             autoFocus={!expense}
             placeholder="What was it for?"
-            className="w-full bg-transparent py-1 text-[17px] outline-none placeholder:text-neutral-300"
+            className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
           />
 
           <div className="mt-2 flex items-center gap-2 border-y border-neutral-100 py-3">
@@ -234,7 +234,7 @@ export default function ExpenseForm({
               inputMode="decimal"
               aria-label="Amount"
               placeholder="0.00"
-              className="min-w-0 flex-1 bg-transparent text-[28px] font-semibold tabular-nums tracking-tight outline-none placeholder:text-neutral-200"
+              className="min-w-0 flex-1 bg-transparent text-[28px] font-semibold tabular-nums tracking-tight outline-hidden placeholder:text-neutral-200"
             />
             <CurrencySelect value={currency} onChange={setCurrency} />
           </div>
@@ -251,7 +251,7 @@ export default function ExpenseForm({
                     inputMode="decimal"
                     aria-label={`${home} per ${currency}`}
                     placeholder="0.0000"
-                    className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-none placeholder:text-neutral-300"
+                    className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-hidden placeholder:text-neutral-300"
                   />
                   <span className="text-[13px] text-neutral-400">{home}</span>
                 </span>

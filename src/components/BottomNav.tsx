@@ -25,7 +25,7 @@ export default function BottomNav({
         smaller font.
       */}
       <div
-        className="mx-auto grid max-w-md border-t border-neutral-100 bg-white/90 backdrop-blur pb-safe sm:border-x sm:border-neutral-200 md:max-w-xl"
+        className="mx-auto grid max-w-md border-t border-neutral-100 bg-white/90 backdrop-blur-sm pb-safe sm:border-x sm:border-neutral-200 md:max-w-xl"
         style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
       >
         {NAV.map(({ id, label, Icon }) => (

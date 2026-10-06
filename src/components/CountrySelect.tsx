@@ -89,7 +89,7 @@ export default function CountrySelect({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
               aria-label="Search countries"
-              className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-none placeholder:text-neutral-400"
+              className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
             />
             <div className="no-scrollbar max-h-[228px] overflow-y-auto">
               {clearable && (

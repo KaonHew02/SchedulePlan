@@ -40,7 +40,7 @@ export default function TagEditor({
           value={emoji}
           onChange={(e) => setEmoji(e.target.value)}
           aria-label="Emoji"
-          className="w-11 shrink-0 rounded-xl border border-neutral-200 py-2 text-center text-[17px] outline-none"
+          className="w-11 shrink-0 rounded-xl border border-neutral-200 py-2 text-center text-[17px] outline-hidden"
         />
         <input
           value={label}
@@ -49,7 +49,7 @@ export default function TagEditor({
           autoFocus
           placeholder="Tag name"
           maxLength={20}
-          className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-[15px] outline-none placeholder:text-neutral-300"
+          className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-[15px] outline-hidden placeholder:text-neutral-300"
         />
       </div>
 

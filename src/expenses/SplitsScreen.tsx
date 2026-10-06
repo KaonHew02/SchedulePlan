@@ -99,7 +99,7 @@ function LineRow({
         onChange={(event) => onChange({ ...line, label: event.target.value })}
         placeholder="What was it?"
         aria-label="What this line was"
-        className="min-w-0 flex-1 bg-transparent py-1 text-[14px] outline-none placeholder:text-neutral-300"
+        className="min-w-0 flex-1 bg-transparent py-1 text-[14px] outline-hidden placeholder:text-neutral-300"
       />
       {each !== null && line.amount > 0 && (
         <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
@@ -115,7 +115,7 @@ function LineRow({
         inputMode="decimal"
         placeholder="0.00"
         aria-label="Amount"
-        className="w-20 shrink-0 bg-transparent py-1 text-right text-[14px] tabular-nums outline-none placeholder:text-neutral-300"
+        className="w-20 shrink-0 bg-transparent py-1 text-right text-[14px] tabular-nums outline-hidden placeholder:text-neutral-300"
       />
       <button
         onClick={onRemove}
@@ -452,7 +452,7 @@ export function SplitEditor({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onClose} aria-label="Back to bills" className="p-1.5 text-neutral-400">
             <ChevronLeft />
@@ -462,7 +462,7 @@ export function SplitEditor({
             onChange={(event) => change({ ...split, title: event.target.value })}
             placeholder="What are you splitting?"
             aria-label="Bill name"
-            className="min-w-0 flex-1 bg-transparent text-[19px] font-semibold tracking-tight outline-none placeholder:text-neutral-300"
+            className="min-w-0 flex-1 bg-transparent text-[19px] font-semibold tracking-tight outline-hidden placeholder:text-neutral-300"
           />
         </div>
       </header>
@@ -579,7 +579,7 @@ export function SplitEditor({
                 }}
                 placeholder="Add someone"
                 aria-label="New person's name"
-                className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-neutral-400"
+                className="min-w-0 flex-1 bg-transparent text-[13px] outline-hidden placeholder:text-neutral-400"
               />
               <button
                 onClick={addPerson}

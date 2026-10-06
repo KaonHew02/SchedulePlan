@@ -159,13 +159,13 @@ export default function RepeatField({
                 onBlur={() => setEveryText(String(value.every))}
                 inputMode="numeric"
                 aria-label="Every how many"
-                className="w-12 rounded-xl bg-neutral-100 px-2 py-1.5 text-center text-[15px] tabular-nums outline-none focus:ring-2 focus:ring-brand-500/40"
+                className="w-12 rounded-xl bg-neutral-100 px-2 py-1.5 text-center text-[15px] tabular-nums outline-hidden focus:ring-2 focus:ring-brand-500/40"
               />
               <select
                 value={value.unit}
                 onChange={(event) => changeUnit(event.target.value as RepeatUnit)}
                 aria-label="Repeat unit"
-                className="rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] outline-none transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
+                className="rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
               >
                 {UNITS.map((unit) => (
                   <option key={unit} value={unit}>

@@ -390,7 +390,7 @@ drawn without that, the two merge into one unreadable squiggle.
 | Tile corner | `rx 58` on a 256 grid |
 | Globe / orbit stroke | 11 on a 256 grid |
 
-The accent is defined once, as `brand` in `tailwind.config.js`. Nothing in
+The accent is defined once, as `brand` in the `@theme` block of `src/index.css`. Nothing in
 `src/` should name a raw blue or purple — it moved from blue to purple in one
 pass precisely because it was never spelled out in more than one place.
 

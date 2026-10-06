@@ -48,7 +48,7 @@ export default function LabelsScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
             <ChevronLeft />

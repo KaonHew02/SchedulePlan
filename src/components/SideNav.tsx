@@ -14,7 +14,7 @@ export default function SideNav({
   onChange: (screen: Screen) => void
 }) {
   return (
-    <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-[100dvh] lg:w-56 lg:shrink-0 lg:flex-col lg:border-r lg:border-neutral-200">
+    <aside className="hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-56 lg:shrink-0 lg:flex-col lg:border-r lg:border-neutral-200">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <Logo size={28} />
         <span className="text-[15px] font-semibold tracking-tight">SchedulePlan</span>

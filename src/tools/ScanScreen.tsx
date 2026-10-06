@@ -173,7 +173,7 @@ export default function ScanScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
             <ChevronLeft />
@@ -210,7 +210,7 @@ export default function ScanScreen({
               rows={5}
               placeholder={'2 Oct 2026\n10:00 Check in at Marina Bay Cruise Centre\n13:00 Muster drill'}
               aria-label="Text to look for appointments in"
-              className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-none transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+              className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
             />
             <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
               Tap the box, choose Scan Text (on newer iPhones it is under AutoFill), point the
@@ -331,7 +331,7 @@ export default function ScanScreen({
                           value={row.title}
                           onChange={(event) => edit(row.key, { title: event.target.value })}
                           aria-label="What it is"
-                          className="w-full bg-transparent text-[15px] outline-none"
+                          className="w-full bg-transparent text-[15px] outline-hidden"
                         />
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           <DateField
@@ -358,7 +358,7 @@ export default function ScanScreen({
                             onChange={(event) => edit(row.key, { notes: event.target.value })}
                             rows={Math.min(8, row.notes.split('\n').length)}
                             aria-label="Notes"
-                            className="mt-1.5 w-full resize-y rounded-lg bg-neutral-50 px-2.5 py-1.5 text-[13px] leading-5 text-neutral-600 outline-none"
+                            className="mt-1.5 w-full resize-y rounded-lg bg-neutral-50 px-2.5 py-1.5 text-[13px] leading-5 text-neutral-600 outline-hidden"
                           />
                         )}
                       </div>

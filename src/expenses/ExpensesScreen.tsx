@@ -115,7 +115,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
           <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
             {tab === 'spending' ? monthTitle(month) : 'Bill splits'}

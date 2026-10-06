@@ -32,7 +32,7 @@ export function Field({
  * it brought the whole native picker's behaviour with it.
  */
 export const chip =
-  'relative flex items-center gap-2 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] tabular-nums transition-colors hover:bg-neutral-200/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40'
+  'relative flex items-center gap-2 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] tabular-nums transition-colors hover:bg-neutral-200/70 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40'
 
 export const chipOpen = 'bg-neutral-200/70 ring-2 ring-brand-500/40'
 
@@ -231,7 +231,7 @@ export function Segmented<T extends string>({
           type="button"
           onClick={() => onChange(option.value)}
           className={`flex-1 rounded-full px-3 py-1.5 text-[13px] transition-colors ${
-            value === option.value ? 'bg-white font-medium shadow-sm' : 'text-neutral-500'
+            value === option.value ? 'bg-white font-medium shadow-xs' : 'text-neutral-500'
           }`}
         >
           {option.label}
@@ -265,7 +265,7 @@ export function TextField({
       aria-label={label}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="min-w-0 flex-1 bg-transparent text-right text-[15px] outline-none placeholder:text-neutral-300"
+      className="min-w-0 flex-1 bg-transparent text-right text-[15px] outline-hidden placeholder:text-neutral-300"
     />
   )
 }
@@ -371,8 +371,8 @@ export function NotesField({
         placeholder={placeholder}
         aria-label={placeholder}
         // pr-7 keeps the first line clear of the button sitting over the corner.
-        className={`w-full resize-none overflow-y-auto bg-transparent pr-7 text-[15px] leading-6 outline-none placeholder:text-neutral-300 ${
-          expanded ? 'h-[60vh]' : 'max-h-[40vh] min-h-[5.5rem]'
+        className={`w-full resize-none overflow-y-auto bg-transparent pr-7 text-[15px] leading-6 outline-hidden placeholder:text-neutral-300 ${
+          expanded ? 'h-[60vh]' : 'max-h-[40vh] min-h-22'
         }`}
       />
       <button
