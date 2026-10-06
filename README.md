@@ -48,6 +48,30 @@ good. It is one row with a rule on it, unrolled when a view draws its days, so
 changing the class's time changes every week of it. Items carry your own tags,
 a location, links, notes and attachments.
 
+**Public holidays** are on the calendar in red, the way a printed calendar has
+them: the date turns red in the month grid and the week strip, and the day says
+what the holiday is. Pick the country, and the state, in **More → Calendar** —
+in Malaysia a third of the holidays belong to some states only, so with no
+state picked just the ones most of the country has off show. A day off given back for a holiday on
+a Sunday (Friday in Kedah, Kelantan and Terengganu) shows as a replacement
+holiday. On a trip abroad — any item with a place in another country — that
+country's holidays show on the trip's days too, with its badge.
+
+**Malaysia's holidays keep themselves up to date.** They come from the
+government's own list — the Prime Minister's Department publishes each year's,
+federal and state, as a PDF — and a GitHub workflow reads it every morning.
+When next year's list comes out, or a Prime Minister announces an extra day, the
+workflow commits the new dates and publishes the site; nobody types anything in.
+A year the government has not published yet is worked out instead and marked
+*not confirmed yet*. How it works, and what to do if it ever fails:
+[docs/HOLIDAYS.md](docs/HOLIDAYS.md).
+
+Every other country comes from [date-holidays](https://github.com/commenthol/date-holidays)
+(rules for about 200 countries, ISC licence, data CC-BY-SA), worked out on the
+phone for any year, so it works with no signal. It was not good enough for
+Malaysia: the moon-sighted holidays are Malaysia's own, and it put Hari Raya a
+day early in 2027.
+
 **Reminders** — due date and time, optionally running *until* a later date and
 time, optionally repeating daily or weekly inside that window. Alerts only fire
 while a tab is open; there is no server to send them otherwise, and the screen

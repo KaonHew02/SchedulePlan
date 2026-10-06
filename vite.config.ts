@@ -89,12 +89,31 @@ export default defineConfig({
   // two identical.
   base: '/SchedulePlan/',
   plugins: [react(), contentSecurityPolicy()],
+  resolve: {
+    alias: [
+      /*
+       * The holiday rules (lib/holidays.ts) need time zones, and the default
+       * moment-timezone carries every zone's whole history: 730 KB, half the
+       * holiday file, for transitions back to the 1800s. Holidays only need
+       * the date in a country, so the 1970–2030 build does, at a fifth of the
+       * size. Past 2030 it keeps each zone's last offset, which moves a
+       * holiday's hour at most, not its day.
+       */
+      {
+        find: /^moment-timezone$/,
+        replacement: 'moment-timezone/builds/moment-timezone-with-data-1970-2030.js',
+      },
+    ],
+  },
   build: {
     // No source maps on the live site. They would hand anyone the original
     // files with every comment in them; without them the browser gets only the
     // minified bundle. This is tidiness, not protection — the repository is
     // public and the bundle is still readable to anyone patient enough.
     sourcemap: false,
+    // The holiday rules are one 800 KB file, loaded only when needed, and
+    // most of it is data for two hundred countries that does not split.
+    chunkSizeWarningLimit: 900,
   },
   server: {
     // host: true so the app can be opened from a phone on the same wifi.

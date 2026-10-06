@@ -1,7 +1,9 @@
 import { ChevronRight } from '../components/Icons'
 import { relativeDay, shortDate } from '../lib/date'
+import type { Holiday } from '../lib/holidays'
 import { occupies } from '../lib/store'
 import type { ScheduleItem } from '../types'
+import { HolidayLines } from './HolidayLine'
 import ItemCard from './ItemCard'
 import MonthGrid from './MonthGrid'
 
@@ -17,18 +19,20 @@ export default function MonthView({
   onOpen,
   onSelect,
   onPickDay,
+  holidays,
 }: {
   anchor: string
   items: ScheduleItem[]
   onOpen: (item: ScheduleItem) => void
   onSelect: (date: string) => void
   onPickDay: (date: string) => void
+  holidays: Map<string, Holiday[]>
 }) {
   const selectedItems = items.filter((item) => occupies(item, anchor))
 
   return (
     <div>
-      <MonthGrid anchor={anchor} items={items} onSelect={onSelect} />
+      <MonthGrid anchor={anchor} items={items} onSelect={onSelect} holidays={holidays} />
 
       <button
         onClick={() => onPickDay(anchor)}
@@ -38,6 +42,8 @@ export default function MonthView({
         <span className="text-[13px] text-neutral-400">{shortDate(anchor)}</span>
         <ChevronRight className="h-4 w-4 text-neutral-300" />
       </button>
+
+      <HolidayLines holidays={holidays.get(anchor)} className="px-4 pb-2" />
 
       {selectedItems.length === 0 ? (
         <p className="px-5 pb-6 text-[13px] text-neutral-300">Nothing scheduled</p>

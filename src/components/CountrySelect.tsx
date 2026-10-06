@@ -19,6 +19,7 @@ export default function CountrySelect({
   label = 'Country',
   placeholder = 'Pick a country',
   clearable = false,
+  clearLabel = 'No country',
 }: {
   value: string | null
   onChange: (code: string | null) => void
@@ -27,6 +28,8 @@ export default function CountrySelect({
   label?: string
   placeholder?: string
   clearable?: boolean
+  /** What the clearing row says. */
+  clearLabel?: string
 }) {
   const anchor = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
@@ -98,7 +101,7 @@ export default function CountrySelect({
                   }}
                   className="w-full rounded-lg px-3 py-2 text-left text-[14px] text-neutral-500 hover:bg-neutral-100"
                 >
-                  No country
+                  {clearLabel}
                 </button>
               )}
               {matches.length === 0 && (

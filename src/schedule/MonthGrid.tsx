@@ -11,6 +11,7 @@ import {
 import { onDay, useTags } from '../lib/store'
 import { tintFor } from '../lib/tags'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
+import type { Holiday } from '../lib/holidays'
 import type { ScheduleItem } from '../types'
 
 /**
@@ -28,6 +29,9 @@ import type { ScheduleItem } from '../types'
  * four dots is a number nobody can read at a glance — and the count stays
  * neutral on purpose, since a coloured number would claim a category the day
  * does not have.
+ *
+ * A public holiday turns the date itself red, the way a printed calendar does.
+ * Not a dot: the dots are what you put in the diary, and a holiday is not.
  */
 export default function MonthGrid({
   anchor,
@@ -37,9 +41,12 @@ export default function MonthGrid({
   compact = false,
   /** Shown above the grid when compact, so the rail can be paged on its own. */
   onStepMonth,
+  holidays,
 }: {
   anchor: string
   items: ScheduleItem[]
+  /** By day, from useHolidays. */
+  holidays?: Map<string, Holiday[]>
   onSelect: (day: string) => void
   compact?: boolean
   onStepMonth?: (iso: string) => void
@@ -100,12 +107,15 @@ export default function MonthGrid({
           const count = list.length
           const selected = day === anchor
           const thisMonth = isSameMonth(day, anchor)
+          const holiday = holidays?.get(day)
 
           return (
             <button
               key={day}
               onClick={() => onSelect(day)}
-              aria-label={`${shortDate(day)}, ${count} scheduled`}
+              aria-label={`${shortDate(day)}, ${count} scheduled${
+                holiday ? `, ${holiday.map((one) => one.name).join(', ')}` : ''
+              }`}
               className={`flex flex-col items-center justify-center gap-1 ${
                 compact ? 'h-9' : 'h-12 md:h-16'
               }`}
@@ -116,8 +126,15 @@ export default function MonthGrid({
                   compact ? 'h-6 w-6 text-[12px]' : 'h-7 w-7 text-[13px]',
                   selected ? 'bg-brand-500 font-medium text-white' : '',
                   !selected && day === today ? 'font-semibold text-brand-500' : '',
-                  !selected && day !== today && thisMonth ? 'text-neutral-900' : '',
-                  !selected && !thisMonth ? 'text-neutral-300' : '',
+                  // Today keeps its own colour even on a holiday: which day it
+                  // is matters more, and the line under the grid says the rest.
+                  !selected && day !== today && holiday
+                    ? thisMonth
+                      ? 'font-semibold text-rose-600'
+                      : 'text-rose-300'
+                    : '',
+                  !selected && day !== today && !holiday && thisMonth ? 'text-neutral-900' : '',
+                  !selected && !holiday && !thisMonth ? 'text-neutral-300' : '',
                 ].join(' ')}
               >
                 {dayNumber(day)}

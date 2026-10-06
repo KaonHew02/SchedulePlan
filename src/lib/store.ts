@@ -99,6 +99,8 @@ export const DEFAULT_SETTINGS: Settings = {
   quoteUnits: {},
   travelGoal: 50,
   placeGoal: 100,
+  holidayCountry: 'MY',
+  holidayRegion: null,
 }
 
 const EMPTY: DB = {
@@ -339,6 +341,13 @@ function fillSettings(raw: unknown): Settings {
     quoteUnits: safe.rateMap(given.quoteUnits),
     travelGoal: safe.goal(given.travelGoal, DEFAULT_SETTINGS.travelGoal),
     placeGoal: safe.goal(given.placeGoal, DEFAULT_SETTINGS.placeGoal),
+    // Null is a choice — no holidays — and must survive. Only a field that is
+    // missing, from before holidays existed, takes the default.
+    holidayCountry:
+      given.holidayCountry === null
+        ? null
+        : (safe.countryCode(given.holidayCountry) ?? DEFAULT_SETTINGS.holidayCountry),
+    holidayRegion: safe.regionCode(given.holidayRegion),
   }
 }
 

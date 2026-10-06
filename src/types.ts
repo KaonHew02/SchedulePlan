@@ -351,6 +351,17 @@ export interface Settings {
    * settings saved before this existed, which the defaults merge covers.
    */
   placeGoal: number
+  /**
+   * Whose public holidays the calendar shows, ISO 3166-1 alpha-2. Null shows
+   * none. Malaysia unless changed, which is where this notebook is kept.
+   */
+  holidayCountry: string | null
+  /**
+   * The state or region inside it, for the holidays only that part keeps —
+   * Thaipusam in Negeri Sembilan, Hari Gawai in Sarawak. Null is the country
+   * as a whole, which is the federal ones only.
+   */
+  holidayRegion: string | null
 }
 
 export type ViewMode = 'day' | 'week' | 'month'

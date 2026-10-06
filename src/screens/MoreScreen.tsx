@@ -2,6 +2,7 @@ import { useState, type ComponentType } from 'react'
 import BackupBar from '../components/BackupBar'
 import CurrencySelect from '../components/CurrencySelect'
 import DataSheet from '../components/DataSheet'
+import HolidaySettings from '../components/HolidaySettings'
 import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
 import { MONEY } from '../lib/features'
@@ -84,6 +85,9 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
             onClick={() => setPage('scan')}
           />
         </div>
+
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Calendar</h2>
+        <HolidaySettings />
 
         <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Labels</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">

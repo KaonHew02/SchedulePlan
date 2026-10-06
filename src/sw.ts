@@ -22,8 +22,9 @@
  *   reload (lib/offline.ts). Swapping it in under a running page would leave
  *   that page asking for scripts the new copy no longer has.
  * - **Only what changed is downloaded again.** The first copy is the whole
- *   site, about 2MB, most of it flags. After that a deploy costs the page and
- *   whichever scripts changed; everything else moves over from the old copy.
+ *   site, about 2.7MB, most of it flags and the holiday rules. After that a
+ *   deploy costs the page and whichever scripts changed; everything else
+ *   moves over from the old copy.
  *   That matters on the one network this app is most used on: roaming.
  *
  * `scripts/service-worker.mjs` compiles this after `vite build` and puts two

@@ -1,0 +1,80 @@
+# Keeps Malaysia's public holidays current without anybody remembering to.
+#
+# Every morning: read the government's holiday list (scripts/holidays.mjs).
+# When it has changed — next year's list is out, a Prime Minister has given
+# an extra day — commit src/lib/holidays-my.json and publish the site.
+# On a day nothing changed, nothing happens. See docs/HOLIDAYS.md.
+name: Update holidays
+
+on:
+  schedule:
+    # 00:17 UTC is 08:17 in Malaysia. Off the hour, when GitHub is least busy.
+    - cron: '17 0 * * *'
+  # The "Run workflow" button on the Actions tab, to check it by hand.
+  workflow_dispatch:
+  # And whenever the updater itself changes, so a change to it is tried on
+  # GitHub's machines at once rather than the next morning.
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/holidays.mjs'
+      - 'scripts/holidays-pdf.mjs'
+      - '.github/workflows/holidays.yml'
+
+permissions:
+  contents: write # commit the holiday file
+  actions: write # start the deploy, and keep this schedule switched on
+
+concurrency:
+  group: holidays
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Allowed to fail without stopping the steps below: whatever it did
+      # manage to read is still worth publishing. The last step turns the run
+      # red afterwards, which is what emails the repository's owner.
+      - id: update
+        run: npm run holidays
+        continue-on-error: true
+
+      - name: Publish if the holidays changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- src/lib/holidays-my.json; then
+            echo "No change to the holidays."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/lib/holidays-my.json
+          git commit -m "Holidays: the government's latest list"
+          git push
+          # A push made with this workflow's own token does not start other
+          # workflows — GitHub's guard against loops — so start the deploy.
+          gh workflow run pages.yml --ref main
+
+      # GitHub switches a scheduled workflow off after 60 days with no commit
+      # to a public repository, and a year can go by without the holidays
+      # changing. Switching it on again each run restarts that count.
+      - name: Keep this schedule switched on
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/holidays.yml/enable"
+
+      - name: Fail if the holidays could not be read
+        if: steps.update.outcome == 'failure'
+        run: |
+          echo "The holiday update failed. See the step above for why; docs/HOLIDAYS.md says what to do."
+          exit 1

@@ -15,6 +15,7 @@ import {
   todayISO,
   weekTitle,
 } from '../lib/date'
+import { useHolidays } from '../lib/holidays'
 import { firstOccurrence, occurrences } from '../lib/repeat'
 import {
   createExpense,
@@ -142,10 +143,14 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   }, [schedule, anchor])
   // The rail's calendar shows the anchor's whole month, which is a wider range
   // than the day view alone ever loads.
-  const monthItems = useMemo(() => {
-    const grid = monthGrid(anchor)
-    return inRange(schedule, grid[0], grid[grid.length - 1])
-  }, [schedule, anchor])
+  const grid = useMemo(() => monthGrid(anchor), [anchor])
+  const monthItems = useMemo(
+    () => inRange(schedule, grid[0], grid[grid.length - 1]),
+    [schedule, grid],
+  )
+  // The anchor's month grid holds its week and its day too, so one lookup over
+  // it serves every view, the strip and the rail.
+  const holidays = useHolidays(grid[0], grid[grid.length - 1], monthItems)
   const upNext = useMemo(() => upcoming(schedule, 5), [schedule])
 
   function step(direction: 1 | -1) {
@@ -243,15 +248,28 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
         <ViewToggle view={view} onChange={setView} className="mx-5 mb-3 lg:hidden" />
 
-        {view === 'day' && <DayStrip anchor={anchor} items={weekItems} onPick={setAnchor} />}
+        {view === 'day' && (
+          <DayStrip anchor={anchor} items={weekItems} onPick={setAnchor} holidays={holidays} />
+        )}
       </header>
 
       <main className="pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start xl:gap-8">
         <div className="min-w-0">
           {view === 'day' ? (
-            <DayView items={dayItems} day={anchor} onOpen={setDetail} />
+            <DayView
+              items={dayItems}
+              day={anchor}
+              onOpen={setDetail}
+              holidays={holidays.get(anchor)}
+            />
           ) : view === 'week' ? (
-            <WeekView anchor={anchor} items={items} onOpen={setDetail} onPickDay={openDay} />
+            <WeekView
+              anchor={anchor}
+              items={items}
+              onOpen={setDetail}
+              onPickDay={openDay}
+              holidays={holidays}
+            />
           ) : (
             <MonthView
               anchor={anchor}
@@ -259,6 +277,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
               onOpen={setDetail}
               onSelect={setAnchor}
               onPickDay={openDay}
+              holidays={holidays}
             />
           )}
         </div>
@@ -277,6 +296,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
                 items={monthItems}
                 onSelect={setAnchor}
                 onStepMonth={setAnchor}
+                holidays={holidays}
                 compact
               />
             </section>

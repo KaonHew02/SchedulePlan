@@ -1,8 +1,10 @@
 import { Fragment } from 'react'
 import EmptyState from '../components/EmptyState'
 import { minutesOf, nowTime, todayISO } from '../lib/date'
+import type { Holiday } from '../lib/holidays'
 import { lastDay } from '../lib/store'
 import type { ScheduleItem } from '../types'
+import { HolidayLines } from './HolidayLine'
 import ItemCard from './ItemCard'
 
 /**
@@ -54,13 +56,20 @@ export default function DayView({
   items,
   day,
   onOpen,
+  holidays,
 }: {
   items: ScheduleItem[]
   day: string
   onOpen: (item: ScheduleItem) => void
+  holidays: Holiday[] | undefined
 }) {
   if (items.length === 0) {
-    return <EmptyState title="Nothing scheduled" hint="Tap + to add something" />
+    return (
+      <>
+        <HolidayLines holidays={holidays} className="px-4 pt-1" />
+        <EmptyState title="Nothing scheduled" hint="Tap + to add something" />
+      </>
+    )
   }
 
   const now = nowTime()
@@ -73,6 +82,9 @@ export default function DayView({
 
   return (
     <div className="space-y-2.5 px-4 pb-4 pt-1">
+      {/* Lined up with the cards, past the time gutter, so it reads as part
+          of the day rather than as a banner across the screen. */}
+      <HolidayLines holidays={holidays} className="pl-[60px]" />
       {items.map((item, index) => (
         <Fragment key={`${item.id}:${item.date}`}>
           {index === nowAt && <NowLine time={now} />}

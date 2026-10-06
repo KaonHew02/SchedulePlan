@@ -84,6 +84,14 @@ export function countryCode(value: unknown): string | null {
   return typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : null
 }
 
+/**
+ * A state or region inside a country, as the holiday rules key them: '05',
+ * 'NSW', 'BY'. Letters and digits only, since it is used as a lookup key.
+ */
+export function regionCode(value: unknown): string | null {
+  return typeof value === 'string' && /^[A-Za-z0-9]{1,6}$/.test(value) ? value : null
+}
+
 /** ISO 4217, upper case. It ends up in a rate provider's URL. */
 export function currencyCode(value: unknown): string | null {
   return typeof value === 'string' && /^[A-Za-z]{3}$/.test(value) ? value.toUpperCase() : null

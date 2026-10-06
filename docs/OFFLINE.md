@@ -10,7 +10,8 @@ the home screen, or after the phone had closed the tab to save memory — there
 was nothing to show the notebook with. The browser showed its own offline page.
 
 Now a **service worker** keeps a copy of the whole published site: the page,
-the scripts, the map data, all 186 flags and the icons, about 2 MB. Every
+the scripts, the map data, the holiday rules, all 186 flags and the icons,
+about 2.7 MB on the phone (about 1 MB to download, compressed). Every
 request for anything under `/SchedulePlan/` is answered from that copy. The
 app opens in airplane mode, never having been opened that day.
 
@@ -28,7 +29,7 @@ Anything that fails for want of a signal says so, and nothing else stops working
 ## Getting it onto a phone
 
 1. **Open the site once with a connection.** The copy is made in the background:
-   about 2 MB, once.
+   about 1 MB to download, once.
 2. **Check it took.** More → tap the saved time in the bar → **Your data**. The
    **With no signal** line says when the app is saved in the browser.
 3. **Install it, if you like.** It is not needed for the offline copy, but it
@@ -50,7 +51,7 @@ Pushing to `main` deploys as before. On the phone:
   from its HTTP cache), sees that it changed, and makes the new copy in the
   background. **Only files whose content changed are downloaded**: the page
   and the changed scripts. The flags and everything else move over from the
-  old copy, so a deploy costs a few hundred KB rather than 2 MB, which matters
+  old copy, so a deploy costs a few hundred KB rather than the whole copy, which matters
   when roaming.
 - Then a bar appears: **A new version is ready · Reload**. It asks rather than
   reloading by itself, because a reload halfway through typing something would

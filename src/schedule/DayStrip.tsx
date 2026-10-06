@@ -1,4 +1,5 @@
 import { dayNumber, todayISO, weekDays, weekdayShort } from '../lib/date'
+import type { Holiday } from '../lib/holidays'
 import { occupies } from '../lib/store'
 import type { ScheduleItem } from '../types'
 
@@ -14,10 +15,12 @@ export default function DayStrip({
   anchor,
   items,
   onPick,
+  holidays,
 }: {
   anchor: string
   items: ScheduleItem[]
   onPick: (day: string) => void
+  holidays?: Map<string, Holiday[]>
 }) {
   const today = todayISO()
 
@@ -27,6 +30,7 @@ export default function DayStrip({
         const selected = day === anchor
         const isToday = day === today
         const busy = items.some((item) => occupies(item, day))
+        const holiday = holidays?.has(day)
 
         return (
           <button
@@ -42,7 +46,13 @@ export default function DayStrip({
             </span>
             <span
               className={`text-[15px] font-semibold tabular-nums ${
-                selected ? 'text-white' : isToday ? 'text-brand-500' : 'text-neutral-900'
+                selected
+                  ? 'text-white'
+                  : isToday
+                    ? 'text-brand-500'
+                    : holiday
+                      ? 'text-rose-600'
+                      : 'text-neutral-900'
               }`}
             >
               {dayNumber(day)}
