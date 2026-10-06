@@ -9,6 +9,7 @@ import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import { MONEY } from './lib/features'
 import RemindersScreen from './reminders/RemindersScreen'
+import SeasonsScreen from './seasons/SeasonsScreen'
 import TranslateScreen from './translate/TranslateScreen'
 import MoreScreen from './screens/MoreScreen'
 import ScheduleScreen from './screens/ScheduleScreen'
@@ -71,6 +72,7 @@ export default function App() {
           <div className={`min-w-0 flex-1 ${CONTENT}`}>
             {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
             {screen === 'travel' && <TravelScreen onToast={setToast} />}
+            {screen === 'seasons' && <SeasonsScreen onToast={setToast} />}
             {MONEY && screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
             {screen === 'reminders' && <RemindersScreen onToast={setToast} />}
             {screen === 'currency' && <CurrencyScreen />}

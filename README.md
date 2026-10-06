@@ -7,11 +7,12 @@ Short form **S.P**. A clean digital notebook for your schedule and spending.
 All seven phases are in, plus Travel. Schedule with whole-day and multi-day
 items, Reminders that can run from one date until another, Expenses in any
 currency, a converter, a bill split that works out who owes whom, a scanner
-that reads a receipt or a booking with no account and no API key, and a Travel
-screen that counts where you have been.
+that reads a receipt or a booking with no account and no API key, a Travel
+screen that counts where you have been, and Seasons — a travel calendar of
+when to go where.
 
-Six tabs — Schedule, Travel, Reminders, Currency, Translate, More. Everything
-else lives behind **More**.
+Seven tabs — Schedule, Travel, Seasons, Reminders, Currency, Translate, More.
+Everything else lives behind **More**.
 
 **Expenses is parked.** `MONEY` in `lib/features.ts` is `false`, which takes
 out the tab, the bill split, the receipt scanner, the spend on a schedule item
@@ -154,6 +155,25 @@ here**: it fills in the schedule form with the country, the note, the links and
 the files already on it, and comes off the wishlist when you save. There is no "visited" flag, because having been somewhere is a
 schedule item — which is what the counters read. Nothing is entered twice: see
 below.
+
+**Seasons** — 全球旅行月历, the travel calendar. 242 destinations — every
+Chinese province, the big countries split by region, 119 countries and
+territories in all — each rated month by month as best, good, possible or
+not advisable, with a line for every month: the temperature, what is in
+flower, the typhoon or the monsoon. Pick a month to see everywhere at its
+best then, grouped by part of the world, or turn to the whole-year table
+and read one place across. A destination opens onto its full year, its
+highlights, what to avoid and the tips, and goes onto the wishlist in a tap
+with its best months in the note.
+
+**It keeps itself current.** The year at the top is the year the dates are
+for: Chinese New Year, Ramadan, Easter and every festival hung off them carry
+a rule rather than a date, and are worked out on the phone for whichever year
+is picked, by the same holiday library the calendar uses — as are each
+destination's public holidays for that year. What cannot be worked out — the
+year's Olympics and eclipses, a visa rule that changed — is a short
+read-through once a year, listed by `npm run seasons`. How it fits together:
+[docs/SEASONS.md](docs/SEASONS.md).
 
 **Scanner** — photograph a receipt or a booking. The lighting is flattened out
 of the photo, the text is read, and the fields are *offered* in a form you

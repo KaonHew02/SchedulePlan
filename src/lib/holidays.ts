@@ -212,6 +212,31 @@ export function useHolidays(
   }, [ready, home, region, start, end, items])
 }
 
+/**
+ * A whole year of holidays, for one or more countries.
+ *
+ * The calendar asks for a stretch of days; the travel calendar asks for a
+ * year, for a destination that may cross a border (Victoria Falls is two
+ * countries). Same cache and same sources — Malaysia still from the gazette —
+ * so a year worked out for one screen is ready for the other.
+ */
+export function useHolidayYear(countries: string[], year: number): Holiday[] {
+  const ready = useSyncExternalStore(subscribe, () => version)
+  // The codes as one string, so a new array with the same codes in it is not
+  // a reason to work anything out again.
+  const key = countries.join(',')
+
+  return useMemo(
+    () =>
+      key
+        .split(',')
+        .filter(Boolean)
+        .flatMap((country) => yearOf(country, null, year)),
+    // `ready` is how a year that finished loading reaches this list.
+    [ready, key, year],
+  )
+}
+
 // ---------------------------------------------------------------- for settings
 
 export interface HolidayCountry {

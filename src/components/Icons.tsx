@@ -224,6 +224,14 @@ export const GlobeIcon = ({ className = 'w-6 h-6' }: Props) => (
   </svg>
 )
 
+/** The sun on the horizon — the Seasons tab: when to go, rather than where you went. */
+export const SunriseIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 19h18M7 19a5 5 0 0 1 10 0" />
+    <path d="M12 5v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8M2.5 15h2M19.5 15h2" />
+  </svg>
+)
+
 export const TranslateIcon = ({ className = 'w-4 h-4' }: Props) => (
   <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 5h9M7.5 5v1.6c0 3-1.7 5.7-4.5 7.4M5 9.4c0 2.3 2.7 4.4 6 4.8" />

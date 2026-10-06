@@ -1,0 +1,17 @@
+{
+  "2026": [
+    { "ids": ["it-north"], "m": [2], "t": "米兰–科尔蒂纳冬奥会（2月6日–22日），米兰与多洛米蒂山区住宿紧张、价格高" },
+    { "ids": ["us-northeast", "us-florida", "us-south", "us-california", "us-pacificnw", "ca-bc", "ca-east", "mx-central"], "m": [6, 7], "t": "美加墨世界杯（6月11日–7月19日），主办城市机票和酒店大涨" },
+    { "ids": ["is-iceland", "es-barcelona-north", "es-balearic", "xx-arctic"], "m": [8], "t": "8月12日日全食：格陵兰、冰岛西部、西班牙北部与东部（含巴利阿里群岛）可见，西班牙是傍晚低空，观测点住宿早早订满" },
+    { "ids": ["jp-chubu"], "m": [9, 10], "t": "爱知·名古屋亚运会（9月19日–10月4日），名古屋一带住宿紧张" }
+  ],
+  "2027": [
+    { "ids": ["es-andalusia", "ma-morocco", "tn-tunisia", "eg-egypt", "sa-saudi-arabia"], "m": [8], "t": "8月2日日全食，本世纪最长之一：西班牙南部、摩洛哥北部、突尼斯、埃及卢克索一带可见，卢克索附近全食约6分钟" },
+    { "ids": ["rs-serbia"], "m": [5, 6, 7, 8], "t": "贝尔格莱德专业类世博会（5月15日–8月15日）" },
+    { "ids": ["au-sydney-nsw", "au-melbourne-vic", "au-queensland", "au-western-australia", "au-south-australia"], "m": [10, 11], "t": "澳大利亚橄榄球世界杯（10月1日–11月13日），比赛城市周末住宿紧张" }
+  ],
+  "2028": [
+    { "ids": ["us-california"], "m": [7, 8], "t": "洛杉矶夏季奥运会（7月14日–30日），8月中下旬还有残奥会" },
+    { "ids": ["au-western-australia", "au-northern-territory", "au-queensland", "au-sydney-nsw", "nz-south-island"], "m": [7], "t": "7月22日日全食：澳大利亚西北部经内陆至悉尼、新西兰南岛可见" }
+  ]
+}

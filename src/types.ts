@@ -368,6 +368,7 @@ export type ViewMode = 'day' | 'week' | 'month'
 export type Screen =
   | 'schedule'
   | 'travel'
+  | 'seasons'
   | 'expenses'
   | 'reminders'
   | 'currency'

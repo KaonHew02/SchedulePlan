@@ -6,6 +6,7 @@ import {
   CalendarIcon,
   GlobeIcon,
   MoreIcon,
+  SunriseIcon,
   SwapIcon,
   TranslateIcon,
   WalletIcon,
@@ -30,10 +31,17 @@ import {
  * With Expenses parked it is six, which is what the bottom bar was drawn for
  * in the first place. Filtered rather than removed, so the entry and its
  * place in the order both survive being switched off.
+ *
+ * Seasons, the travel calendar, makes it seven again and sits next to Travel:
+ * Travel is where you have been, Seasons is when to go next. Seven is what
+ * BottomNav was already sized for while Expenses was in. Switching MONEY
+ * back on would make eight, which BottomNav says is past what that bar can
+ * hold — at that point one of the two belongs behind More.
  */
 export const NAV: { id: Screen; label: string; Icon: ComponentType<{ className?: string }> }[] = [
   { id: 'schedule', label: 'Schedule', Icon: CalendarIcon },
   { id: 'travel', label: 'Travel', Icon: GlobeIcon },
+  { id: 'seasons', label: 'Seasons', Icon: SunriseIcon },
   ...(MONEY
     ? [{ id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon }]
     : []),
