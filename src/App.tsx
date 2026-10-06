@@ -4,6 +4,7 @@ import BottomNav from './components/BottomNav'
 import DataSheet from './components/DataSheet'
 import SideNav from './components/SideNav'
 import Toast from './components/Toast'
+import UpdateBar from './components/UpdateBar'
 import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import { MONEY } from './lib/features'
@@ -81,6 +82,7 @@ export default function App() {
 
       {showData && <DataSheet onClose={() => setShowData(false)} onToast={setToast} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      <UpdateBar />
       <BottomNav current={screen} onChange={setScreen} />
     </>
   )

@@ -1,10 +1,35 @@
 import { useEffect, useState } from 'react'
-import { CloudIcon, DatabaseIcon, GoogleG, Spinner } from './Icons'
+import { CloudIcon, DatabaseIcon, GoogleG, OfflineIcon, Spinner } from './Icons'
 import Sheet from './Sheet'
 import { storageUse, type StorageUse } from '../lib/idb'
 import { prettySize, sweepFiles } from '../lib/files'
 import { driveIsConfigured } from '../lib/drive-config'
+import { useOfflineState, type OfflineState } from '../lib/offline'
 import { itemCount, snapshot, useSettings } from '../lib/store'
+
+/** Whether the app itself, and not only the notebook, will open with no signal. */
+function offlineLine(state: OfflineState): string {
+  if (state === 'ready') {
+    return (
+      'The app is saved in this browser too, so it opens with no wifi and no data — ' +
+      'schedule, photos and attachments included. Only fetching something new waits for a ' +
+      'signal: Drive, fresh rates, translating, reading text off a photo.'
+    )
+  }
+  if (state === 'preparing') {
+    return (
+      'Saving a copy of the app so it can open with no signal. Leave it open on a connection ' +
+      'for a minute; this line changes when it is done.'
+    )
+  }
+  if (import.meta.env.DEV) {
+    return 'The development server never keeps an offline copy. The published site does.'
+  }
+  return (
+    'This browser will not keep a copy of the app, so opening it needs a signal. Once it is ' +
+    'open, everything already in it works offline.'
+  )
+}
 
 /** 'just now', '2 days ago' — how long since, in the roundest useful unit. */
 function ago(iso: string): string {
@@ -48,6 +73,7 @@ export default function DataSheet({
   onToast: (message: string) => void
 }) {
   const settings = useSettings()
+  const offline = useOfflineState()
   const [use, setUse] = useState<StorageUse | null>(null)
   const [sweeping, setSweeping] = useState(false)
 
@@ -141,6 +167,14 @@ export default function DataSheet({
           the same file either way. Nothing leaves this browser unless you press one of the
           buttons in the bar, and SchedulePlan works with no account at all.
         </p>
+      </section>
+
+      <section className="mt-6">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold">
+          <OfflineIcon className="h-[18px] w-[18px] text-neutral-400" />
+          With no signal
+        </h3>
+        <p className="mt-1.5 text-[14px] leading-6 text-neutral-600">{offlineLine(offline)}</p>
       </section>
 
       <section className="mt-6 border-t border-neutral-100 pt-4">

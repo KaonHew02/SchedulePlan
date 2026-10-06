@@ -61,3 +61,8 @@ carries a Content Security Policy that lists every server the app may talk to
 itself works by doing what the policy forbids. So a feature that reaches a new
 server works in dev and fails on the live site. If you add one, check it here
 and add its origin to the policy — the browser console names what it refused.
+
+And it is where the **offline copy** runs ([OFFLINE.md](OFFLINE.md)). The built
+page keeps a copy of itself so it opens with no signal, and that copy answers
+first: after a rebuild, preview shows the previous build until you tap
+**Reload** on the bar that appears. `npm run dev` never keeps a copy.

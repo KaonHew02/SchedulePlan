@@ -25,6 +25,8 @@ import react from '@vitejs/plugin-react'
  *   api.frankfurter.dev         the two rate feeds
  *   translate.googleapis.com,
  *   api.mymemory.translated.net the two translators
+ *   'self' in worker-src        the offline worker, sw.js (src/sw.ts). The
+ *                               manifest and icons are 'self' by default-src
  *   blob: in worker-src         the OCR worker is started from a blob
  *   blob: in frame-src          the PDF viewer
  *   data:/blob: in connect-src  Import decodes attachments with fetch()

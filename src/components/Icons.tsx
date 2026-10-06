@@ -277,3 +277,10 @@ export const RepeatIcon = ({ className = 'w-4 h-4' }: Props) => (
     <path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />
   </svg>
 )
+
+/** Wifi, struck through: no signal. */
+export const OfflineIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 19.5h.01M8.8 15.9a4.5 4.5 0 0 1 6.4 0M5.4 12.5a9 9 0 0 1 4.2-2.4M18.6 12.5a9 9 0 0 0-2.2-1.6M2.3 9.2a13.5 13.5 0 0 1 3.9-2.7M21.7 9.2A13.5 13.5 0 0 0 11 5.5M3 3l18 18" />
+  </svg>
+)
