@@ -26,8 +26,12 @@ interface TokenResponse {
 }
 
 interface TokenClient {
-  callback: (response: TokenResponse) => void
   requestAccessToken: (overrides?: { prompt?: string }) => void
+}
+
+/** Why Google's window gave no token back: blocked, closed, or something else. */
+interface PopupError {
+  type: 'popup_failed_to_open' | 'popup_closed' | 'unknown' | string
 }
 
 declare global {
@@ -39,6 +43,7 @@ declare global {
             client_id: string
             scope: string
             callback: (response: TokenResponse) => void
+            error_callback?: (error: PopupError) => void
           }) => TokenClient
         }
       }
@@ -50,6 +55,8 @@ let scriptLoading: Promise<void> | null = null
 let tokenClient: TokenClient | null = null
 let token: string | null = null
 let tokenExpiresAt = 0
+/** The sign-in Google's window is answering, while one is open. */
+let answer: { resolve: (token: string) => void; reject: (error: Error) => void } | null = null
 
 /**
  * Pull Google's script in early. The sign-in popup has to open inside the
@@ -92,6 +99,19 @@ function loadScript(): Promise<void> {
   return scriptLoading
 }
 
+/** What to say when Google's window gave no token back. */
+function popupProblem(error: PopupError): Error {
+  if (error.type === 'popup_failed_to_open') {
+    return new Error(
+      'The Google sign-in window was blocked. Tap the button again; if it keeps happening, allow pop-ups for this site.',
+    )
+  }
+  if (error.type === 'popup_closed') {
+    return new Error('The Google window was closed before signing in finished. Tap the button to try again.')
+  }
+  return new Error('Google sign-in did not finish. Tap the button to try again.')
+}
+
 async function getToken(): Promise<string> {
   if (token && Date.now() < tokenExpiresAt) return token
   await loadScript()
@@ -99,28 +119,42 @@ async function getToken(): Promise<string> {
   const oauth2 = window.google?.accounts?.oauth2
   if (!oauth2) throw new Error("Couldn't load Google sign-in. Try again in a moment.")
 
-  return new Promise<string>((resolve, reject) => {
-    tokenClient ??= oauth2.initTokenClient({
-      client_id: SP_DRIVE.clientId,
-      scope: SCOPE,
-      callback: () => {}, // replaced per request below
-    })
-
-    tokenClient.callback = (response) => {
+  tokenClient ??= oauth2.initTokenClient({
+    client_id: SP_DRIVE.clientId,
+    scope: SCOPE,
+    callback: (response) => {
+      const waiting = answer
+      answer = null
+      if (!waiting) return
       if (response.error || !response.access_token) {
-        reject(new Error('Google sign-in was cancelled or refused.'))
+        waiting.reject(new Error('Google sign-in was cancelled or refused.'))
         return
       }
       token = response.access_token
       // Expire a minute early so a request never starts on a dying token.
       tokenExpiresAt = Date.now() + ((response.expires_in ?? 3600) - 60) * 1000
-      resolve(token)
-    }
+      waiting.resolve(token)
+    },
+    // Google calls this, and not `callback`, when its window could not open
+    // or was closed before signing in finished. Without it the sign-in never
+    // ended: the button spun for good and all four buttons stayed greyed out
+    // until the page was reloaded.
+    error_callback: (error) => {
+      const waiting = answer
+      answer = null
+      waiting?.reject(popupProblem(error))
+    },
+  })
 
+  return new Promise<string>((resolve, reject) => {
+    // A second tap while a window is still open: the first one is over.
+    answer?.reject(popupProblem({ type: 'popup_closed' }))
+    answer = { resolve, reject }
     try {
-      tokenClient.requestAccessToken()
+      tokenClient!.requestAccessToken()
     } catch {
-      reject(new Error("Couldn't open the Google sign-in window. Allow popups and retry."))
+      answer = null
+      reject(new Error("Couldn't open the Google sign-in window. Allow pop-ups and retry."))
     }
   })
 }
@@ -181,6 +215,12 @@ async function findFile(): Promise<string | null> {
  * only ever existed on one device.
  */
 export async function saveToDrive(): Promise<number> {
+  // Sign in before gathering the notebook, not after. Safari on an iPhone
+  // lets a window open only within about a second of the tap that asked for
+  // it, and gathering a notebook with photos in it takes longer than that:
+  // Google's window was blocked without a word, so To Drive did nothing,
+  // while From Drive, which signs in first, worked.
+  await getToken()
   const data = await fullSnapshot()
   const body = JSON.stringify(data, null, 2)
   const existing = await findFile()
