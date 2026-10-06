@@ -199,9 +199,22 @@ function stringify(data) {
 
 const report = []
 const problems = []
-const say = (line) => {
+
+/**
+ * On GitHub, a line is also an annotation. Those show on the run's page to
+ * anyone, signed in or not, where the log and the summary need signing in —
+ * so "Official lists for 2023–2027" can be seen without an account.
+ */
+function annotate(level, line) {
+  if (process.env.GITHUB_ACTIONS !== 'true') return
+  const escaped = line.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')
+  console.log(`::${level} title=Holidays::${escaped}`)
+}
+
+function say(line, level = 'notice') {
   console.log(line)
   report.push(line)
+  annotate(level, line)
 }
 
 const before = previous()
@@ -213,7 +226,7 @@ let linked = new Map()
 try {
   linked = await gazettes()
 } catch (error) {
-  say(`Could not read the government's holiday page — ${error.message}`)
+  say(`Could not read the government's holiday page — ${error.message}`, 'warning')
 }
 
 // Every year is read again every time, gone-by ones too: it is a few MB on
@@ -231,7 +244,7 @@ for (const [year, url] of [...linked].sort(([a], [b]) => a - b)) {
     // Keep what the year had. Only a year with nothing at all is a failure:
     // that is the new year's list arriving in a shape this cannot read.
     const message = `${year}: could not read ${url} — ${error.message}`
-    if (had) say(`${message}. Kept the list it had.`)
+    if (had) say(`${message}. Kept the list it had.`, 'warning')
     else problems.push(message)
   }
 }
@@ -254,7 +267,7 @@ try {
   next.extras.sort((a, b) => a.date.localeCompare(b.date))
 } catch (error) {
   // Extras are a bonus. The government's list is the thing that matters.
-  say(`Could not check Google's calendar for late additions — ${error.message}`)
+  say(`Could not check Google's calendar for late additions — ${error.message}`, 'warning')
 }
 
 const text = stringify(next)
@@ -280,7 +293,10 @@ say(
     ? `Wrote ${OUT}: official lists for ${years[0]}–${years[years.length - 1]}.`
     : `No change. Official lists for ${years[0]}–${years[years.length - 1]}.`,
 )
-for (const problem of problems) console.error(problem)
+for (const problem of problems) {
+  console.error(problem)
+  annotate('error', problem)
+}
 
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(

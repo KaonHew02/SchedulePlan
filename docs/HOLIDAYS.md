@@ -38,6 +38,11 @@ calendar, "first Monday of June") work for any year.
    *"Holidays: the government's latest list"* and starts the deploy.
 4. On a day nothing changed, there is no commit and no deploy.
 
+Each run says what it found on its own page in the Actions tab — "No change.
+Official lists for 2023–2027", or what was added — and anyone can read it
+there without signing in to GitHub. A warning in yellow (the government's
+site was down that morning) needs nothing doing.
+
 Reading the PDF is the delicate part. Every year's is drawn differently — a √
 for yes in one year, a - for no in another, a Wingdings tick in a third — so
 the reader finds each row by what it says (a day, a Malay month and the
