@@ -14,6 +14,8 @@ import { fullSnapshot, restore, updateSettings, type Snapshot } from './store'
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const GIS_SCRIPT = 'https://accounts.google.com/gsi/client'
+/** The id Google's script checks before adding its button stylesheet. See `loadScript`. */
+const GIS_BUTTON_STYLES = 'googleidentityservice_button_styles'
 const FILES = 'https://www.googleapis.com/drive/v3/files'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files'
 
@@ -61,6 +63,20 @@ export function preloadDrive(): void {
 function loadScript(): Promise<void> {
   if (window.google?.accounts?.oauth2) return Promise.resolve()
   if (scriptLoading) return scriptLoading
+
+  // Google's script carries the stylesheet for its "Sign in with Google"
+  // button, and puts it in the page as an inline <style> the moment it loads.
+  // The page's security policy refuses inline styles, so every visit logged
+  // an error in the console — for a button this app never shows: Drive
+  // sign-in happens in Google's own popup window. The script skips the
+  // stylesheet when an element with this id is already in the page, so one
+  // is put there first. Keeping the policy strict beats allowing the
+  // stylesheet by its hash, which breaks whenever Google restyles the button.
+  if (!document.getElementById(GIS_BUTTON_STYLES)) {
+    const placeholder = document.createElement('template')
+    placeholder.id = GIS_BUTTON_STYLES
+    document.head.appendChild(placeholder)
+  }
 
   scriptLoading = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
