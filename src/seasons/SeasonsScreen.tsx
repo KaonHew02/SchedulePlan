@@ -37,22 +37,27 @@ import {
 
 type View = 'month' | 'year'
 
+/** What there is before the data arrives — one array, so the memos hold still. */
+const NO_DESTINATIONS: Destination[] = []
+
 const VIEWS: { value: View; label: string }[] = [
   { value: 'month', label: '这个月去哪' },
   { value: 'year', label: '全年日历' },
 ]
-
-const NOW = new Date()
 
 /*
  * What was on screen, kept for the next time the tab is opened. Switching to
  * Schedule to check a date and back again should land on the same month, not
  * on today with the search cleared. Not saved anywhere: it is a place in a
  * book, not part of the notebook, and a new day starts on today.
+ *
+ * Only the starting point is taken when the app opens. "Today" itself is read
+ * fresh on every draw, so an app left open over New Year rings the right month.
  */
+const opened = new Date()
 const kept = {
-  year: NOW.getFullYear(),
-  month: NOW.getMonth() + 1,
+  year: opened.getFullYear(),
+  month: opened.getMonth() + 1,
   view: 'month' as View,
   area: '全部',
   query: '',
@@ -60,7 +65,7 @@ const kept = {
 }
 
 function YearStepper({ year, onChange }: { year: number; onChange: (year: number) => void }) {
-  const thisYear = NOW.getFullYear()
+  const thisYear = new Date().getFullYear()
   return (
     <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-neutral-100 p-0.5">
       <button
@@ -127,8 +132,12 @@ function Card({
 }) {
   const r = d.ratings[month - 1]
   const happening = events.filter((event) => event.ids.includes(d.id) && event.m.includes(month))
+  // There is room for three. The ones with a rule go first: Ramadan or
+  // Chinese New Year landing in this month of this year changes the trip
+  // more than a flower that is out every year, and is the part that moves.
   const highlights = d.highlights
     .filter((h) => highlightMonths(h, dates, year).includes(month))
+    .sort((a, b) => Number(Boolean(b.rule)) - Number(Boolean(a.rule)))
     .slice(0, 3 - Math.min(happening.length, 2))
 
   return (
@@ -183,7 +192,7 @@ function Row({ d, month, onOpen }: { d: Destination; month: number; onOpen: (d: 
   return (
     <button
       onClick={() => onOpen(d)}
-      className="grid w-full grid-cols-1 gap-x-4 gap-y-0.5 py-2.5 text-left sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
+      className="grid w-full grid-cols-1 gap-x-4 gap-y-0.5 py-2.5 text-left md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
     >
       <span className="truncate text-[14px] font-medium">
         {d.region === d.country ? d.country : `${d.country} · ${d.region}`}
@@ -213,17 +222,17 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   const dates = useRuleDates(data, year)
   const events = eventsIn(year)
 
-  const all = data?.destinations ?? []
-  const list = useMemo(
-    () => all.filter((d) => (area === '全部' || d.area === area) && matches(d, query.trim())),
-    [all, area, query],
-  )
+  const all = data?.destinations ?? NO_DESTINATIONS
+  // The search first, then the area: the chips count what the search found,
+  // so 樱花 shows at a glance which parts of the world have any.
+  const found = useMemo(() => all.filter((d) => matches(d, query.trim())), [all, query])
+  const list = useMemo(() => found.filter((d) => area === '全部' || d.area === area), [found, area])
 
   const perArea = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const d of all) counts.set(d.area, (counts.get(d.area) ?? 0) + 1)
+    for (const d of found) counts.set(d.area, (counts.get(d.area) ?? 0) + 1)
     return counts
-  }, [all])
+  }, [found])
 
   // How many places are at their best in each month, for the strip.
   const bestBy = useMemo(
@@ -239,7 +248,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   }, [list, month])
 
   const shown = onlyBest ? byRating[3] : [...byRating[3], ...byRating[2]]
-  const thisMonth = NOW.getFullYear() === year ? NOW.getMonth() + 1 : null
+  const today = new Date()
+  const thisMonth = today.getFullYear() === year ? today.getMonth() + 1 : null
 
   return (
     <>
@@ -261,8 +271,11 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             The bar under each month is how many places are at their best
             then, so the good months for wherever is filtered show before any
             of them is opened.
+
+            One row from md, not sm. The app is still a 448px column until md,
+            and twelve to a row there is 28px a month — narrower than 10月.
           */}
-          <div className="mt-3 grid grid-cols-6 gap-1.5 sm:grid-cols-12" role="group" aria-label="月份">
+          <div className="mt-3 grid grid-cols-6 gap-1.5 md:grid-cols-12" role="group" aria-label="月份">
             {bestBy.map((count, i) => {
               const m = i + 1
               const on = m === month
@@ -284,7 +297,9 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                   <span className="flex h-1.5 w-full max-w-[2.5rem] items-end overflow-hidden rounded-full bg-black/5">
                     <span
                       className={`h-full rounded-full ${on ? 'bg-white' : 'bg-emerald-500'}`}
-                      style={{ width: `${Math.max(6, Math.round((count / peak) * 100))}%` }}
+                      // A sliver for one place, so it is not mistaken for none;
+                      // nothing at all for none.
+                      style={{ width: count ? `${Math.max(6, Math.round((count / peak) * 100))}%` : 0 }}
                     />
                   </span>
                 </button>
@@ -297,7 +312,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
       <main className="px-5 pb-28 lg:px-8 lg:pb-10">
         <div className="flex flex-wrap items-center gap-3 pt-2">
           {/* A set width: left to size itself, the pair squeezed 这个月去哪 onto two lines. */}
-          <div className="w-full shrink-0 sm:w-64">
+          <div className="w-full shrink-0 md:w-64">
             <Segmented value={view} options={VIEWS} onChange={setView} />
           </div>
           <input
@@ -321,7 +336,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             >
               {name}
               <span className="ml-1 text-[11px] tabular-nums opacity-60">
-                {name === '全部' ? all.length : (perArea.get(name) ?? 0)}
+                {name === '全部' ? found.length : (perArea.get(name) ?? 0)}
               </span>
             </button>
           ))}
@@ -367,7 +382,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                   <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">
                     {name} <span className="tabular-nums">{here.length}</span>
                   </h2>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {here.map((d) => (
                       <Card
                         key={d.id}

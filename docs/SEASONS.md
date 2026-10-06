@@ -26,7 +26,7 @@ both. See *The yearly read-through* below.
 | Highlights on fixed dates: cherry blossom, lavender, Oktoberfest | `destinations.json`, as months | No |
 | Highlights on a moving date: Chinese New Year, Eid, Easter, Carnival | `destinations.json`, as a **rule** | **Worked out on the phone** for the year on screen |
 | One-off events: an Olympics, an eclipse, a World Cup | `src/seasons/events.json`, under the year | **Added once a year**, by hand |
-| A destination's public holidays | The same source as the calendar (`src/lib/holidays.ts`) | **Worked out on the phone**; Malaysia from the gazette |
+| A destination's public holidays, and its state's where `holidayRegion` names one | The same source as the calendar (`src/lib/holidays.ts`) | **Worked out on the phone**; Malaysia from the gazette |
 
 ## How a moving festival works
 
@@ -54,6 +54,16 @@ puts public holidays on the calendar:
 
 The Hijri dates are worked out by arithmetic; the real day is declared when
 the moon is seen and can be a day either side, so the app writes them as 约3月9日.
+
+A festival does not stop at New Year. Each year is worked out together with
+the year either side of it, so Ramadan that begins on 26 December 2030 is on
+January's cards in 2031 as well as December's in 2030, labelled with the year
+it started in.
+
+Ramadan itself is a highlight in every destination where it changes the trip
+(the Gulf, Egypt, Morocco, Tunisia, Jordan, Iran, Türkiye, the Maldives), so
+the year's dates are on the sheet; the tips point there rather than saying
+when it falls.
 
 Hindu, Thai, Tibetan and Balinese festivals (Diwali, Holi, Loy Krathong,
 Losar, Nyepi) have no rule the library can work out. They keep their usual
@@ -96,16 +106,21 @@ yearly Seasons read-through for 2028" is enough for it to find this page.
 
 Each destination in `destinations.json` has this shape. `countries` is the
 ISO codes the badge, the wishlist and the public holidays use — several when
-it crosses a border, none for Antarctica.
+it crosses a border, none for Antarctica. `holidayRegion` is optional: the
+state or province of the first country, in date-holidays' codes, for the days
+off only it keeps — `12` is Sabah (Kaamatan), `SCT` is Scotland (St Andrew's
+Day), `LA` is Louisiana (Mardi Gras). Malaysia's codes are the gazette's,
+`01` Johor to `16` Putrajaya, the same ones More → Calendar uses.
 
 ```json
 {
-  "id": "jp-hokkaido",
-  "area": "东亚",
-  "country": "日本",
-  "region": "北海道",
-  "countries": ["JP"],
-  "places": "札幌、小樽、富良野…",
+  "id": "my-sabah",
+  "area": "东南亚",
+  "country": "马来西亚",
+  "region": "沙巴",
+  "countries": ["MY"],
+  "holidayRegion": "12",
+  "places": "亚庇、京那巴鲁神山、仙本那…",
   "summary": "最佳：6–9月避暑花海，1–2月雪祭与粉雪滑雪",
   "climate": "…",
   "ratings": [3, 3, 2, 1, 2, 3, 3, 3, 3, 2, 1, 2],
@@ -123,6 +138,12 @@ Ratings are 3 best, 2 good, 1 possible but not the time, 0 not advisable
 
 `node scripts/seasons.mjs --check` runs at the start of every `npm run build`,
 so a broken file stops the deploy rather than drawing a broken screen. It
-refuses: a missing field, a rating outside 0–3, anything but twelve months,
-a destination with no best month, a rule the library cannot read, an event
-naming an id that does not exist, and a year written into the evergreen file.
+refuses: a missing field, a key it does not know (`offest` for `offset` would
+otherwise be ignored by the app and dropped by `--format`), a rating outside
+0–3, anything but twelve months, a destination with no best month, a country
+listed twice, a `holidayRegion` the library does not know, a rule it cannot
+read, an event naming an id that does not exist, and a year written into the
+evergreen file — 2027年, with or without a space. A year before 2020 is
+history and is left alone: 1987年列入世界遗产 stays true.
+
+`--format` runs the check first and writes nothing if it fails.

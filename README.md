@@ -170,7 +170,8 @@ with its best months in the note.
 for: Chinese New Year, Ramadan, Easter and every festival hung off them carry
 a rule rather than a date, and are worked out on the phone for whichever year
 is picked, by the same holiday library the calendar uses — as are each
-destination's public holidays for that year. What cannot be worked out — the
+destination's public holidays for that year, its state's included (Kaamatan in
+Sabah, Mardi Gras in Louisiana). What cannot be worked out — the
 year's Olympics and eclipses, a visa rule that changed — is a short
 read-through once a year, listed by `npm run seasons`. How it fits together:
 [docs/SEASONS.md](docs/SEASONS.md).

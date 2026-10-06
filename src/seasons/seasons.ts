@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays } from '../lib/date'
+import areasFile from './areas.json'
 import eventsFile from './events.json'
 
 /**
@@ -55,6 +56,13 @@ export interface Destination {
    * Empty for Antarctica, which keeps no holidays.
    */
   countries: string[]
+  /**
+   * The state or province inside the first country, for the holidays only it
+   * keeps: Kaamatan in Sabah, Mardi Gras in Louisiana, St Andrew's Day in
+   * Scotland. The codes date-holidays uses (and Malaysia's gazette, which
+   * uses the same ones). Left out, the sheet shows the country's own.
+   */
+  holidayRegion?: string
   places: string
   summary: string
   climate: string
@@ -80,10 +88,12 @@ export interface Seasons {
   destinations: Destination[]
 }
 
-export const AREAS = [
-  '中国', '东亚', '东南亚', '南亚', '中亚·高加索', '中东',
-  '欧洲', '非洲', '北美', '中南美', '大洋洲', '极地',
-] as const
+/**
+ * The parts of the world, in the order the screen shows them. Kept in a file
+ * of their own so scripts/seasons.mjs checks against the same list: an area
+ * known to one and not the other would quietly drop its destinations.
+ */
+export const AREAS: readonly string[] = areasFile
 
 export const RATING_LABEL = ['不建议', '一般', '适合', '最佳'] as const
 
@@ -97,8 +107,11 @@ export const RATING_TINT = [
 
 const EVENTS = eventsFile as Record<string, YearEvent[]>
 
+/** One empty list for every year with no events, so a memo keyed on it holds. */
+const NONE: YearEvent[] = []
+
 export function eventsIn(year: number): YearEvent[] {
-  return EVENTS[String(year)] ?? []
+  return EVENTS[String(year)] ?? NONE
 }
 
 /** The years events.json has anything for, for saying how far ahead it reaches. */
@@ -147,10 +160,28 @@ export function useSeasons(): { data: Seasons | null; failed: boolean } {
 
 type Library = typeof import('../lib/holiday-rules').default
 
-/** Each rule's dates, by year. A Hijri date can come round twice in one year. */
-const ruleYears = new Map<number, Map<string, string[]>>()
+/*
+ * The library, once it has arrived. Kept rather than imported again on every
+ * turn of the year: an import() is never synchronous, even for a module that
+ * is already loaded, and that one tick showed the usual months for a frame
+ * before the year's real dates replaced them.
+ */
+let library: Library | null = null
+let fetching: Promise<Library> | null = null
 
-function work(Holidays: Library, rules: string[], year: number): Map<string, string[]> {
+function loadLibrary(): Promise<Library> {
+  fetching ??= import('../lib/holiday-rules').then((module) => (library = module.default))
+  return fetching
+}
+
+/** Each rule's dates in one calendar year. A Hijri date can come round twice in one. */
+const singleYears = new Map<number, Map<string, string[]>>()
+/** The same, for a year and the one either side of it — see `datesAround`. */
+const windows = new Map<number, Map<string, string[]>>()
+
+function datesOfYear(Holidays: Library, rules: string[], year: number): Map<string, string[]> {
+  const known = singleYears.get(year)
+  if (known) return known
   const calendar = new Holidays()
   for (const rule of rules) calendar.setHoliday(rule, { name: { en: rule }, type: 'public' })
   const dates = new Map<string, string[]>()
@@ -159,13 +190,37 @@ function work(Holidays: Library, rules: string[], year: number): Map<string, str
     list.push(holiday.date.slice(0, 10))
     dates.set(holiday.name, list)
   }
+  singleYears.set(year, dates)
   return dates
 }
 
 /**
- * The year's dates for every rule in the data. Null until the library is in,
- * which is the moment it takes to fetch it from the offline copy the first
- * time; the usual months stand in until then.
+ * The rules' dates from the year before to the year after.
+ *
+ * The library answers for one calendar year at a time, and a festival does
+ * not stop at New Year: Ramadan that begins on 26 December 2030 is most of
+ * January 2031, and asked only about 2031 the library has never heard of it.
+ * So a year is looked at with its neighbours, and `spansOf` keeps whatever
+ * touches the year itself.
+ */
+function datesAround(Holidays: Library, rules: string[], year: number): Map<string, string[]> {
+  const known = windows.get(year)
+  if (known) return known
+  const merged = new Map<string, string[]>()
+  for (const y of [year - 1, year, year + 1]) {
+    for (const [rule, list] of datesOfYear(Holidays, rules, y)) {
+      merged.set(rule, [...(merged.get(rule) ?? []), ...list])
+    }
+  }
+  windows.set(year, merged)
+  return merged
+}
+
+/**
+ * The dates every rule in the data falls on around a year. Null until the
+ * library is in — the moment it takes to fetch it from the offline copy the
+ * first time — and the usual months stand in until then. After that a year is
+ * worked out as it is turned to, in the same frame.
  */
 export function useRuleDates(data: Seasons | null, year: number): Map<string, string[]> | null {
   const rules = useMemo(() => {
@@ -173,27 +228,28 @@ export function useRuleDates(data: Seasons | null, year: number): Map<string, st
     for (const d of data?.destinations ?? []) for (const h of d.highlights) if (h.rule) set.add(h.rule)
     return [...set]
   }, [data])
-  // Only a nudge to draw again. The answer itself is read from the cache by
-  // year, so turning the year never shows one frame of last year's dates.
-  const [, setWorked] = useState(0)
+  // Bumped once, when the library arrives, so the memo below runs again.
+  const [arrived, setArrived] = useState(library !== null)
 
   useEffect(() => {
-    if (ruleYears.has(year) || rules.length === 0) return
+    if (arrived || rules.length === 0) return
     let live = true
-    import('../lib/holiday-rules')
-      .then((module) => {
-        ruleYears.set(year, work(module.default, rules, year))
-        if (live) setWorked((count) => count + 1)
-      })
+    loadLibrary()
+      .then(() => live && setArrived(true))
       // With no library there is nothing better than the usual months, which
-      // is what a null already shows.
-      .catch(() => {})
+      // is what a null already shows. The next visit tries again.
+      .catch(() => {
+        fetching = null
+      })
     return () => {
       live = false
     }
-  }, [rules, year])
+  }, [arrived, rules])
 
-  return ruleYears.get(year) ?? null
+  return useMemo(
+    () => (arrived && library && rules.length > 0 ? datesAround(library, rules, year) : null),
+    [arrived, rules, year],
+  )
 }
 
 /** One time a highlight happens: its first and last day. */
@@ -202,13 +258,23 @@ export interface Span {
   end: string
 }
 
-/** Where a highlight with a rule falls in a year, or null for one without. */
-export function spansOf(highlight: Highlight, dates: Map<string, string[]> | null): Span[] | null {
+/**
+ * The times a highlight with a rule touches `year`, or null for one without
+ * a rule (or before the dates are in). Includes one that began the December
+ * before, or runs on into the January after.
+ */
+export function spansOf(
+  highlight: Highlight,
+  dates: Map<string, string[]> | null,
+  year: number,
+): Span[] | null {
   if (!highlight.rule || !dates) return null
-  return (dates.get(highlight.rule) ?? []).map((date) => {
-    const start = addDays(date, highlight.offset ?? 0)
-    return { start, end: addDays(start, (highlight.days ?? 1) - 1) }
-  })
+  return (dates.get(highlight.rule) ?? [])
+    .map((date) => {
+      const start = addDays(date, highlight.offset ?? 0)
+      return { start, end: addDays(start, (highlight.days ?? 1) - 1) }
+    })
+    .filter((span) => span.end >= `${year}-01-01` && span.start <= `${year}-12-31`)
 }
 
 /** The months of `year` a span touches. */
@@ -230,7 +296,7 @@ export function spanIn(
   month: number,
 ): Span | undefined {
   const mm = String(month).padStart(2, '0')
-  return spansOf(highlight, dates)?.find(
+  return spansOf(highlight, dates, year)?.find(
     (span) => span.start <= `${year}-${mm}-31` && span.end >= `${year}-${mm}-01`,
   )
 }
@@ -241,7 +307,7 @@ export function highlightMonths(
   dates: Map<string, string[]> | null,
   year: number,
 ): number[] {
-  const spans = spansOf(highlight, dates)
+  const spans = spansOf(highlight, dates, year)
   if (!spans || spans.length === 0) return highlight.m
   return [...new Set(spans.flatMap((span) => monthsOf(span, year)))]
 }
@@ -253,16 +319,21 @@ export function highlightMonths(
  */
 const SIGHTED = /Ramadan|Shawwal|Dhu al-Hijjah|Muharram|Rajab|Rabi/
 
-/** 2月6日, 2月6–20日, 1月26日–2月9日. */
+/**
+ * 2月6日, 2月6–20日, 1月26日–2月9日 — and 12月26日–2031年1月24日 for one that
+ * runs into the next year, which would otherwise read as going backwards.
+ */
 export function spanLabel(span: Span, rule?: string): string {
-  const [, m1, d1] = span.start.split('-').map(Number)
-  const [, m2, d2] = span.end.split('-').map(Number)
+  const [y1, m1, d1] = span.start.split('-').map(Number)
+  const [y2, m2, d2] = span.end.split('-').map(Number)
   const text =
     span.start === span.end
       ? `${m1}月${d1}日`
-      : m1 === m2
-        ? `${m1}月${d1}–${d2}日`
-        : `${m1}月${d1}日–${m2}月${d2}日`
+      : y1 !== y2
+        ? `${m1}月${d1}日–${y2}年${m2}月${d2}日`
+        : m1 === m2
+          ? `${m1}月${d1}–${d2}日`
+          : `${m1}月${d1}日–${m2}月${d2}日`
   return rule && SIGHTED.test(rule) ? `约${text}` : text
 }
 
@@ -283,6 +354,11 @@ export function monthsLabel(months: number[]): string {
     }
   }
   runs.push(run)
+  // Months counted up from January leave a winter in two pieces — 1–3月 at
+  // the front, 11–12月 at the back. It is one season, 11–3月.
+  if (runs.length > 1 && runs[0][0] === 1 && runs[runs.length - 1].at(-1) === 12) {
+    runs[0] = [...runs.pop()!, ...runs[0]]
+  }
   return runs
     .map((r) => (r.length === 1 ? `${r[0]}月` : `${r[0]}–${r[r.length - 1]}月`))
     .join('、')
@@ -310,9 +386,10 @@ export function matches(d: Destination, query: string): boolean {
       .toLowerCase()
     haystacks.set(d, hay)
   }
+  const text = hay
   return query
     .toLowerCase()
     .split(/\s+/)
     .filter(Boolean)
-    .every((term) => hay.includes(term))
+    .every((term) => text.includes(term))
 }

@@ -39,6 +39,12 @@ interface HolidayRun {
   end: string
   name: string
   country: string
+  /**
+   * A day off given back for a holiday on a rest day. The library names it
+   * after the holiday it replaces, so without this the sheet said Constitution
+   * Day on 6 May, the day after the real one.
+   */
+  replacement: boolean
   /** A Malaysian year the government has not published yet — see holidays.ts. */
   estimated: boolean
 }
@@ -48,10 +54,14 @@ function holidayRuns(days: Holiday[]): HolidayRun[] {
   const runs: HolidayRun[] = []
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date) || a.country.localeCompare(b.country))
   for (const day of sorted) {
+    const replacement = Boolean(day.replacement)
+    // The same holiday on the next day carries on its run — but a day given
+    // back is a line of its own, even straight after the holiday itself.
     const last = runs.find(
       (run) =>
         run.name === day.name &&
         run.country === day.country &&
+        run.replacement === replacement &&
         new Date(`${day.date}T00:00:00Z`).getTime() - new Date(`${run.end}T00:00:00Z`).getTime() === 86_400_000,
     )
     if (last) last.end = day.date
@@ -61,6 +71,7 @@ function holidayRuns(days: Holiday[]): HolidayRun[] {
         end: day.date,
         name: day.name,
         country: day.country,
+        replacement,
         estimated: Boolean(day.estimated),
       })
     }
@@ -85,7 +96,11 @@ export default function DestinationSheet({
   onToast: (message: string) => void
 }) {
   const wishlist = useWishlist()
-  const holidays = useHolidayYear(d.countries, year)
+  // The region belongs to the first country only: it is where the place is.
+  const holidays = useHolidayYear(
+    d.countries.map((code, i) => [code, i === 0 ? (d.holidayRegion ?? null) : null]),
+    year,
+  )
   const [saving, setSaving] = useState(false)
 
   const best = d.ratings.flatMap((r, i) => (r === 3 ? [i + 1] : []))
@@ -179,11 +194,13 @@ export default function DestinationSheet({
       <Section title="季节亮点">
         <ul className="space-y-2">
           {d.highlights.map((h, i) => {
-            const spans = spansOf(h, dates)
+            const spans = spansOf(h, dates, year)
             // A rule's dates are this year's; the rest are the usual months.
+            // Each says its own year: one that began the December before is
+            // that December's.
             const when =
               spans && spans.length > 0
-                ? spans.map((span) => `${year}年${spanLabel(span, h.rule)}`).join('、')
+                ? spans.map((span) => `${span.start.slice(0, 4)}年${spanLabel(span, h.rule)}`).join('、')
                 : monthsLabel(h.m)
             return (
               <li key={i} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5">
@@ -220,12 +237,13 @@ export default function DestinationSheet({
           <ul className="space-y-1">
             {runs.map((run) => (
               <li
-                key={`${run.country}${run.start}${run.name}`}
+                key={`${run.country}${run.start}${run.name}${run.replacement ? '+' : ''}`}
                 className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5"
               >
                 <span className="tabular-nums text-neutral-500">{spanLabel(run)}</span>
                 <span className="text-neutral-700">
                   {run.name}
+                  {run.replacement && <span className="text-neutral-400"> · 补假</span>}
                   {several && <span className="text-neutral-400"> · {countryName(run.country)}</span>}
                   {run.estimated && <span className="text-neutral-400"> · 未确认</span>}
                 </span>

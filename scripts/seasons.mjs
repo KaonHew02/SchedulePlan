@@ -5,7 +5,7 @@
  *   npm run seasons -- --year 2028   check, then the report for 2028
  *   npm run seasons -- --check       check only — `npm run build` runs this
  *   npm run seasons -- --review      the sentences that go out of date
- *   npm run seasons -- --format      rewrite both files in the house layout
+ *   npm run seasons -- --format      check, then rewrite both files in the house layout
  *
  * The calendar is two files. src/seasons/destinations.json is the part that
  * holds from one year to the next — the weather, the ratings, the flowers —
@@ -25,23 +25,41 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import Holidays from 'date-holidays'
 
-const DESTINATIONS = 'src/seasons/destinations.json'
-const EVENTS = 'src/seasons/events.json'
+// Found from this file rather than from wherever the command was typed, so
+// `node scripts/seasons.mjs` works from any folder in the repository.
+const ROOT = fileURLToPath(new URL('..', import.meta.url))
+const DESTINATIONS = join(ROOT, 'src/seasons/destinations.json')
+const EVENTS = join(ROOT, 'src/seasons/events.json')
+const AREAS_FILE = join(ROOT, 'src/seasons/areas.json')
+const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
-export const AREAS = [
-  '中国', '东亚', '东南亚', '南亚', '中亚·高加索', '中东',
-  '欧洲', '非洲', '北美', '中南美', '大洋洲', '极地',
+/** The same list the screen groups by, so the two cannot disagree. */
+const AREAS = JSON.parse(readFileSync(AREAS_FILE, 'utf8'))
+
+/*
+ * Every key each kind of record may have. Anything else is a typo — "offest"
+ * for "offset" — and is refused: the app would ignore it, and --format,
+ * which writes only these, would quietly drop it.
+ */
+const DESTINATION_KEYS = [
+  'id', 'area', 'country', 'region', 'countries', 'holidayRegion', 'places',
+  'summary', 'climate', 'ratings', 'notes', 'highlights', 'avoid', 'tips',
 ]
+const HIGHLIGHT_KEYS = ['m', 't', 'rule', 'offset', 'days']
+const EVENT_KEYS = ['ids', 'm', 't']
 
 const TEXT_FIELDS = ['id', 'area', 'country', 'region', 'places', 'summary', 'climate', 'avoid', 'tips']
 
 /**
- * A year written into a sentence: 2027年. Only with the 年 — a bare 2000 is as
- * likely to be metres above the sea, and Lhasa is not a date.
+ * A year written into a sentence: 2027年, or 2027 年. Only 2020 onwards and
+ * only with the 年 — 拥有2000年历史 is an age, 1987年列入世界遗产 is history
+ * that stays true, and a bare 2000 is as likely to be metres above the sea.
  */
-const A_YEAR = /(?<!\d)(?:19|20)\d\d年/
+const A_YEAR = /(?<!\d)20[2-9]\d\s*年/
 
 /**
  * Words that mark a sentence as something a government or a park can change
@@ -60,7 +78,7 @@ function addDays(iso, days) {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
 }
 
-/** Every rule's dates in one year. A Hijri rule can fall twice in one. */
+/** Every rule's dates in one calendar year. A Hijri rule can fall twice in one. */
 export function ruleDates(rules, year) {
   const calendar = new Holidays()
   for (const rule of rules) calendar.setHoliday(rule, { name: { en: rule }, type: 'public' })
@@ -73,10 +91,28 @@ export function ruleDates(rules, year) {
   return dates
 }
 
+/**
+ * When a highlight happens in `year`: its spans, from the year before to the
+ * year after, kept where they touch the year — Ramadan that begins on 26
+ * December is mostly January's. The same as `spansOf` in src/seasons/seasons.ts.
+ */
+function spansIn(highlight, around, year) {
+  const spans = []
+  for (const dates of around) {
+    for (const date of dates.get(highlight.rule) ?? []) {
+      const start = addDays(date, highlight.offset ?? 0)
+      const end = addDays(start, (highlight.days ?? 1) - 1)
+      if (end >= `${year}-01-01` && start <= `${year}-12-31`) spans.push({ start, end })
+    }
+  }
+  return spans
+}
+
 const label = (start, end) => {
-  const [, m1, d1] = start.split('-').map(Number)
-  const [, m2, d2] = end.split('-').map(Number)
+  const [y1, m1, d1] = start.split('-').map(Number)
+  const [y2, m2, d2] = end.split('-').map(Number)
   if (start === end) return `${m1}月${d1}日`
+  if (y1 !== y2) return `${y1}年${m1}月${d1}日–${y2}年${m2}月${d2}日`
   return m1 === m2 ? `${m1}月${d1}–${d2}日` : `${m1}月${d1}日–${m2}月${d2}日`
 }
 
@@ -92,14 +128,14 @@ const label = (start, end) => {
 function formatDestination(d) {
   const s = JSON.stringify
   const highlight = (h) =>
-    `{ ${['m', 't', 'rule', 'offset', 'days']
-      .filter((key) => h[key] !== undefined)
+    `{ ${HIGHLIGHT_KEYS.filter((key) => h[key] !== undefined)
       .map((key) => `${s(key)}: ${key === 'm' ? `[${h.m.join(', ')}]` : s(h[key])}`)
       .join(', ')} }`
   return [
     '    {',
     ...['id', 'area', 'country', 'region'].map((key) => `      ${s(key)}: ${s(d[key])},`),
     `      "countries": [${d.countries.map((c) => s(c)).join(', ')}],`,
+    ...(d.holidayRegion !== undefined ? [`      "holidayRegion": ${s(d.holidayRegion)},`] : []),
     ...['places', 'summary', 'climate'].map((key) => `      ${s(key)}: ${s(d[key])},`),
     `      "ratings": [${d.ratings.join(', ')}],`,
     '      "notes": [',
@@ -147,30 +183,44 @@ export function formatEvents(events) {
 
 const isMonth = (m) => Number.isInteger(m) && m >= 1 && m <= 12
 const isMonths = (list) => Array.isArray(list) && list.length > 0 && list.every(isMonth)
+const unknownKeys = (record, allowed) => Object.keys(record ?? {}).filter((key) => !allowed.includes(key))
 
 export function check(file, events) {
   const problems = []
   const say = (where, what) => problems.push(`${where}: ${what}`)
 
+  for (const key of unknownKeys(file, ['reviewed', 'destinations'])) say(shown(DESTINATIONS), `unknown key "${key}"`)
   if (!/^\d{4}-\d{2}$/.test(file.reviewed ?? '')) say('reviewed', 'should be YYYY-MM')
   if (!Array.isArray(file.destinations)) {
     say('destinations', 'is not a list')
     return problems
   }
 
+  const library = new Holidays()
   const ids = new Set()
   const rules = new Set()
   for (const d of file.destinations) {
     const at = d.id ?? '(no id)'
+    for (const key of unknownKeys(d, DESTINATION_KEYS)) say(at, `unknown key "${key}" — a typo?`)
     for (const key of TEXT_FIELDS) {
       if (typeof d[key] !== 'string' || !d[key].trim()) say(at, `${key} is missing`)
     }
     if (ids.has(d.id)) say(at, 'the id is used twice')
     ids.add(d.id)
     if (!AREAS.includes(d.area)) say(at, `area "${d.area}" is not one of ${AREAS.join(' ')}`)
+
     if (!Array.isArray(d.countries) || d.countries.some((c) => !/^[A-Z]{2}$/.test(c))) {
       say(at, 'countries should be ISO codes like ["JP"]')
+    } else if (new Set(d.countries).size !== d.countries.length) {
+      say(at, 'a country is listed twice — its holidays would show twice')
     }
+    if (d.holidayRegion !== undefined) {
+      const states = d.countries?.[0] ? library.getStates(d.countries[0], 'en') ?? {} : {}
+      if (typeof d.holidayRegion !== 'string' || !states[d.holidayRegion]) {
+        say(at, `holidayRegion "${d.holidayRegion}" is not a region date-holidays knows for ${d.countries?.[0]}`)
+      }
+    }
+
     if (
       !Array.isArray(d.ratings) ||
       d.ratings.length !== 12 ||
@@ -185,23 +235,29 @@ export function check(file, events) {
     }
     if (!Array.isArray(d.highlights)) say(at, 'highlights should be a list')
     for (const [i, h] of (d.highlights ?? []).entries()) {
-      if (typeof h.t !== 'string' || !h.t.trim()) say(`${at} highlight ${i + 1}`, 'has no text')
-      if (!isMonths(h.m)) say(`${at} highlight ${i + 1}`, 'm should be months from 1 to 12')
+      const where = `${at} highlight ${i + 1}`
+      for (const key of unknownKeys(h, HIGHLIGHT_KEYS)) say(where, `unknown key "${key}" — a typo?`)
+      if (typeof h.t !== 'string' || !h.t.trim()) say(where, 'has no text')
+      if (!isMonths(h.m)) say(where, 'm should be months from 1 to 12')
       if (h.rule !== undefined) {
-        if (typeof h.rule !== 'string') say(`${at} highlight ${i + 1}`, 'rule should be text')
+        if (typeof h.rule !== 'string') say(where, 'rule should be text')
         else rules.add(h.rule)
       }
-      if (h.offset !== undefined && !Number.isInteger(h.offset)) say(`${at} highlight ${i + 1}`, 'offset should be whole days')
-      if (h.days !== undefined && !(Number.isInteger(h.days) && h.days >= 1)) say(`${at} highlight ${i + 1}`, 'days should be 1 or more')
+      if (h.offset !== undefined && !Number.isInteger(h.offset)) say(where, 'offset should be whole days')
+      if (h.days !== undefined && !(Number.isInteger(h.days) && h.days >= 1)) say(where, 'days should be 1 or more')
       if ((h.offset !== undefined || h.days !== undefined) && h.rule === undefined) {
-        say(`${at} highlight ${i + 1}`, 'offset and days only mean something with a rule')
+        say(where, 'offset and days only mean something with a rule')
       }
     }
 
-    const texts = [d.summary, d.climate, d.avoid, d.tips, ...(d.notes ?? []), ...(d.highlights ?? []).map((h) => h.t)]
+    const texts = [
+      ...TEXT_FIELDS.map((key) => d[key]),
+      ...(d.notes ?? []),
+      ...(d.highlights ?? []).map((h) => h.t),
+    ]
     for (const text of texts) {
       if (typeof text === 'string' && A_YEAR.test(text)) {
-        say(at, `names a year ("${text.match(/.{0,12}\d{4}年.{0,12}/)?.[0]}") — put it in events.json, or give the highlight a rule`)
+        say(at, `names a year ("${text.match(/.{0,12}\d{4}\s*年.{0,12}/)?.[0]}") — put it in events.json, or give the highlight a rule`)
       }
     }
   }
@@ -212,16 +268,25 @@ export function check(file, events) {
   const probe = new Holidays()
   const quiet = console.error
   console.error = () => {}
+  const unreadable = new Set()
   for (const rule of rules) {
-    if (!probe.setHoliday(rule, { name: { en: rule }, type: 'public' })) say(`rule "${rule}"`, 'date-holidays cannot read it')
+    if (!probe.setHoliday(rule, { name: { en: rule }, type: 'public' })) {
+      unreadable.add(rule)
+      say(`rule "${rule}"`, 'date-holidays cannot read it')
+    }
   }
+  const readable = [...rules].filter((rule) => !unreadable.has(rule))
+  const worked = ruleDates(readable, thisYear)
+  const next = ruleDates(readable, thisYear + 1)
   console.error = quiet
-  const worked = ruleDates([...rules], thisYear)
-  const next = ruleDates([...rules], thisYear + 1)
-  for (const rule of rules) {
+  for (const rule of readable) {
     if (!worked.has(rule) && !next.has(rule)) say(`rule "${rule}"`, `gives no date in ${thisYear} or ${thisYear + 1}`)
   }
 
+  if (typeof events !== 'object' || events === null || Array.isArray(events)) {
+    say(shown(EVENTS), 'should be an object of years')
+    return problems
+  }
   for (const [year, list] of Object.entries(events)) {
     if (!/^\d{4}$/.test(year)) say(`events "${year}"`, 'should be a year')
     if (!Array.isArray(list)) {
@@ -230,6 +295,7 @@ export function check(file, events) {
     }
     for (const [i, e] of list.entries()) {
       const where = `events ${year} #${i + 1}`
+      for (const key of unknownKeys(e, EVENT_KEYS)) say(where, `unknown key "${key}" — a typo?`)
       if (typeof e.t !== 'string' || !e.t.trim()) say(where, 'has no text')
       if (!isMonths(e.m)) say(where, 'm should be months from 1 to 12')
       if (!Array.isArray(e.ids) || e.ids.length === 0) say(where, 'ids should name at least one destination')
@@ -253,16 +319,14 @@ function report(file, events, year) {
       }
     }
   }
-  const dates = ruleDates([...rules], year)
+  const around = [year - 1, year, year + 1].map((y) => ruleDates([...rules], y))
 
   console.log(`\nSeasons in ${year}\n`)
   console.log(`${file.destinations.length} destinations, last read through ${file.reviewed}.`)
 
   const rows = []
   for (const { d, h } of ruled) {
-    for (const date of dates.get(h.rule) ?? []) {
-      const start = addDays(date, h.offset ?? 0)
-      const end = addDays(start, (h.days ?? 1) - 1)
+    for (const { start, end } of spansIn(h, around, year)) {
       const where = d.region === d.country ? d.country : `${d.country}·${d.region}`
       rows.push({ start, line: `  ${label(start, end).padEnd(14, '　')} ${where}  ${h.t}` })
     }
@@ -274,7 +338,7 @@ function report(file, events, year) {
   const once = events[year] ?? []
   console.log(`\nOne-off events in ${year} (${once.length}):`)
   if (once.length === 0) {
-    console.log(`  None yet. Add the year's Olympics, eclipses and expos to ${EVENTS}.`)
+    console.log(`  None yet. Add the year's Olympics, eclipses and expos to ${shown(EVENTS)}.`)
   }
   for (const e of once) console.log(`  ${e.m.join('、')}月  ${e.t}  [${e.ids.join(' ')}]`)
 }
@@ -295,7 +359,7 @@ function review(file) {
       for (const line of lines) console.log(line)
     }
   }
-  console.log(`\n${count} sentences to read again. Change what is out of date, then set "reviewed" in ${DESTINATIONS}.`)
+  console.log(`\n${count} sentences to read again. Change what is out of date, then set "reviewed" in ${shown(DESTINATIONS)}.`)
 }
 
 // ------------------------------------------------------------------- main
@@ -308,12 +372,8 @@ const year = yearArg >= 0 ? Number(args[yearArg + 1]) : new Date().getFullYear()
 const file = JSON.parse(readFileSync(DESTINATIONS, 'utf8'))
 const events = JSON.parse(readFileSync(EVENTS, 'utf8'))
 
-if (flag('--format')) {
-  writeFileSync(DESTINATIONS, formatDestinations(file))
-  writeFileSync(EVENTS, formatEvents(events))
-  console.log(`Rewrote ${DESTINATIONS} and ${EVENTS}.`)
-}
-
+// Checked before anything is written, so --format never rewrites a file it
+// would have refused.
 const problems = check(file, events)
 if (problems.length) {
   console.error(`Seasons: ${problems.length} problem${problems.length === 1 ? '' : 's'} in the data.\n`)
@@ -321,11 +381,15 @@ if (problems.length) {
   process.exit(1)
 }
 
-if (flag('--check')) {
+if (flag('--format')) {
+  writeFileSync(DESTINATIONS, formatDestinations(file))
+  writeFileSync(EVENTS, formatEvents(events))
+  console.log(`Rewrote ${shown(DESTINATIONS)} and ${shown(EVENTS)}.`)
+} else if (flag('--check')) {
   console.log(`Seasons: ${file.destinations.length} destinations, all well formed.`)
 } else if (flag('--review')) {
   review(file)
-} else if (!flag('--format')) {
+} else {
   if (!Number.isInteger(year) || year < 1970) {
     console.error('--year needs a year, like --year 2028')
     process.exit(1)

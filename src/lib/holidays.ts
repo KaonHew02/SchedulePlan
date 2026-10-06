@@ -213,25 +213,31 @@ export function useHolidays(
 }
 
 /**
- * A whole year of holidays, for one or more countries.
+ * A whole year of holidays, for one or more places.
  *
  * The calendar asks for a stretch of days; the travel calendar asks for a
  * year, for a destination that may cross a border (Victoria Falls is two
- * countries). Same cache and same sources — Malaysia still from the gazette —
- * so a year worked out for one screen is ready for the other.
+ * countries) and may sit in a state with days of its own (Kaamatan is Sabah's,
+ * Mardi Gras is Louisiana's). Each place is a country and, optionally, its
+ * region in the codes the settings already use. Same cache and same sources —
+ * Malaysia still from the gazette — so a year worked out for one screen is
+ * ready for the other.
  */
-export function useHolidayYear(countries: string[], year: number): Holiday[] {
+export function useHolidayYear(places: [country: string, region: string | null][], year: number): Holiday[] {
   const ready = useSyncExternalStore(subscribe, () => version)
-  // The codes as one string, so a new array with the same codes in it is not
-  // a reason to work anything out again.
-  const key = countries.join(',')
+  // The places as one string, so a new array with the same places in it is
+  // not a reason to work anything out again.
+  const key = places.map(([country, region]) => `${country}:${region ?? ''}`).join(',')
 
   return useMemo(
     () =>
       key
         .split(',')
         .filter(Boolean)
-        .flatMap((country) => yearOf(country, null, year)),
+        .flatMap((place) => {
+          const [country, region] = place.split(':')
+          return yearOf(country, region || null, year)
+        }),
     // `ready` is how a year that finished loading reaches this list.
     [ready, key, year],
   )
