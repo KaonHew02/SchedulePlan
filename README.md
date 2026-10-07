@@ -276,8 +276,10 @@ a pocket never blurs.
 
 A trip with stops keeps a plan on **each stop**. Tap a stop and its plan opens
 under it, one at a time, so the boarding day's plan sits under the boarding day
-rather than in one long box below all of them; a folded stop shows the first
-line of its plan. The first stop is the trip itself, and its plan is the trip's.
+rather than in one long box below all of them. The box grows to fit the whole
+plan instead of scrolling inside itself, and a folded stop shows its plan run
+together on two lines. The first stop is the trip itself, and its plan is the
+trip's.
 
 Vlogs are **links, not files**. A ten-minute vlog is hundreds of megabytes,
 which does not fit in a Drive backup and may not fit in browser storage at all,

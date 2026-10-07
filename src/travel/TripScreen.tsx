@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import AttachmentStrip from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
 import {
@@ -179,12 +179,17 @@ function LinkRow({
   )
 }
 
-/** The first line with something on it — what a folded stop shows of its plan. */
-const firstLine = (text: string | null): string =>
-  text
-    ?.split('\n')
+/**
+ * What a folded stop shows of its plan: every line, run together, so the day
+ * can be read at a glance without opening it. Blank lines are dropped — a plan
+ * pasted from Notes or a scan often has one between every line.
+ */
+const summary = (text: string | null): string =>
+  (text ?? '')
+    .split('\n')
     .map((line) => line.trim())
-    .find(Boolean) ?? ''
+    .filter(Boolean)
+    .join(' · ')
 
 /**
  * A plan, typed into local state and written a moment after typing stops.
@@ -243,8 +248,34 @@ function PlanField({
     [item.id],
   )
 
+  /*
+   * The box grows to fit the plan instead of scrolling inside itself. A plan
+   * gets read on the day, standing in a queue, and a few lines' window onto it
+   * that scrolls apart from the page is no way to read one. `rows` is only the
+   * least it shows, so an empty box is still a decent target for a paste.
+   */
+  const box = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const fit = () => {
+      // Dropping to auto for a moment to measure can shorten the page enough
+      // to pull the scroll up with it, so where the page was is put back.
+      const y = window.scrollY
+      el.style.height = 'auto'
+      // scrollHeight leaves out the border, which border-box sizing counts.
+      el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+      if (window.scrollY !== y) window.scrollTo(0, y)
+    }
+    fit()
+    // A phone turned on its side wraps the same plan onto fewer lines.
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [plan])
+
   return (
     <textarea
+      ref={box}
       value={plan}
       onChange={(event) => setPlan(event.target.value)}
       onBlur={() => {
@@ -259,7 +290,7 @@ function PlanField({
       rows={rows}
       placeholder={placeholder}
       aria-label={label}
-      className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-7 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+      className="w-full resize-none overflow-hidden rounded-2xl border border-neutral-200 p-4 text-[15px] leading-7 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
     />
   )
 }
@@ -364,7 +395,7 @@ export default function TripScreen({
               <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                 {[trip, ...legs].map((stop) => {
                   const open = openStop === stop.id
-                  const preview = firstLine(stop.plan)
+                  const preview = summary(stop.plan)
                   return (
                     <div key={stop.id}>
                       <button
@@ -380,7 +411,7 @@ export default function TripScreen({
                             </span>
                           )}
                           {!open && preview && (
-                            <span className="block truncate text-[12px] text-neutral-500">
+                            <span className="mt-0.5 line-clamp-2 text-[12px] leading-[18px] text-neutral-500">
                               {preview}
                             </span>
                           )}
@@ -397,7 +428,7 @@ export default function TripScreen({
                           <PlanField
                             key={stop.id}
                             item={stop}
-                            rows={6}
+                            rows={4}
                             // Straight to the cursor when there is nothing
                             // to read yet, so a paste is one long-press away;
                             // not when there is, or the keyboard would cover
