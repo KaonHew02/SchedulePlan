@@ -274,12 +274,20 @@ itinerary pasted into it would wreck all of them. It saves as you type rather
 than on a button or on blur, because a plan written on a bus and then locked in
 a pocket never blurs.
 
+A trip with stops keeps a plan on **each stop**. Tap a stop and its plan opens
+under it, one at a time, so the boarding day's plan sits under the boarding day
+rather than in one long box below all of them; a folded stop shows the first
+line of its plan. The first stop is the trip itself, and its plan is the trip's.
+
 Vlogs are **links, not files**. A ten-minute vlog is hundreds of megabytes,
 which does not fit in a Drive backup and may not fit in browser storage at all,
 and it is already on YouTube — what the notebook was missing is not the video
 but which video went with which trip. Links are checked for scheme when they
 are stored rather than when they are drawn, because an `href` is somewhere code
 can run and a notebook is a file that gets exported and imported again.
+
+On the trip page a link can be added, edited in place with the pencil, or
+removed.
 
 They are not the trip page's alone. The add and edit forms carry the same link
 field, because the booking confirmation arrives before the trip exists and a

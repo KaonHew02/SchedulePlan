@@ -115,7 +115,7 @@ The clearest way to explain the app is to play one trip through it from start to
 2. **Book.** The confirmation email arrives. More → Scanner photographs the booking and reads it in the browser, then shows each line with a tick beside it. Nothing is added until you say so.
 3. **Put it in the diary.** Schedule → **+** → *Vietnam trip*, whole day, 14–18 September, tag **Travel**, country **Vietnam**. Paste the booking page into Links. That single row is now a trip; there is no separate trip record.
 4. **Add the stops.** Add *Da Nang* (14–15), *Hội An* (16–17) and *Da Nang* again (18), each tagged Travel with its city, and set **Part of** to the Vietnam trip. Each one becomes a **leg**. It stays in the diary and still counts as a place, but it stops being its own row in Travel.
-5. **Write the plan.** Tap the trip in Travel to open its page, then write the itinerary in **Plan**. It saves as you type, because a plan written on a bus and then locked in a pocket never loses focus to trigger a save.
+5. **Write the plan.** Tap the trip in Travel to open its page, then tap a stop — *Hội An* — and its plan opens under it. Write or paste that part of the itinerary there; a trip with no stops has a single **Plan** box instead. It saves as you type, because a plan written on a bus and then locked in a pocket never loses focus to trigger a save.
 6. **Set reminders.** Reminders → *Bring a raincoat*, 14 September 08:00 **until** 18 September, **every day**: one reminder that speaks up each morning of the trip.
 
 ### During: at the counter, with no signal
@@ -388,7 +388,7 @@ The module that justifies the architecture. Nothing on it is stored except the w
 - Counters for countries, places and continents, and two goal rings (50 countries, 100 places).
 - A globe with real borders, fetched only when Travel first opens. Visited countries are filled in, and tiny ones get a dot. It can be spun and zoomed; tap a country badge and it turns to face that country and comes in close. Each badge carries its place count.
 - The trip list: one row per journey, spanning its legs, with its spend when Expenses is on.
-- A **trip page** for each trip: the plan (saved as you type), links such as the vlog, the days it covers, its stops and its files.
+- A **trip page** for each trip: the days it covers, its stops with a plan under each (saved as you type), links such as the vlog (added, edited or removed in place) and its files.
 - The **wishlist**: a cover picture, a note, links and attachments on each wish, and **I have been here** to turn it into a schedule item.
 
 ### Reminders

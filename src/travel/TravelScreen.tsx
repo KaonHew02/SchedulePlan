@@ -516,7 +516,10 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                         {placeLabel(trip.place)} · {rangeLabel(span.start, span.end)}
                         {nights > 1 && ` · ${nights} days`}
                         {legs.length > 0 && ` · ${legs.length + 1} stops`}
-                        {(trip.plan || trip.links.length > 0) && ' · has a page'}
+                        {(trip.plan ||
+                          legs.some((leg) => leg.plan) ||
+                          trip.links.length > 0) &&
+                          ' · has a page'}
                       </span>
                     </span>
                   </button>
