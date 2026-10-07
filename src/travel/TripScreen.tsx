@@ -13,6 +13,7 @@ import { money } from '../lib/currency'
 import { daysBetween, rangeLabel } from '../lib/date'
 import { MONEY } from '../lib/features'
 import { hostLabel, safeUrl } from '../lib/links'
+import { reflow } from '../lib/notes'
 import { placeLabel } from '../lib/places'
 import {
   deleteTripLink,
@@ -178,18 +179,6 @@ function LinkRow({
     </div>
   )
 }
-
-/**
- * What a folded stop shows of its plan: every line, run together, so the day
- * can be read at a glance without opening it. Blank lines are dropped — a plan
- * pasted from Notes or a scan often has one between every line.
- */
-const summary = (text: string | null): string =>
-  (text ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(' · ')
 
 /**
  * A plan, typed into local state and written a moment after typing stops.
@@ -395,7 +384,6 @@ export default function TripScreen({
               <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                 {[trip, ...legs].map((stop) => {
                   const open = openStop === stop.id
-                  const preview = summary(stop.plan)
                   return (
                     <div key={stop.id}>
                       <button
@@ -410,9 +398,17 @@ export default function TripScreen({
                               {placeLabel(stop.place)}
                             </span>
                           )}
-                          {!open && preview && (
-                            <span className="mt-0.5 line-clamp-2 text-[12px] leading-[18px] text-neutral-500">
-                              {preview}
+                          {/*
+                            A folded stop shows its whole plan, line by line,
+                            the way a schedule card shows its notes. It was
+                            the lines run together with dots and cut at two,
+                            which made a day's plan something to open before
+                            it could be read — on the day, in a queue, that
+                            is one tap too many.
+                          */}
+                          {!open && stop.plan && (
+                            <span className="mt-0.5 block whitespace-pre-wrap text-[13px] leading-5 text-neutral-500">
+                              {reflow(stop.plan)}
                             </span>
                           )}
                         </span>
@@ -420,7 +416,7 @@ export default function TripScreen({
                           {rangeLabel(stop.date, lastDay(stop))}
                         </span>
                         <ChevronDown
-                          className={`h-3.5 w-3.5 shrink-0 self-center text-neutral-300 transition-transform ${open ? 'rotate-180' : ''}`}
+                          className={`mt-[3px] h-3.5 w-3.5 shrink-0 self-start text-neutral-300 transition-transform ${open ? 'rotate-180' : ''}`}
                         />
                       </button>
                       {open && (
