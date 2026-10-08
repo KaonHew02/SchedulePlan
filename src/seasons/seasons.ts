@@ -365,7 +365,8 @@ export function spanLabel(span: Span, rule?: string): string {
 
 /**
  * How a flight from home gets there, best first. A stop is the same plane all
- * the way with a landing on the way — in China, where everyone gets off for
+ * the way with a landing on the way: Lanzhou by way of Kunming, Addis Ababa by
+ * way of Singapore — and in China everyone gets off at the first landing for
  * immigration. Seasonal flies some months only; a charter is sold mostly with
  * a tour.
  */

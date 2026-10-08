@@ -103,15 +103,20 @@ say just 东京.
 "checked": "2026-10",
 "from": "吉隆坡",
 "home": ["KUL", "SZB"],
-"direct": ["ADD", "ADL", …],
-"stop": { "CGQ": "福州", "DLC": "南京", "TYN": "昆明" },
+"direct": [
+  "ADL", "AKL", "ALA", "ALG", …,
+  "BAH", "BAR", "BDJ", …,
+  …
+],
+"stop": { "ADD": "新加坡", "CGQ": "福州", "DLC": "南京", "LHW": "昆明", "TYN": "昆明" },
 "seasonal": ["CTS", "HFE"],
 "charter": ["DNH", "DSN", "TXN"]
 ```
 
-- `direct` — nonstop from KLIA or Subang.
-- `stop` — the same plane all the way, landing on the way in the city named;
-  in China that is where everyone clears immigration.
+- `direct` — nonstop from KLIA or Subang, a line for each first letter, so a
+  route opened or dropped is a change to one line.
+- `stop` — the same plane all the way, landing on the way in the city named.
+  In China that first landing is where everyone clears immigration.
 - `seasonal` — flown some months only, like AirAsia X to Sapporo.
 - `charter` — sold mostly with tours.
 
@@ -148,9 +153,10 @@ Some time in the autumn, for the year about to start:
    every route, with what is starting and ending. Add what opened to
    `flights.json`, take out what stopped, and look up anything Chinese
    or new: a "direct" route to a smaller Chinese city often stops on the way,
-   and goes under `stop`. Set `"checked"` to the month. `npm run seasons --
-   --flights` then lists every destination by how it is reached, so a place
-   that changed side is easy to see.
+   and goes under `stop` — Lanzhou, listed as direct in 2026, stops in
+   Kunming. Set `"checked"` to the month. `npm run seasons -- --flights` then
+   lists every destination by how it is reached, so a place that changed side
+   is easy to see, and ends with any `via` whose airport has lost its flight.
 6. `npm run seasons -- --format` puts the files back in the house layout,
    and `npm run build` checks them again before anything is published.
 

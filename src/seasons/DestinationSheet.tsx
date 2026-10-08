@@ -66,7 +66,10 @@ function GettingThere({ d }: { d: Destination }) {
     )
     rows.push({ label, text: names.join('、') + after })
   }
-  if (d.via) rows.push({ label: home ? `从${FLIGHTS.from}` : '再坐车', text: d.via.t })
+  // Only while something flies there: going on from Tokyo by train is no use
+  // to know on a sheet that says Tokyo has no flight.
+  const via = d.via?.airports.some((code) => kindOf(code) || FLIGHTS.home.includes(code))
+  if (d.via && via) rows.push({ label: home ? `从${FLIGHTS.from}` : '再坐车', text: d.via.t })
   const unflown = d.airports.filter((code) => !kindOf(code))
   if (!home && unflown.length > 0) {
     rows.push({ label: '要转机', text: `转机飞到${unflown.map(airportName).join('、')}` })

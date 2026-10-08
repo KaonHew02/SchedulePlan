@@ -204,14 +204,19 @@ export function formatAirports(names) {
   return `{\n${lines.join(',\n')}\n}\n`
 }
 
-/** The routes sixteen to a line, in code order, so a new one is a diff of one word. */
+/**
+ * The routes in code order, a line for each first letter: a route opened or
+ * dropped changes that one line, not every line after it.
+ */
 export function formatFlights(flights) {
   const s = JSON.stringify
   const codes = (list) => {
     const sorted = [...list].sort()
-    const lines = []
-    for (let i = 0; i < sorted.length; i += 16) lines.push(sorted.slice(i, i + 16).map(s).join(', '))
-    return lines.length > 1 ? `[\n    ${lines.join(',\n    ')}\n  ]` : `[${lines.join('')}]`
+    // A handful reads best on one line, as the file's short lists always have.
+    if (sorted.length <= 8) return `[${sorted.map(s).join(', ')}]`
+    const lines = new Map()
+    for (const code of sorted) lines.set(code[0], [...(lines.get(code[0]) ?? []), s(code)])
+    return `[\n    ${[...lines.values()].map((row) => row.join(', ')).join(',\n    ')}\n  ]`
   }
   const stops = Object.keys(flights.stop).sort()
   return [
@@ -267,7 +272,9 @@ export function checkFlights(flights, names) {
     if (kinds.length > 1) say(`${code} is under ${kinds.join(' and ')} — it can only be one`)
     if (flights.home.includes(code)) say(`${code} is home, not somewhere to fly to`)
   }
-  for (const code of flights.home) if (!names[code]) say(`home airport ${code} has no name in ${shown(AIRPORTS)}`)
+  // A names file that is not a list of names is the other check's to say.
+  const named = typeof names === 'object' && names !== null ? names : {}
+  for (const code of flights.home) if (!named[code]) say(`home airport ${code} has no name in ${shown(AIRPORTS)}`)
   return problems
 }
 
@@ -278,6 +285,15 @@ const unknownKeys = (record, allowed) => Object.keys(record ?? {}).filter((key) 
 export function check(file, events, names, home) {
   const problems = []
   const say = (where, what) => problems.push(`${where}: ${what}`)
+
+  if (typeof names !== 'object' || names === null || Array.isArray(names)) {
+    say(shown(AIRPORTS), 'should map each airport code to its name')
+    names = {}
+  }
+  for (const [code, name] of Object.entries(names)) {
+    if (!isCode(code)) say(shown(AIRPORTS), `"${code}" is not a three-letter airport code`)
+    if (typeof name !== 'string' || !name.trim()) say(shown(AIRPORTS), `${code} has no name`)
+  }
 
   for (const key of unknownKeys(file, ['reviewed', 'destinations'])) say(shown(DESTINATIONS), `unknown key "${key}"`)
   if (!/^\d{4}-\d{2}$/.test(file.reviewed ?? '')) say('reviewed', 'should be YYYY-MM')
@@ -318,7 +334,9 @@ export function check(file, events, names, home) {
     } else if (new Set(d.airports).size !== d.airports.length) {
       say(at, 'an airport is listed twice')
     }
-    if (d.via !== undefined) {
+    if (d.via !== undefined && (typeof d.via !== 'object' || d.via === null || Array.isArray(d.via))) {
+      say(`${at} via`, 'should be { "airports": [...], "t": "..." }')
+    } else if (d.via !== undefined) {
       for (const key of unknownKeys(d.via, VIA_KEYS)) say(`${at} via`, `unknown key "${key}" — a typo?`)
       if (!Array.isArray(d.via.airports) || d.via.airports.length === 0 || !d.via.airports.every(isCode)) {
         say(`${at} via`, 'airports should name at least one airport')
@@ -420,7 +438,8 @@ export function check(file, events, names, home) {
 
   // A name nothing uses is an airport taken out of a destination and left
   // behind. Kept out, so the file stays the list of the ones that matter.
-  const used = new Set(file.destinations.flatMap((d) => [...(d.airports ?? []), ...(d.via?.airports ?? [])]))
+  const list = (codes) => (Array.isArray(codes) ? codes : [])
+  const used = new Set(file.destinations.flatMap((d) => [...list(d.airports), ...list(d.via?.airports)]))
   for (const code of Object.keys(names)) {
     if (!used.has(code) && !home.includes(code)) say(shown(AIRPORTS), `${code} is named but no destination uses it`)
   }
@@ -436,12 +455,9 @@ export function check(file, events, names, home) {
  * best flight, nonstop before a stop before seasonal before a charter, and
  * at the place before one a train or a drive away; else a change of plane.
  */
-export function reachOf(d, flights) {
+export function reachOf(d, flights, kinds) {
   const via = d.via?.airports ?? []
   if ([...d.airports, ...via].some((code) => flights.home.includes(code))) return { kind: 'home' }
-  const kinds = new Map(
-    [...routeKinds(flights)].map(([code, list]) => [code, list[0]]),
-  )
   for (const kind of ROUTE_KINDS) {
     for (const [codes, over] of [[d.airports, false], [via, true]]) {
       const hits = codes.filter((code) => kinds.get(code) === kind)
@@ -452,9 +468,17 @@ export function reachOf(d, flights) {
 }
 
 function flightsReport(file, flights, names) {
+  // The check has made sure each code is under one kind only.
+  const kinds = new Map([...routeKinds(flights)].map(([code, list]) => [code, list[0]]))
   const groups = new Map()
+  // A way in overland from an airport nothing flies to any more: the sheet
+  // leaves it out, and it is worth a look — the route may come back, or a
+  // better airport may have a flight now.
+  const stranded = []
   for (const d of file.destinations) {
-    const reach = reachOf(d, flights)
+    const reach = reachOf(d, flights, kinds)
+    const flown = (code) => kinds.has(code) || flights.home.includes(code)
+    if (d.via && !d.via.airports.some(flown)) stranded.push(`  ${d.id}  via ${d.via.airports.join(' ')}`)
     const key = reach.kind === 'home' || reach.kind === 'connect' ? reach.kind : `${reach.kind}${reach.via ? ' then overland' : ''}`
     const where = d.region === d.country ? d.country : `${d.country}·${d.region}`
     const codes = reach.codes ? `  ${reach.codes.map((code) => `${names[code]} ${code}`).join('、')}` : ''
@@ -467,6 +491,11 @@ function flightsReport(file, flights, names) {
     if (!lines) continue
     console.log(`${key} (${lines.length}):`)
     for (const line of lines) console.log(line)
+    console.log('')
+  }
+  if (stranded.length) {
+    console.log(`Overland from an airport with no flight now (${stranded.length}):`)
+    for (const line of stranded) console.log(line)
     console.log('')
   }
 }
