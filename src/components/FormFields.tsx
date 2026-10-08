@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import CalendarPanel from './DatePicker'
 import { CalendarIcon, ClockIcon, Close, ShrinkIcon, ZoomIcon } from './Icons'
 import Popover from './Popover'
@@ -249,6 +249,7 @@ export function TextField({
   label,
   type = 'text',
   inputMode,
+  suggestions,
 }: {
   value: string
   onChange: (value: string) => void
@@ -256,17 +257,33 @@ export function TextField({
   label: string
   type?: string
   inputMode?: 'text' | 'decimal' | 'numeric'
+  /**
+   * What has been typed here before, offered as it is typed again — so 海南
+   * is one tap the second time, and the same spelling every time.
+   */
+  suggestions?: string[]
 }) {
+  const list = useId()
   return (
-    <input
-      value={value}
-      type={type}
-      inputMode={inputMode}
-      aria-label={label}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      className="min-w-0 flex-1 bg-transparent text-right text-[15px] outline-hidden placeholder:text-neutral-300"
-    />
+    <>
+      <input
+        value={value}
+        type={type}
+        inputMode={inputMode}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        list={suggestions?.length ? list : undefined}
+        className="min-w-0 flex-1 bg-transparent text-right text-[15px] outline-hidden placeholder:text-neutral-300"
+      />
+      {suggestions && suggestions.length > 0 && (
+        <datalist id={list}>
+          {suggestions.map((option) => (
+            <option key={option} value={option} />
+          ))}
+        </datalist>
+      )}
+    </>
   )
 }
 

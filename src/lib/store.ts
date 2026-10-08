@@ -28,6 +28,7 @@ import type {
   Expense,
   ExpenseDraft,
   Phrase,
+  Place,
   Reminder,
   ReminderDraft,
   ScheduleDraft,
@@ -183,8 +184,12 @@ function fillItem(raw: Partial<ScheduleItem>, index = 0): ScheduleItem {
     location: safe.textOrNull(raw.location),
     notes: safe.textOrNull(raw.notes),
     tag: safe.textOrNull(raw.tag),
-    // Backups from before Travel existed have no place at all.
-    place: country && safe.isRecord(place) ? { country, city: safe.textOrNull(place.city) } : null,
+    // Backups from before Travel existed have no place at all, and those from
+    // before regions no region.
+    place:
+      country && safe.isRecord(place)
+        ? { country, region: safe.textOrNull(place.region), city: safe.textOrNull(place.city) }
+        : null,
     attachments: safe.attachments(raw.attachments),
     // All absent from every backup written before the trip page existed.
     plan: safe.textOrNull(raw.plan),
@@ -319,6 +324,7 @@ function fillWish(raw: Partial<WishPlace>, index = 0): WishPlace {
     id: safe.positiveId(raw.id) ?? index + 1,
     name: safe.text(raw.name),
     country: safe.countryCode(raw.country) ?? '',
+    region: safe.textOrNull(raw.region),
     note: safe.textOrNull(raw.note),
     photo: safe.attachment(raw.photo),
     attachments: safe.attachments(raw.attachments),
@@ -499,6 +505,26 @@ export const isVisit = (item: ScheduleItem): boolean =>
   Boolean(item.place?.country && item.tag === TRAVEL_TAG)
 
 /**
+ * Each row's region, a leg's taken from its trip when it gave none of its own:
+ * the 三亚 leg of the 海南 trip is in 海南 without anyone typing it twice.
+ * Built once for a list, so a lookup is a map read rather than a search.
+ */
+export function regionsOf(schedule: ScheduleItem[]): (item: ScheduleItem) => string | null {
+  const byId = new Map(schedule.map((row) => [row.id, row]))
+  return (item) => {
+    if (item.place?.region) return item.place.region
+    const trip = item.trip_id ? byId.get(item.trip_id) : undefined
+    return trip?.place?.country === item.place?.country ? (trip?.place?.region ?? null) : null
+  }
+}
+
+/** The places in a list, each with its region filled in as `regionsOf` says. */
+export function placesOf(schedule: ScheduleItem[]): Place[] {
+  const regionOf = regionsOf(schedule)
+  return schedule.flatMap((item) => (item.place ? [{ ...item.place, region: regionOf(item) }] : []))
+}
+
+/**
  * A trip in its own right rather than a leg of one — one row in Travel.
  *
  * A leg whose trip has gone missing counts as its own trip again, which
@@ -600,7 +626,11 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
     notes: draft.notes?.trim() || null,
     tag: draft.tag ?? null,
     place: draft.place?.country
-      ? { country: draft.place.country.toUpperCase(), city: draft.place.city?.trim() || null }
+      ? {
+          country: draft.place.country.toUpperCase(),
+          region: draft.place.region?.trim() || null,
+          city: draft.place.city?.trim() || null,
+        }
       : null,
     attachments: draft.attachments ?? [],
   }
@@ -1045,6 +1075,7 @@ export async function saveWish(
     id: existing?.id ?? nextId(db.wishlist),
     name,
     country: wish.country.toUpperCase(),
+    region: wish.region?.trim() || null,
     note: wish.note?.trim() || null,
     photo: wish.photo ?? null,
     attachments: wish.attachments ?? [],

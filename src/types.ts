@@ -54,6 +54,13 @@ export interface TripLink {
 export interface Place {
   /** ISO 3166-1 alpha-2. The flag, the continent and the globe all key off it. */
   country: string
+  /**
+   * The part of the country: 海南, Hokkaido, Sabah. Free text, and optional —
+   * a big country has places inside places, so 三亚 and 海口 are both 海南,
+   * while a trip to Da Nang needs nothing between the city and Vietnam.
+   * Absent from everything saved before it existed, which reads as null.
+   */
+  region: string | null
   /** Free text: 'Da Nang', 'Kyoto'. Null when only the country is known. */
   city: string | null
 }
@@ -81,6 +88,8 @@ export interface WishPlace {
   id: number
   name: string
   country: string
+  /** The part of the country, as on a trip — see `Place.region`. */
+  region: string | null
   /**
    * Why you want to go, and whatever else is worth keeping: the season to go
    * in, what the flight costs, the name of the place somebody recommended.

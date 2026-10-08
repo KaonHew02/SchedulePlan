@@ -12,6 +12,7 @@ import {
   isVisit,
   lastDay,
   occupies,
+  regionsOf,
   spanOf,
   store,
   updateSettings,
@@ -102,7 +103,11 @@ function WishCard({ wish, onOpen }: { wish: WishPlace; onOpen: () => void }) {
       <span className="mt-1.5 block truncate text-[13px] font-medium">{wish.name}</span>
       <span className="flex items-center gap-1 text-[12px] text-neutral-400">
         <PinIcon className="h-3 w-3" />
-        <span className="truncate">{countryOf(wish.country)?.name ?? wish.country}</span>
+        <span className="truncate">
+          {/* The region where it adds something: 海南 under a card called 三亚. */}
+          {wish.region && cityKey(wish.region) !== cityKey(wish.name) && `${wish.region}, `}
+          {countryOf(wish.country)?.name ?? wish.country}
+        </span>
       </span>
       {/*
         What is inside, without opening it. A card that holds nothing but a
@@ -261,44 +266,85 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
    * number above it can never drift apart.
    */
   const stats = useMemo(() => {
-    const byCountry = new Map<string, Set<string>>()
+    interface Tally {
+      /** Each region by its key, in the spelling first met. */
+      regions: Map<string, string>
+      /** Each city by its key, with the region it is in ('' for none given). */
+      cities: Map<string, { name: string; region: string }>
+      /** Regions somebody went to without naming a city in them. */
+      bare: Set<string>
+    }
+    const regionOf = regionsOf(schedule)
+    const byCountry = new Map<string, Tally>()
     const continents = new Set<ContinentCode>()
-    for (const visit of visits) {
+    // Newest first, so a country's list reads from the latest trip down.
+    for (const visit of [...visits].sort((a, b) => b.date.localeCompare(a.date))) {
       const code = visit.place.country
+      const tally = byCountry.get(code) ?? { regions: new Map(), cities: new Map(), bare: new Set() }
+      /*
+       * A leg is in its trip's region unless it says otherwise: the 海南 trip
+       * with 三亚 and 海口 as legs is two places in 海南, not two places
+       * somewhere and a third that is the region they were both in.
+       */
+      const regionName = regionOf(visit)
+      const region = cityKey(regionName)
+      if (region && !tally.regions.has(region)) tally.regions.set(region, regionName!.trim())
       // A destination is a place, not a visit — three trips to Kyoto is one.
-      const seen = byCountry.get(code) ?? new Set<string>()
-      seen.add(cityKey(visit.place.city))
-      byCountry.set(code, seen)
+      const city = cityKey(visit.place.city)
+      if (city) {
+        const known = tally.cities.get(city)
+        if (!known) tally.cities.set(city, { name: visit.place.city!.trim(), region })
+        else if (!known.region) known.region = region
+      } else if (region) {
+        tally.bare.add(region)
+      }
+      byCountry.set(code, tally)
       const found = countryOf(code)
       if (found) continents.add(found.continent)
     }
     const places: Record<string, number> = {}
+    const where: Record<string, { region: string | null; cities: string[] }[]> = {}
     let destinations = 0
-    for (const [code, seen] of byCountry) {
+    for (const [code, tally] of byCountry) {
+      const groups = new Map<string, string[]>()
+      for (const { name, region } of tally.cities.values()) {
+        groups.set(region, [...(groups.get(region) ?? []), name])
+      }
       /*
-       * A visit that named no city is 'somewhere in this country', and it
-       * counts as a place only when it is all there is.
+       * A visit that named no city is 'somewhere' — in its region when it
+       * gave one, in the country when not — and it counts as a place only
+       * when there is nothing more exact there.
        *
        * It used to count as one either way, which quietly added a phantom.
        * A Vietnam trip made of a parent row carrying the country and two
        * legs carrying the cities came out as three places — Da Nang, Hoi An,
        * and the trip they were both part of. K went to two.
        *
-       * Still one place when it stands alone, which is the case the rule was
-       * written for: a week in Japan with nowhere typed in is not nowhere.
+       * So a region with only its name on it is a place — a week in 海南
+       * with no city typed in is not nowhere — until a city in it is named,
+       * and a country with nothing typed in at all is still one.
        */
-      const named = seen.size - (seen.has('') ? 1 : 0)
-      const count = Math.max(1, named)
+      const bare = [...tally.bare].filter((region) => !groups.has(region))
+      for (const region of bare) groups.set(region, [])
+      const count = Math.max(1, tally.cities.size + bare.length)
       places[code] = count
       destinations += count
+      // The named regions in the order first met, then the cities in none.
+      where[code] = [
+        ...[...tally.regions]
+          .filter(([key]) => groups.has(key))
+          .map(([key, name]) => ({ region: name, cities: groups.get(key)! })),
+        ...(groups.get('')?.length ? [{ region: null, cities: groups.get('')! }] : []),
+      ]
     }
     return {
       countries: [...byCountry.keys()],
       destinations,
       places,
+      where,
       continents: [...continents],
     }
-  }, [visits])
+  }, [visits, schedule])
 
   /**
    * Spend against a trip, in the home currency — its own and its legs'.
@@ -446,8 +492,8 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             <div className="mt-2.5 flex items-end gap-2">
               <p className="flex-1 text-[12px] leading-4 text-neutral-400">
                 A place is a city: Da Nang and Hoi An are two of them, and going back to
-                either one does not add a third. Somewhere with only a country on it counts
-                once.
+                either one does not add a third. A region with no city named in it, like
+                海南 on its own, counts once, and so does a country with nothing else on it.
               </p>
               <button
                 onClick={() => {
@@ -559,6 +605,43 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           </div>
         )}
 
+        {/*
+          Where, under each country: 海南 · 三亚、海口, the way a big country
+          is remembered. The destinations ring says how many; this says which,
+          and the badge row under the globe only fits the count.
+        */}
+        {stats.countries.length > 0 && (
+          <>
+            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Places</h2>
+            <div className="divide-y divide-neutral-100 border-y border-neutral-100">
+              {stats.countries.map((code) => {
+                const count = stats.places[code] ?? 0
+                const where = stats.where[code] ?? []
+                return (
+                  <div key={code} className="flex gap-3 py-2.5">
+                    <CountryBadge code={code} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="truncate text-[14px]">{countryOf(code)?.name ?? code}</span>
+                        <span className="ml-auto shrink-0 text-[13px] tabular-nums text-neutral-400">
+                          {count} {count === 1 ? 'place' : 'places'}
+                        </span>
+                      </div>
+                      {where.map(({ region, cities }) => (
+                        <p key={region ?? ''} className="text-[13px] leading-5 text-neutral-500">
+                          {region && <span className="font-medium text-neutral-700">{region}</span>}
+                          {region && cities.length > 0 && ' · '}
+                          {cities.join('、')}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
         {stats.continents.length > 0 && (
           <>
             <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Continents</h2>
@@ -615,7 +698,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           prefill={{
             title: visiting.name,
             notes: visiting.note,
-            place: { country: visiting.country, city: null },
+            place: { country: visiting.country, region: visiting.region, city: null },
             allDay: true,
             // The picture first, so the trip leads with the same image the
             // wishlist card did.

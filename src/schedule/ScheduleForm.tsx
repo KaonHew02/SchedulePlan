@@ -7,7 +7,8 @@ import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
 import { describeRepeat } from '../lib/repeat'
-import { createTag, isTrip, useSchedule, useTags } from '../lib/store'
+import { typedBefore } from '../lib/places'
+import { createTag, isTrip, placesOf, useSchedule, useTags, useWishlist } from '../lib/store'
 import type {
   Attachment,
   Place,
@@ -69,6 +70,7 @@ export default function ScheduleForm({
   const [country, setCountry] = useState<string | null>(
     item?.place?.country ?? prefill?.place?.country ?? null,
   )
+  const [region, setRegion] = useState(item?.place?.region ?? prefill?.place?.region ?? '')
   const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
   const [tripId, setTripId] = useState<number | null>(item?.trip_id ?? null)
   const [repeat, setRepeat] = useState<ScheduleRepeat | null>(item?.repeat ?? null)
@@ -103,6 +105,15 @@ export default function ScheduleForm({
     }
     return seen.slice(0, 8)
   }, [schedule])
+  // The regions and cities typed for this country before, and on the wishlist.
+  const wishlist = useWishlist()
+  const typed = useMemo(
+    () =>
+      country
+        ? typedBefore([...placesOf(schedule), ...wishlist], country, region.trim())
+        : { regions: [], cities: [] },
+    [schedule, wishlist, country, region],
+  )
   // Location, links, notes and files stay out of the way until they are wanted.
   const [showDetails, setShowDetails] = useState(
     Boolean(
@@ -154,7 +165,7 @@ export default function ScheduleForm({
         location: location.trim() || null,
         notes: notes.trim() || null,
         tag,
-        place: country ? { country, city: city.trim() || null } : null,
+        place: country ? { country, region: region.trim() || null, city: city.trim() || null } : null,
         attachments: files,
         links,
         trip_id: tripId,
@@ -293,7 +304,8 @@ export default function ScheduleForm({
               <Field label="Location">
                 <TextField label="Location" value={location} onChange={setLocation} />
               </Field>
-              {/* Country is what Travel counts; city is only ever a label. */}
+              {/* Country is what Travel counts; region and city are labels, and
+                  the city is what makes a place. */}
               <Field label="Country" hint="For Travel">
                 <CountrySelect
                   value={country}
@@ -304,9 +316,14 @@ export default function ScheduleForm({
                 />
               </Field>
               {country && (
-                <Field label="City">
-                  <TextField label="City" value={city} onChange={setCity} />
-                </Field>
+                <>
+                  <Field label="Region" hint="地区, like 海南 or Sabah">
+                    <TextField label="Region" value={region} onChange={setRegion} suggestions={typed.regions} />
+                  </Field>
+                  <Field label="City">
+                    <TextField label="City" value={city} onChange={setCity} suggestions={typed.cities} />
+                  </Field>
+                </>
               )}
               {joinable.length > 0 && (
                 <Field label="Part of trip" hint="Groups it under one trip in Travel">

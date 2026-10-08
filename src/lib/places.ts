@@ -285,11 +285,16 @@ export function flagOf(code: string | null | undefined): string {
   )
 }
 
-/** 'Kyoto, Japan' — or just the country when no city was given. */
-export function placeLabel(place: { country: string; city: string | null } | null): string {
+/**
+ * 'Kyoto, Japan', '三亚, 海南, China' — or as much of it as was given. A region
+ * that is the city over again (Da Nang in Da Nang) is said once.
+ */
+export function placeLabel(
+  place: { country: string; region?: string | null; city: string | null } | null,
+): string {
   if (!place) return ''
-  const name = countryName(place.country)
-  return place.city ? `${place.city}, ${name}` : name
+  const region = place.region && cityKey(place.region) !== cityKey(place.city) ? place.region : null
+  return [place.city, region, countryName(place.country)].filter(Boolean).join(', ')
 }
 
 /**
@@ -315,6 +320,29 @@ export function cityKey(city: string | null | undefined): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
+}
+
+/**
+ * What has been typed for a country before, for the form to offer back: its
+ * regions, and the cities — in `region` when one is given. Each once, in the
+ * spelling first met, newest rows first when the list is newest first.
+ */
+export function typedBefore(
+  places: ({ country: string; region?: string | null; city?: string | null } | null | undefined)[],
+  country: string,
+  region?: string,
+): { regions: string[]; cities: string[] } {
+  const regions = new Map<string, string>()
+  const cities = new Map<string, string>()
+  const inRegion = region ? cityKey(region) : ''
+  for (const place of places) {
+    if (!place || place.country !== country) continue
+    const key = cityKey(place.region)
+    if (key && !regions.has(key)) regions.set(key, place.region!.trim())
+    const city = cityKey(place.city)
+    if (city && (!inRegion || key === inRegion) && !cities.has(city)) cities.set(city, place.city!.trim())
+  }
+  return { regions: [...regions.values()], cities: [...cities.values()] }
 }
 
 // ------------------------------------------------------------- projection

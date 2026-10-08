@@ -268,6 +268,15 @@ cities are recorded alongside it, because the Vietnam row that Da Nang and
 Hoi An hang off is the trip they were both part of and not a third place on
 it. Both goals are settable, and default to 50 and 100.
 
+**A big country has places inside places.** Between the country and the city
+is an optional **region** — 地区 — so a week in China reads 中国 › 海南 ›
+三亚、海口 and Vietnam can stay Vietnam › Da Nang. The **Places** list under
+the wishlist shows each country that way, and the form offers back the regions
+and cities already typed for that country. A leg takes its trip's region
+unless it gives its own, so the 海南 trip with 三亚 and 海口 as legs is two
+places in 海南, and a region with no city named in it — 北海道 on its own —
+counts once, the same rule as a country on its own.
+
 Tapping a trip opens **its own page**: the plan, the vlog, what it cost, the
 days it covers, and its files — which can be added right there, rather than
 only in the schedule form, since a boarding pass is something you are handed
@@ -575,7 +584,7 @@ holds. `version` is 2; a version 1 file still imports.
       "location": null,
       "notes": null,
       "tag": "travel",
-      "place": { "country": "VN", "city": "Da Nang" },
+      "place": { "country": "VN", "region": null, "city": "Da Nang" },
       "attachments": []
     }
   ],

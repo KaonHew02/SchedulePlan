@@ -56,7 +56,18 @@ export interface Destination {
   area: string
   /** As a reader names it: 日本, 卢旺达·乌干达. */
   country: string
+  /**
+   * 地区: 海南, 北海道, 苏格兰 — the part of the country, as a trip in Travel
+   * would name it. The country again for somewhere that is one place.
+   */
   region: string
+  /**
+   * Which stretch of the region, for one with several entries: 四川 is 成都及周边,
+   * 九寨沟黄龙 and 川西高原. Left out where the region is the whole entry.
+   */
+  part?: string
+  /** 地方: the towns a trip there is made of — 三亚, 海口, 万宁 in 海南. */
+  cities: string[]
   /**
    * ISO codes, for the badge, the wishlist and the public holidays. Several
    * when one entry crosses borders — Victoria Falls is Zimbabwe and Zambia.
@@ -497,8 +508,19 @@ export function seasonsOf(month: number): string {
   return `北半球${north}季 · 南半球${south}季`
 }
 
-/** What a destination is called on its own: the region, or the country when they are one. */
-export const nameOf = (d: Destination) => (d.region === d.country ? d.country : d.region)
+/**
+ * What a destination is called on its own: 海南, 四川·九寨沟黄龙 — or the
+ * country, when it is one place.
+ */
+export const nameOf = (d: Destination) =>
+  d.region === d.country ? d.country : d.part ? `${d.region}·${d.part}` : d.region
+
+/** Its 地区 for Travel — 海南, 四川 — or null for a country that is one place. */
+export const regionOf = (d: Destination): string | null => (d.region === d.country ? null : d.region)
+
+/** The towns worth saying under the name: none when the only one is the name over again. */
+export const townsOf = (d: Destination): string[] =>
+  d.cities.length === 1 && d.cities[0] === nameOf(d) ? [] : d.cities
 
 /** Everything a search can match, lower-cased once. */
 const haystacks = new WeakMap<Destination, string>()
@@ -507,7 +529,17 @@ export function matches(d: Destination, query: string): boolean {
   if (!query) return true
   let hay = haystacks.get(d)
   if (hay === undefined) {
-    hay = [d.area, d.country, d.region, d.places, d.summary, d.countries.join(' '), ...d.highlights.map((h) => h.t)]
+    hay = [
+      d.area,
+      d.country,
+      d.region,
+      d.part ?? '',
+      ...d.cities,
+      d.places,
+      d.summary,
+      d.countries.join(' '),
+      ...d.highlights.map((h) => h.t),
+    ]
       .join(' ')
       .toLowerCase()
     haystacks.set(d, hay)

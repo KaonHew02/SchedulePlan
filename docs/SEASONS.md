@@ -165,7 +165,15 @@ yearly Seasons read-through for 2028" is enough for it to find this page.
 
 ## Adding or changing a destination
 
-Each destination in `destinations.json` has this shape. `countries` is the
+Each destination in `destinations.json` has this shape. `region` is the 地区
+as Travel would name it — 海南, 北海道, 苏格兰 — and the country over again for
+somewhere that is one place. `part` is only for a region with several
+entries, so 四川 is `成都及周边`, `九寨沟黄龙` and `川西高原`, and the card says
+四川·九寨沟黄龙. `cities` is the 地方: the towns a trip there is made of,
+shown under the name (三亚、海口、万宁 under 海南) and written into the note
+when it goes on the wishlist, with the region on the wish itself. A place
+that is one town — 北京, Singapore — lists just that, and its card shows its
+first sights instead. `countries` is the
 ISO codes the badge, the wishlist and the public holidays use — several when
 it crosses a border, none for Antarctica. `holidayRegion` is optional: the
 state or province of the first country, in date-holidays' codes, for the days
@@ -182,6 +190,7 @@ Day), `LA` is Louisiana (Mardi Gras). Malaysia's codes are the gazette's,
   "countries": ["MY"],
   "holidayRegion": "12",
   "airports": ["BKI", "TWU", "SDK"],
+  "cities": ["亚庇", "昆达山", "仙本那", "山打根", "斗湖"],
   "places": "亚庇、京那巴鲁神山、仙本那…",
   "summary": "最佳：6–9月避暑花海，1–2月雪祭与粉雪滑雪",
   "climate": "…",
@@ -204,7 +213,8 @@ refuses: a missing field, a key it does not know (`offest` for `offset` would
 otherwise be ignored by the app and dropped by `--format`), a rating outside
 0–3, anything but twelve months, a destination with no best month, a country
 listed twice, a `holidayRegion` the library does not know, a rule it cannot
-read, an event naming an id that does not exist, an airport that is not a
+read, an event naming an id that does not exist, no city or one listed
+twice, an airport that is not a
 three-letter code or has no name, a route listed under two kinds, and a year
 written into the evergreen file — 2027年, with or without a space. A year before 2020 is
 history and is left alone: 1987年列入世界遗产 stays true.

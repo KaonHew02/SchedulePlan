@@ -1,12 +1,13 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import AttachmentStrip, { useFileUrl } from '../components/Attachments'
 import CountrySelect from '../components/CountrySelect'
-import { Field, NotesField } from '../components/FormFields'
+import { Field, NotesField, TextField } from '../components/FormFields'
 import { CameraIcon, CheckIcon, Spinner, TrashIcon } from '../components/Icons'
 import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import { saveFile } from '../lib/files'
-import { deleteWish, saveWish } from '../lib/store'
+import { typedBefore } from '../lib/places'
+import { deleteWish, placesOf, saveWish, useSchedule, useWishlist } from '../lib/store'
 import type { Attachment, TripLink, WishPlace } from '../types'
 
 const FORM_ID = 'wish-form'
@@ -40,6 +41,7 @@ export default function WishForm({
   const photoInput = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(wish?.name ?? '')
   const [country, setCountry] = useState<string | null>(wish?.country ?? null)
+  const [region, setRegion] = useState(wish?.region ?? '')
   const [note, setNote] = useState(wish?.note ?? '')
   const [photo, setPhoto] = useState<Attachment | null>(wish?.photo ?? null)
   const [files, setFiles] = useState<Attachment[]>(wish?.attachments ?? [])
@@ -47,6 +49,12 @@ export default function WishForm({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const preview = useFileUrl(photo?.id ?? null)
+  const schedule = useSchedule()
+  const wishlist = useWishlist()
+  const regions = useMemo(
+    () => (country ? typedBefore([...placesOf(schedule), ...wishlist], country).regions : []),
+    [schedule, wishlist, country],
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -57,6 +65,7 @@ export default function WishForm({
         id: wish?.id,
         name,
         country: country ?? '',
+        region: region || null,
         note: note || null,
         photo,
         attachments: files,
@@ -111,6 +120,11 @@ export default function WishForm({
           <Field label="Country">
             <CountrySelect value={country} onChange={setCountry} />
           </Field>
+          {country && (
+            <Field label="Region" hint="地区, like 海南 or Sabah">
+              <TextField label="Region" value={region} onChange={setRegion} suggestions={regions} />
+            </Field>
+          )}
           {/*
             Why used to be a line on the right of a label, which is a stamp to
             write on: "Culture, Ice Cream, Dessert," was already running off

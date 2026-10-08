@@ -14,6 +14,8 @@ import {
   monthsLabel,
   nameOf,
   reachOf,
+  regionOf,
+  townsOf,
   spanLabel,
   spansOf,
   type Destination,
@@ -177,16 +179,29 @@ export default function DestinationSheet({
    */
   const home = countryOf(d.countries[0])
   const name = nameOf(d)
-  const wished = wishlist.some((wish) => wish.name === name && wish.country === home?.code)
+  const region = regionOf(d)
+  const towns = townsOf(d)
+  // On the wishlist the region has a line of its own, so 九寨沟黄龙 in 四川
+  // rather than 四川·九寨沟黄龙 in China.
+  const wishName = d.part ?? name
+  const wished = wishlist.some(
+    (wish) => (wish.name === wishName || wish.name === name) && wish.country === home?.code,
+  )
 
   async function addWish() {
     if (!home) return
     setSaving(true)
     try {
       await saveWish({
-        name,
+        name: wishName,
         country: home.code,
-        note: `${d.summary}\n最佳月份：${monthsLabel(best)}\n去处：${d.places}`,
+        region,
+        note: [
+          d.summary,
+          `最佳月份：${monthsLabel(best)}`,
+          ...(towns.length > 0 ? [`地方：${towns.join('、')}`] : []),
+          `去处：${d.places}`,
+        ].join('\n'),
         photo: null,
         attachments: [],
         links: [],
@@ -219,11 +234,19 @@ export default function DestinationSheet({
         {d.countries.slice(0, 3).map((code) => (
           <CountryBadge key={code} code={code} size="sm" />
         ))}
+        {/* Where it sits: 东亚 · 日本 · 北海道, or 中国 · 海南 when the part of
+            the world and the country are one. */}
         <span className="truncate">
-          {d.area} · {d.country}
+          {[...new Set([d.area, d.country, ...(region ? [region] : [])])].join(' · ')}
         </span>
       </div>
       <p className="pt-2 text-[15px] font-medium leading-6">{d.summary}</p>
+
+      {towns.length > 0 && (
+        <Section title="地方">
+          <p className="text-[14px] leading-6 text-neutral-700">{towns.join('、')}</p>
+        </Section>
+      )}
 
       <Section title="主要去处">
         <p className="text-[14px] leading-6 text-neutral-700">{d.places}</p>

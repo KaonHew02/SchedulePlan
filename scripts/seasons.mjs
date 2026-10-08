@@ -55,8 +55,8 @@ const AREAS = JSON.parse(readFileSync(AREAS_FILE, 'utf8'))
  * which writes only these, would quietly drop it.
  */
 const DESTINATION_KEYS = [
-  'id', 'area', 'country', 'region', 'countries', 'holidayRegion', 'airports', 'via',
-  'places', 'summary', 'climate', 'ratings', 'notes', 'highlights', 'avoid', 'tips',
+  'id', 'area', 'country', 'region', 'part', 'countries', 'holidayRegion', 'airports', 'via',
+  'cities', 'places', 'summary', 'climate', 'ratings', 'notes', 'highlights', 'avoid', 'tips',
 ]
 const HIGHLIGHT_KEYS = ['m', 't', 'rule', 'offset', 'days']
 const EVENT_KEYS = ['ids', 'm', 't']
@@ -147,12 +147,14 @@ function formatDestination(d) {
   return [
     '    {',
     ...['id', 'area', 'country', 'region'].map((key) => `      ${s(key)}: ${s(d[key])},`),
+    ...(d.part !== undefined ? [`      "part": ${s(d.part)},`] : []),
     `      "countries": [${d.countries.map((c) => s(c)).join(', ')}],`,
     ...(d.holidayRegion !== undefined ? [`      "holidayRegion": ${s(d.holidayRegion)},`] : []),
     `      "airports": [${d.airports.map((c) => s(c)).join(', ')}],`,
     ...(d.via !== undefined
       ? [`      "via": { "airports": [${d.via.airports.map((c) => s(c)).join(', ')}], "t": ${s(d.via.t)} },`]
       : []),
+    `      "cities": [${d.cities.map((c) => s(c)).join(', ')}],`,
     ...['places', 'summary', 'climate'].map((key) => `      ${s(key)}: ${s(d[key])},`),
     `      "ratings": [${d.ratings.join(', ')}],`,
     '      "notes": [',
@@ -327,6 +329,21 @@ export function check(file, events, names, home) {
       }
     }
 
+    // 地方: the towns a trip there is logged as, at least one, each once. The
+    // part is the stretch of a region with several entries — 四川's 九寨沟黄龙.
+    if (
+      !Array.isArray(d.cities) ||
+      d.cities.length === 0 ||
+      d.cities.some((city) => typeof city !== 'string' || !city.trim())
+    ) {
+      say(at, 'cities should name at least one town, like ["三亚", "海口"]')
+    } else if (new Set(d.cities).size !== d.cities.length) {
+      say(at, 'a city is listed twice')
+    }
+    if (d.part !== undefined && (typeof d.part !== 'string' || !d.part.trim())) {
+      say(at, 'part should be the stretch of the region this covers, or left out')
+    }
+
     // The airports it is flown to — none for somewhere nobody can fly to now —
     // and, where the usual way in is overland from a bigger one, that one.
     if (!Array.isArray(d.airports) || !d.airports.every(isCode)) {
@@ -387,6 +404,8 @@ export function check(file, events, names, home) {
       ...(d.notes ?? []),
       ...(d.highlights ?? []).map((h) => h.t),
       d.via?.t,
+      d.part,
+      ...(Array.isArray(d.cities) ? d.cities : []),
     ]
     for (const text of texts) {
       if (typeof text === 'string' && A_YEAR.test(text)) {
@@ -447,6 +466,10 @@ export function check(file, events, names, home) {
   return problems
 }
 
+/** 中国·四川·九寨沟黄龙, 日本·北海道, 新加坡: a destination as the reports name it. */
+const whereOf = (d) =>
+  d.region === d.country ? d.country : [d.country, d.region, d.part].filter(Boolean).join('·')
+
 // ---------------------------------------------------------------- flights
 
 /**
@@ -480,7 +503,7 @@ function flightsReport(file, flights, names) {
     const flown = (code) => kinds.has(code) || flights.home.includes(code)
     if (d.via && !d.via.airports.some(flown)) stranded.push(`  ${d.id}  via ${d.via.airports.join(' ')}`)
     const key = reach.kind === 'home' || reach.kind === 'connect' ? reach.kind : `${reach.kind}${reach.via ? ' then overland' : ''}`
-    const where = d.region === d.country ? d.country : `${d.country}·${d.region}`
+    const where = whereOf(d)
     const codes = reach.codes ? `  ${reach.codes.map((code) => `${names[code]} ${code}`).join('、')}` : ''
     groups.set(key, [...(groups.get(key) ?? []), `  ${d.id.padEnd(30)} ${where}${codes}`])
   }
@@ -521,7 +544,7 @@ function report(file, events, year) {
   const rows = []
   for (const { d, h } of ruled) {
     for (const { start, end } of spansIn(h, around, year)) {
-      const where = d.region === d.country ? d.country : `${d.country}·${d.region}`
+      const where = whereOf(d)
       rows.push({ start, line: `  ${label(start, end).padEnd(14, '　')} ${where}  ${h.t}` })
     }
   }
@@ -549,7 +572,7 @@ function review(file) {
     }
     if (lines.length) {
       count += lines.length
-      console.log(`  ${d.id}  ${d.country} · ${d.region}`)
+      console.log(`  ${d.id}  ${whereOf(d)}`)
       for (const line of lines) console.log(line)
     }
   }

@@ -18,6 +18,7 @@ import {
   seasonsOf,
   spanIn,
   spanLabel,
+  townsOf,
   useRuleDates,
   useSeasons,
   type Destination,
@@ -129,10 +130,15 @@ function Strip({ ratings, month }: { ratings: number[]; month: number }) {
   )
 }
 
-/** Under the name: the country, or the first few places when the country is already the heading. */
+/**
+ * Under the name: its 地方 — 三亚、海口、万宁 under 海南 — after the country
+ * where the heading does not already say it (日本 · 札幌、小樽). Somewhere that
+ * is one town, Singapore or 北京, shows its first few sights instead.
+ */
 function subtitle(d: Destination): string {
-  if (d.region !== d.country && d.country !== d.area) return d.country
-  return d.places.split('、').slice(0, 3).join('、')
+  const towns = townsOf(d)
+  const where = towns.length > 0 ? towns.slice(0, 4).join('、') : d.places.split('、').slice(0, 3).join('、')
+  return d.region !== d.country && d.country !== d.area ? `${d.country} · ${where}` : where
 }
 
 function Card({
@@ -237,7 +243,7 @@ function Row({ d, month, onOpen }: { d: Destination; month: number; onOpen: (d: 
       className="grid w-full grid-cols-1 gap-x-4 gap-y-0.5 py-2.5 text-left md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
     >
       <span className="truncate text-[14px] font-medium">
-        {d.region === d.country ? d.country : `${d.country} · ${d.region}`}
+        {d.region === d.country ? d.country : `${d.country} · ${nameOf(d)}`}
       </span>
       <span className="text-[13px] leading-5 text-neutral-500">{d.notes[month - 1]}</span>
     </button>
