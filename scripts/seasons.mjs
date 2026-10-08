@@ -5,7 +5,8 @@
  *   npm run seasons -- --year 2028   check, then the report for 2028
  *   npm run seasons -- --check       check only — `npm run build` runs this
  *   npm run seasons -- --review      the sentences that go out of date
- *   npm run seasons -- --format      check, then rewrite both files in the house layout
+ *   npm run seasons -- --flights     where there is a direct flight to, and where not
+ *   npm run seasons -- --format      check, then rewrite the files in the house layout
  *
  * The calendar is two files. src/seasons/destinations.json is the part that
  * holds from one year to the next — the weather, the ratings, the flowers —
@@ -19,6 +20,12 @@
  * sentence is right for one year and wrong for every one after it, and the
  * check below refuses it: a date that belongs to one year goes in events.json,
  * and one that comes round every year goes in a rule.
+ *
+ * Getting there is two files more. src/seasons/airports.json names the
+ * airports every destination is reached by, which do not move, and
+ * src/seasons/flights.json lists the places Kuala Lumpur flies to without a
+ * change of plane, which moves every few months and is read through with the
+ * rest.
  *
  * The check runs before every build, so a file that would draw a broken
  * screen is never published. See docs/SEASONS.md.
@@ -35,6 +42,8 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const DESTINATIONS = join(ROOT, 'src/seasons/destinations.json')
 const EVENTS = join(ROOT, 'src/seasons/events.json')
 const AREAS_FILE = join(ROOT, 'src/seasons/areas.json')
+const AIRPORTS = join(ROOT, 'src/seasons/airports.json')
+const FLIGHTS = join(ROOT, 'src/seasons/flights.json')
 const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
 /** The same list the screen groups by, so the two cannot disagree. */
@@ -46,11 +55,15 @@ const AREAS = JSON.parse(readFileSync(AREAS_FILE, 'utf8'))
  * which writes only these, would quietly drop it.
  */
 const DESTINATION_KEYS = [
-  'id', 'area', 'country', 'region', 'countries', 'holidayRegion', 'places',
-  'summary', 'climate', 'ratings', 'notes', 'highlights', 'avoid', 'tips',
+  'id', 'area', 'country', 'region', 'countries', 'holidayRegion', 'airports', 'via',
+  'places', 'summary', 'climate', 'ratings', 'notes', 'highlights', 'avoid', 'tips',
 ]
 const HIGHLIGHT_KEYS = ['m', 't', 'rule', 'offset', 'days']
 const EVENT_KEYS = ['ids', 'm', 't']
+const VIA_KEYS = ['airports', 't']
+const FLIGHT_KEYS = ['checked', 'from', 'home', 'direct', 'stop', 'seasonal', 'charter']
+/** The kinds of flight in flights.json, best first — the order the app picks in. */
+const ROUTE_KINDS = ['direct', 'stop', 'seasonal', 'charter']
 
 const TEXT_FIELDS = ['id', 'area', 'country', 'region', 'places', 'summary', 'climate', 'avoid', 'tips']
 
@@ -136,6 +149,10 @@ function formatDestination(d) {
     ...['id', 'area', 'country', 'region'].map((key) => `      ${s(key)}: ${s(d[key])},`),
     `      "countries": [${d.countries.map((c) => s(c)).join(', ')}],`,
     ...(d.holidayRegion !== undefined ? [`      "holidayRegion": ${s(d.holidayRegion)},`] : []),
+    `      "airports": [${d.airports.map((c) => s(c)).join(', ')}],`,
+    ...(d.via !== undefined
+      ? [`      "via": { "airports": [${d.via.airports.map((c) => s(c)).join(', ')}], "t": ${s(d.via.t)} },`]
+      : []),
     ...['places', 'summary', 'climate'].map((key) => `      ${s(key)}: ${s(d[key])},`),
     `      "ratings": [${d.ratings.join(', ')}],`,
     '      "notes": [',
@@ -179,13 +196,86 @@ export function formatEvents(events) {
   )
 }
 
+/** One airport a line, in code order. */
+export function formatAirports(names) {
+  const lines = Object.keys(names)
+    .sort()
+    .map((code) => `  ${JSON.stringify(code)}: ${JSON.stringify(names[code])}`)
+  return `{\n${lines.join(',\n')}\n}\n`
+}
+
+/** The routes sixteen to a line, in code order, so a new one is a diff of one word. */
+export function formatFlights(flights) {
+  const s = JSON.stringify
+  const codes = (list) => {
+    const sorted = [...list].sort()
+    const lines = []
+    for (let i = 0; i < sorted.length; i += 16) lines.push(sorted.slice(i, i + 16).map(s).join(', '))
+    return lines.length > 1 ? `[\n    ${lines.join(',\n    ')}\n  ]` : `[${lines.join('')}]`
+  }
+  const stops = Object.keys(flights.stop).sort()
+  return [
+    '{',
+    `  "checked": ${s(flights.checked)},`,
+    `  "from": ${s(flights.from)},`,
+    `  "home": ${codes(flights.home)},`,
+    `  "direct": ${codes(flights.direct)},`,
+    `  "stop": { ${stops.map((code) => `${s(code)}: ${s(flights.stop[code])}`).join(', ')} },`,
+    `  "seasonal": ${codes(flights.seasonal)},`,
+    `  "charter": ${codes(flights.charter)}`,
+    '}',
+    '',
+  ].join('\n')
+}
+
 // ------------------------------------------------------------------ check
+
+const isCode = (code) => typeof code === 'string' && /^[A-Z]{3}$/.test(code)
+
+/** Each route's kinds. More than one is a mistake: a flight is one or the other. */
+function routeKinds(flights) {
+  const kinds = new Map()
+  for (const kind of ROUTE_KINDS) {
+    const codes = kind === 'stop' ? Object.keys(flights.stop ?? {}) : (flights[kind] ?? [])
+    for (const code of codes) kinds.set(code, [...(kinds.get(code) ?? []), kind])
+  }
+  return kinds
+}
+
+export function checkFlights(flights, names) {
+  const problems = []
+  const say = (what) => problems.push(`${shown(FLIGHTS)}: ${what}`)
+  for (const key of unknownKeys(flights, FLIGHT_KEYS)) say(`unknown key "${key}" — a typo?`)
+  if (!/^\d{4}-\d{2}$/.test(flights.checked ?? '')) say('checked should be YYYY-MM')
+  if (typeof flights.from !== 'string' || !flights.from.trim()) say('from should name the city')
+  if (!Array.isArray(flights.home) || flights.home.length === 0 || !flights.home.every(isCode)) {
+    say('home should be the airports of the city flown from, like ["KUL"]')
+  }
+  for (const kind of ['direct', 'seasonal', 'charter']) {
+    if (!Array.isArray(flights[kind]) || !flights[kind].every(isCode)) say(`${kind} should be a list of airport codes`)
+  }
+  if (typeof flights.stop !== 'object' || flights.stop === null || Array.isArray(flights.stop)) {
+    say('stop should map each airport code to the city the flight stops in')
+  } else {
+    for (const [code, city] of Object.entries(flights.stop)) {
+      if (!isCode(code) || typeof city !== 'string' || !city.trim()) say(`stop "${code}" should name the city it stops in`)
+    }
+  }
+  if (problems.length) return problems
+
+  for (const [code, kinds] of routeKinds(flights)) {
+    if (kinds.length > 1) say(`${code} is under ${kinds.join(' and ')} — it can only be one`)
+    if (flights.home.includes(code)) say(`${code} is home, not somewhere to fly to`)
+  }
+  for (const code of flights.home) if (!names[code]) say(`home airport ${code} has no name in ${shown(AIRPORTS)}`)
+  return problems
+}
 
 const isMonth = (m) => Number.isInteger(m) && m >= 1 && m <= 12
 const isMonths = (list) => Array.isArray(list) && list.length > 0 && list.every(isMonth)
 const unknownKeys = (record, allowed) => Object.keys(record ?? {}).filter((key) => !allowed.includes(key))
 
-export function check(file, events) {
+export function check(file, events, names, home) {
   const problems = []
   const say = (where, what) => problems.push(`${where}: ${what}`)
 
@@ -221,6 +311,30 @@ export function check(file, events) {
       }
     }
 
+    // The airports it is flown to — none for somewhere nobody can fly to now —
+    // and, where the usual way in is overland from a bigger one, that one.
+    if (!Array.isArray(d.airports) || !d.airports.every(isCode)) {
+      say(at, 'airports should be a list of codes like ["NRT", "HND"], or [] for none')
+    } else if (new Set(d.airports).size !== d.airports.length) {
+      say(at, 'an airport is listed twice')
+    }
+    if (d.via !== undefined) {
+      for (const key of unknownKeys(d.via, VIA_KEYS)) say(`${at} via`, `unknown key "${key}" — a typo?`)
+      if (!Array.isArray(d.via.airports) || d.via.airports.length === 0 || !d.via.airports.every(isCode)) {
+        say(`${at} via`, 'airports should name at least one airport')
+      } else if (d.via.airports.some((code) => d.airports?.includes(code))) {
+        say(`${at} via`, 'an airport is under both airports and via')
+      }
+      if (typeof d.via.t !== 'string' || !d.via.t.trim()) say(`${at} via`, 'should say how to go on from there')
+    }
+    const codes = [
+      ...(Array.isArray(d.airports) ? d.airports : []),
+      ...(Array.isArray(d.via?.airports) ? d.via.airports : []),
+    ]
+    for (const code of codes) {
+      if (isCode(code) && !names[code]) say(at, `airport ${code} has no name in ${shown(AIRPORTS)}`)
+    }
+
     if (
       !Array.isArray(d.ratings) ||
       d.ratings.length !== 12 ||
@@ -254,6 +368,7 @@ export function check(file, events) {
       ...TEXT_FIELDS.map((key) => d[key]),
       ...(d.notes ?? []),
       ...(d.highlights ?? []).map((h) => h.t),
+      d.via?.t,
     ]
     for (const text of texts) {
       if (typeof text === 'string' && A_YEAR.test(text)) {
@@ -303,7 +418,57 @@ export function check(file, events) {
     }
   }
 
+  // A name nothing uses is an airport taken out of a destination and left
+  // behind. Kept out, so the file stays the list of the ones that matter.
+  const used = new Set(file.destinations.flatMap((d) => [...(d.airports ?? []), ...(d.via?.airports ?? [])]))
+  for (const code of Object.keys(names)) {
+    if (!used.has(code) && !home.includes(code)) say(shown(AIRPORTS), `${code} is named but no destination uses it`)
+  }
+
   return problems
+}
+
+// ---------------------------------------------------------------- flights
+
+/**
+ * How a destination is reached from home: the same as `reachOf` in
+ * src/seasons/seasons.ts. Home itself, or reached by land from it; else the
+ * best flight, nonstop before a stop before seasonal before a charter, and
+ * at the place before one a train or a drive away; else a change of plane.
+ */
+export function reachOf(d, flights) {
+  const via = d.via?.airports ?? []
+  if ([...d.airports, ...via].some((code) => flights.home.includes(code))) return { kind: 'home' }
+  const kinds = new Map(
+    [...routeKinds(flights)].map(([code, list]) => [code, list[0]]),
+  )
+  for (const kind of ROUTE_KINDS) {
+    for (const [codes, over] of [[d.airports, false], [via, true]]) {
+      const hits = codes.filter((code) => kinds.get(code) === kind)
+      if (hits.length) return { kind, codes: hits, via: over }
+    }
+  }
+  return { kind: 'connect' }
+}
+
+function flightsReport(file, flights, names) {
+  const groups = new Map()
+  for (const d of file.destinations) {
+    const reach = reachOf(d, flights)
+    const key = reach.kind === 'home' || reach.kind === 'connect' ? reach.kind : `${reach.kind}${reach.via ? ' then overland' : ''}`
+    const where = d.region === d.country ? d.country : `${d.country}·${d.region}`
+    const codes = reach.codes ? `  ${reach.codes.map((code) => `${names[code]} ${code}`).join('、')}` : ''
+    groups.set(key, [...(groups.get(key) ?? []), `  ${d.id.padEnd(30)} ${where}${codes}`])
+  }
+  console.log(`\nFrom ${flights.from}, routes checked ${flights.checked}\n`)
+  const order = ['home', ...ROUTE_KINDS.flatMap((kind) => [kind, `${kind} then overland`]), 'connect']
+  for (const key of order) {
+    const lines = groups.get(key)
+    if (!lines) continue
+    console.log(`${key} (${lines.length}):`)
+    for (const line of lines) console.log(line)
+    console.log('')
+  }
 }
 
 // ----------------------------------------------------------------- report
@@ -371,10 +536,12 @@ const year = yearArg >= 0 ? Number(args[yearArg + 1]) : new Date().getFullYear()
 
 const file = JSON.parse(readFileSync(DESTINATIONS, 'utf8'))
 const events = JSON.parse(readFileSync(EVENTS, 'utf8'))
+const names = JSON.parse(readFileSync(AIRPORTS, 'utf8'))
+const flights = JSON.parse(readFileSync(FLIGHTS, 'utf8'))
 
 // Checked before anything is written, so --format never rewrites a file it
 // would have refused.
-const problems = check(file, events)
+const problems = [...checkFlights(flights, names), ...check(file, events, names, Array.isArray(flights.home) ? flights.home : [])]
 if (problems.length) {
   console.error(`Seasons: ${problems.length} problem${problems.length === 1 ? '' : 's'} in the data.\n`)
   for (const problem of problems) console.error(`  ${problem}`)
@@ -384,11 +551,15 @@ if (problems.length) {
 if (flag('--format')) {
   writeFileSync(DESTINATIONS, formatDestinations(file))
   writeFileSync(EVENTS, formatEvents(events))
-  console.log(`Rewrote ${shown(DESTINATIONS)} and ${shown(EVENTS)}.`)
+  writeFileSync(AIRPORTS, formatAirports(names))
+  writeFileSync(FLIGHTS, formatFlights(flights))
+  console.log(`Rewrote ${[DESTINATIONS, EVENTS, AIRPORTS, FLIGHTS].map(shown).join(', ')}.`)
 } else if (flag('--check')) {
   console.log(`Seasons: ${file.destinations.length} destinations, all well formed.`)
 } else if (flag('--review')) {
   review(file)
+} else if (flag('--flights')) {
+  flightsReport(file, flights, names)
 } else {
   if (!Number.isInteger(year) || year < 1970) {
     console.error('--year needs a year, like --year 2028')

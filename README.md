@@ -162,7 +162,10 @@ territories in all — each rated month by month as best, good, possible or
 not advisable, with a line for every month: the temperature, what is in
 flower, the typhoon or the monsoon. Pick a month to see everywhere at its
 best then, grouped by part of the world, or turn to the whole-year table
-and read one place across. A destination opens onto its full year, its
+and read one place across. Narrow either to where Kuala Lumpur flies direct
+(直飞) or to where it takes a change of plane (要转机): each place says which —
+直飞东京, 直飞杭州，再坐车 for Huangshan a train ride on, 季节性直飞 for
+Hokkaido. A destination opens onto its full year, how to get there, its
 highlights, what to avoid and the tips, and goes onto the wishlist in a tap
 with its best months in the note.
 
@@ -172,8 +175,8 @@ a rule rather than a date, and are worked out on the phone for whichever year
 is picked, by the same holiday library the calendar uses — as are each
 destination's public holidays for that year, its state's included (Kaamatan in
 Sabah, Mardi Gras in Louisiana). What cannot be worked out — the
-year's Olympics and eclipses, a visa rule that changed — is a short
-read-through once a year, listed by `npm run seasons`. How it fits together:
+year's Olympics and eclipses, a visa rule that changed, a route opened or
+dropped — is a short read-through once a year, listed by `npm run seasons`. How it fits together:
 [docs/SEASONS.md](docs/SEASONS.md).
 
 **Scanner** — photograph a receipt or a booking. The lighting is flattened out

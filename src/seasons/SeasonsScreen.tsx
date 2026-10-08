@@ -1,16 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Segmented, Toggle } from '../components/FormFields'
-import { ChevronLeft, ChevronRight } from '../components/Icons'
+import { ChevronLeft, ChevronRight, PlaneIcon } from '../components/Icons'
 import DestinationSheet from './DestinationSheet'
 import {
   AREAS,
   EVENT_YEARS,
+  FLIGHTS,
   RATING_LABEL,
   RATING_TINT,
   eventsIn,
   highlightMonths,
   matches,
   nameOf,
+  noChange,
+  reachLabel,
+  reachOf,
   seasonsOf,
   spanIn,
   spanLabel,
@@ -37,6 +41,13 @@ import {
 
 type View = 'month' | 'year'
 
+/**
+ * Flights from home. 直飞 is everywhere got to without changing planes: a
+ * flight straight there, one that stops on the way, one a train ride short of
+ * it — each card says which — and the places a drive from home.
+ */
+type Flight = 'all' | 'direct' | 'connect'
+
 /** What there is before the data arrives — one array, so the memos hold still. */
 const NO_DESTINATIONS: Destination[] = []
 
@@ -44,6 +55,14 @@ const VIEWS: { value: View; label: string }[] = [
   { value: 'month', label: '这个月去哪' },
   { value: 'year', label: '全年日历' },
 ]
+
+const FLIGHT_CHOICES: { value: Flight; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'direct', label: '直飞' },
+  { value: 'connect', label: '要转机' },
+]
+
+const fits = (d: Destination, flight: Flight) => flight === 'all' || noChange(d) === (flight === 'direct')
 
 /*
  * What was on screen, kept for the next time the tab is opened. Switching to
@@ -61,6 +80,7 @@ const kept = {
   view: 'month' as View,
   area: '全部',
   query: '',
+  flight: 'all' as Flight,
   onlyBest: false,
 }
 
@@ -182,8 +202,30 @@ function Card({
         </span>
       )}
 
+      <FlightLine d={d} />
       <Strip ratings={d.ratings} month={month} />
     </button>
+  )
+}
+
+/**
+ * How it is got to from home, in a line. Green when there is no change of
+ * plane, amber when the flight is there only some months or with a tour,
+ * grey when there is a change somewhere.
+ */
+function FlightLine({ d }: { d: Destination }) {
+  const reach = reachOf(d)
+  const tone =
+    reach.kind === 'connect'
+      ? 'text-neutral-400'
+      : reach.kind === 'seasonal' || reach.kind === 'charter'
+        ? 'text-amber-700'
+        : 'text-emerald-700'
+  return (
+    <span className={`flex items-center gap-1.5 text-[12px] leading-[18px] ${tone}`}>
+      <PlaneIcon className="h-3.5 w-3.5" />
+      <span className="min-w-0 truncate">{reachLabel(reach)}</span>
+    </span>
   )
 }
 
@@ -209,6 +251,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   const [view, setViewState] = useState<View>(kept.view)
   const [area, setAreaState] = useState(kept.area)
   const [query, setQueryState] = useState(kept.query)
+  const [flight, setFlightState] = useState<Flight>(kept.flight)
   const [onlyBest, setOnlyBestState] = useState(kept.onlyBest)
   const [open, setOpen] = useState<Destination | null>(null)
 
@@ -217,15 +260,18 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   const setView = (value: View) => setViewState((kept.view = value))
   const setArea = (value: string) => setAreaState((kept.area = value))
   const setQuery = (value: string) => setQueryState((kept.query = value))
+  const setFlight = (value: Flight) => setFlightState((kept.flight = value))
   const setOnlyBest = (value: boolean) => setOnlyBestState((kept.onlyBest = value))
 
   const dates = useRuleDates(data, year)
   const events = eventsIn(year)
 
   const all = data?.destinations ?? NO_DESTINATIONS
-  // The search first, then the area: the chips count what the search found,
-  // so 樱花 shows at a glance which parts of the world have any.
-  const found = useMemo(() => all.filter((d) => matches(d, query.trim())), [all, query])
+  // The search first, then the flights and the area: each row of chips counts
+  // what the search and the other row let through, so 樱花 shows at a glance
+  // which parts of the world have any, and how many of those are 直飞.
+  const searched = useMemo(() => all.filter((d) => matches(d, query.trim())), [all, query])
+  const found = useMemo(() => searched.filter((d) => fits(d, flight)), [searched, flight])
   const list = useMemo(() => found.filter((d) => area === '全部' || d.area === area), [found, area])
 
   const perArea = useMemo(() => {
@@ -233,6 +279,12 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
     for (const d of found) counts.set(d.area, (counts.get(d.area) ?? 0) + 1)
     return counts
   }, [found])
+
+  const perFlight = useMemo(() => {
+    const here = searched.filter((d) => area === '全部' || d.area === area)
+    const direct = here.filter(noChange).length
+    return { all: here.length, direct, connect: here.length - direct }
+  }, [searched, area])
 
   // How many places are at their best in each month, for the strip.
   const bestBy = useMemo(
@@ -342,6 +394,25 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           ))}
         </div>
 
+        <div className="flex flex-wrap items-center gap-1.5 pt-2" role="group" aria-label={`从${FLIGHTS.from}的航班`}>
+          <span className="flex items-center gap-1 pr-1 text-[13px] text-neutral-500">
+            <PlaneIcon className="h-3.5 w-3.5" />从{FLIGHTS.from}
+          </span>
+          {FLIGHT_CHOICES.map((choice) => (
+            <button
+              key={choice.value}
+              onClick={() => setFlight(choice.value)}
+              aria-pressed={flight === choice.value}
+              className={`rounded-full px-3 py-1 text-[13px] transition-colors ${
+                flight === choice.value ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'
+              }`}
+            >
+              {choice.label}
+              <span className="ml-1 text-[11px] tabular-nums opacity-60">{perFlight[choice.value]}</span>
+            </button>
+          ))}
+        </div>
+
         {!data ? (
           <p className="py-16 text-center text-[13px] text-neutral-400">
             {failed ? '没能载入目的地。连上网络后再打开一次。' : '正在载入目的地…'}
@@ -351,7 +422,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             <p className="text-[14px] text-neutral-600">没有找到{query.trim() && `「${query.trim()}」`}</p>
             <p className="mx-auto mt-1 max-w-[300px] text-[13px] leading-5 text-neutral-400">
               试试国家名、城市名，或者「樱花」「极光」「潜水」这样的关键词
-              {area !== '全部' && '，也可以把地区切回「全部」'}。
+              {area !== '全部' && '，也可以把地区切回「全部」'}
+              {flight !== 'all' && '，或者把航班切回「全部」'}。
             </p>
           </div>
         ) : view === 'month' ? (
@@ -441,6 +513,10 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           </p>
           {!EVENT_YEARS.includes(year) && <p>{year} 年的特别活动（奥运、日食、世博之类）还没有整理进来。</p>}
           {data && <p>签证、门票和开放时间以官方为准。资料核对于 {data.reviewed.replace('-', ' 年 ')} 月。</p>}
+          <p>
+            直飞指从{FLIGHTS.from}出发不用换飞机，包括中途经停，和直飞附近城市再坐车。航线常有增减，核对于{' '}
+            {FLIGHTS.checked.replace('-', ' 年 ')} 月，订票前以航空公司为准。
+          </p>
         </div>
       </main>
 

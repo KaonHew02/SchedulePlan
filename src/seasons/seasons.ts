@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays } from '../lib/date'
+import airportsFile from './airports.json'
 import areasFile from './areas.json'
 import eventsFile from './events.json'
+import flightsFile from './flights.json'
 
 /**
  * The travel calendar: where in the world is at its best in which month.
@@ -23,6 +25,11 @@ import eventsFile from './events.json'
  * on the phone for whichever year is on screen, by the same date-holidays
  * library that puts public holidays on the calendar. That is what lets the
  * calendar turn the year by itself.
+ *
+ * And getting there: every destination names the airports it is flown to,
+ * which do not move, and `flights.json` says which of them Kuala Lumpur flies
+ * to without a change of plane, which does — so it is a file of its own, read
+ * through with the rest.
  */
 
 /** 3 best, 2 good, 1 possible but not the time, 0 not advisable. */
@@ -63,6 +70,17 @@ export interface Destination {
    * uses the same ones). Left out, the sheet shows the country's own.
    */
   holidayRegion?: string
+  /**
+   * The airports it is flown to, as IATA codes: CTS for Hokkaido, NRT and HND
+   * for Tokyo. Empty for somewhere with none, or none anyone can fly to now.
+   */
+  airports: string[]
+  /**
+   * Where the usual way in is by land or sea from a bigger airport — Huangshan
+   * by train from Hangzhou, Kyrgyzstan by road from Almaty — that airport,
+   * and how to go on from it.
+   */
+  via?: Via
   places: string
   summary: string
   climate: string
@@ -73,6 +91,12 @@ export interface Destination {
   highlights: Highlight[]
   avoid: string
   tips: string
+}
+
+export interface Via {
+  airports: string[]
+  /** 杭州坐高铁到黄山北站约1.5小时. */
+  t: string
 }
 
 /** Something that happens in one year only. */
@@ -335,6 +359,107 @@ export function spanLabel(span: Span, rule?: string): string {
           ? `${m1}月${d1}–${d2}日`
           : `${m1}月${d1}日–${m2}月${d2}日`
   return rule && SIGHTED.test(rule) ? `约${text}` : text
+}
+
+// ----------------------------------------------------------------- flights
+
+/**
+ * How a flight from home gets there, best first. A stop is the same plane all
+ * the way with a landing on the way — in China, where everyone gets off for
+ * immigration. Seasonal flies some months only; a charter is sold mostly with
+ * a tour.
+ */
+export type FlightKind = 'direct' | 'stop' | 'seasonal' | 'charter'
+
+const KINDS: FlightKind[] = ['direct', 'stop', 'seasonal', 'charter']
+
+interface Flights {
+  /** When the routes were last read through, YYYY-MM. */
+  checked: string
+  /** The city they are flown from: 吉隆坡. */
+  from: string
+  /** Its airports: KLIA and Subang. */
+  home: string[]
+  direct: string[]
+  /** Each stopping flight, with the city it stops in. */
+  stop: Record<string, string>
+  seasonal: string[]
+  charter: string[]
+}
+
+export const FLIGHTS = flightsFile as Flights
+
+const AIRPORT_NAMES = airportsFile as Record<string, string>
+
+const KIND_OF = new Map<string, FlightKind>()
+for (const kind of KINDS) {
+  for (const code of kind === 'stop' ? Object.keys(FLIGHTS.stop) : FLIGHTS[kind]) KIND_OF.set(code, kind)
+}
+
+export const kindOf = (code: string): FlightKind | undefined => KIND_OF.get(code)
+
+/**
+ * How a destination is got to from home.
+ *
+ * Home itself, or a drive from it. Otherwise the best flight there is: one
+ * without a stop before one with, before a seasonal one, before a charter —
+ * and to the place itself before one a train ride away. Otherwise a change
+ * of plane somewhere.
+ */
+export type Reach =
+  | { kind: 'home'; overland: boolean }
+  | { kind: FlightKind; codes: string[]; overland: boolean }
+  | { kind: 'connect' }
+
+const reaches = new WeakMap<Destination, Reach>()
+
+export function reachOf(d: Destination): Reach {
+  const known = reaches.get(d)
+  if (known) return known
+  const via = d.via?.airports ?? []
+  const atHome = (codes: string[]) => codes.some((code) => FLIGHTS.home.includes(code))
+  let reach: Reach = { kind: 'connect' }
+  if (atHome(d.airports) || atHome(via)) {
+    reach = { kind: 'home', overland: !atHome(d.airports) }
+  } else {
+    search: for (const kind of KINDS) {
+      for (const [codes, overland] of [[d.airports, false], [via, true]] as const) {
+        const hits = codes.filter((code) => KIND_OF.get(code) === kind)
+        if (hits.length) {
+          reach = { kind, codes: hits, overland }
+          break search
+        }
+      }
+    }
+  }
+  reaches.set(d, reach)
+  return reach
+}
+
+/** Got to without changing planes: a flight of any kind, or no flight at all. */
+export const noChange = (d: Destination) => reachOf(d).kind !== 'connect'
+
+/** 东京·成田 is 东京成田 written out. An airport with no name keeps its code. */
+export const airportName = (code: string) => (AIRPORT_NAMES[code] ?? code).replace('·', '')
+
+/** The cities some airports are in, each once: 成田 and 羽田 are both 东京. */
+export function citiesOf(codes: string[]): string {
+  const cities = codes.map((code) => (AIRPORT_NAMES[code] ?? code).split('·')[0])
+  return cities.filter((city, i) => cities.indexOf(city) === i).join('、')
+}
+
+/** The line on a card: 直飞东京, 直飞杭州，再坐车, 要转机. */
+export function reachLabel(reach: Reach): string {
+  if (reach.kind === 'connect') return '要转机'
+  if (reach.kind === 'home') return reach.overland ? `${FLIGHTS.from}开车可到` : `就在${FLIGHTS.from}`
+  const cities = citiesOf(reach.codes)
+  const flight = {
+    direct: `直飞${cities}`,
+    stop: `经停航班到${cities}`,
+    seasonal: `季节性直飞${cities}`,
+    charter: `包机直飞${cities}`,
+  }[reach.kind]
+  return reach.overland ? `${flight}，再坐车` : flight
 }
 
 // ----------------------------------------------------------------- reading

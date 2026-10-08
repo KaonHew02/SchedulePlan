@@ -5,14 +5,19 @@ import { useHolidayYear, type Holiday } from '../lib/holidays'
 import { countryName, countryOf } from '../lib/places'
 import { saveWish, useWishlist } from '../lib/store'
 import {
+  FLIGHTS,
   RATING_LABEL,
   RATING_TINT,
+  airportName,
   eventsIn,
+  kindOf,
   monthsLabel,
   nameOf,
+  reachOf,
   spanLabel,
   spansOf,
   type Destination,
+  type FlightKind,
 } from './seasons'
 
 /**
@@ -31,6 +36,57 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h3 className="pb-1.5 text-[13px] font-medium text-neutral-400">{title}</h3>
       {children}
     </section>
+  )
+}
+
+const FLIGHT_ROWS: { kind: FlightKind; label: string; after?: string }[] = [
+  { kind: 'direct', label: '直飞' },
+  { kind: 'stop', label: '经停' },
+  { kind: 'seasonal', label: '季节性直飞', after: '（只在部分月份飞）' },
+  { kind: 'charter', label: '包机直飞', after: '（多随旅行团出售）' },
+]
+
+/**
+ * Getting there from home, a line for each way: the flights to the place and
+ * to the airport a train ride from it, how to go on from that one, and the
+ * place's own airports that can only be reached with a change of plane.
+ */
+function GettingThere({ d }: { d: Destination }) {
+  const reach = reachOf(d)
+  const home = reach.kind === 'home'
+  const codes = [...d.airports, ...(d.via?.airports ?? [])]
+  const rows: { label: string; text: string }[] = []
+
+  if (home && !reach.overland) rows.push({ label: '出发地', text: `就在${FLIGHTS.from}，不用坐飞机` })
+  for (const { kind, label, after = '' } of FLIGHT_ROWS) {
+    const here = codes.filter((code) => kindOf(code) === kind)
+    if (here.length === 0) continue
+    const names = here.map((code) =>
+      kind === 'stop' ? `${airportName(code)}（在${FLIGHTS.stop[code]}经停）` : airportName(code),
+    )
+    rows.push({ label, text: names.join('、') + after })
+  }
+  if (d.via) rows.push({ label: home ? `从${FLIGHTS.from}` : '再坐车', text: d.via.t })
+  const unflown = d.airports.filter((code) => !kindOf(code))
+  if (!home && unflown.length > 0) {
+    rows.push({ label: '要转机', text: `转机飞到${unflown.map(airportName).join('、')}` })
+  }
+  if (rows.length === 0) rows.push({ label: '要转机', text: '目前没有民航航班飞到当地' })
+
+  return (
+    <>
+      <ul className="space-y-1">
+        {rows.map((row) => (
+          <li key={row.label} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5">
+            <span className={row.label === '要转机' ? 'text-neutral-400' : 'font-medium text-emerald-700'}>{row.label}</span>
+            <span className="text-neutral-700">{row.text}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
+        航线核对于 {FLIGHTS.checked.replace('-', ' 年 ')} 月，常有增减，订票前以航空公司为准。
+      </p>
+    </>
   )
 }
 
@@ -168,6 +224,10 @@ export default function DestinationSheet({
 
       <Section title="主要去处">
         <p className="text-[14px] leading-6 text-neutral-700">{d.places}</p>
+      </Section>
+
+      <Section title={`怎么去 · 从${FLIGHTS.from}出发`}>
+        <GettingThere d={d} />
       </Section>
 
       <Section title={`逐月 · 最佳 ${monthsLabel(best)}`}>

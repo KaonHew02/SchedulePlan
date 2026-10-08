@@ -27,6 +27,8 @@ both. See *The yearly read-through* below.
 | Highlights on a moving date: Chinese New Year, Eid, Easter, Carnival | `destinations.json`, as a **rule** | **Worked out on the phone** for the year on screen |
 | One-off events: an Olympics, an eclipse, a World Cup | `src/seasons/events.json`, under the year | **Added once a year**, by hand |
 | A destination's public holidays, and its state's where `holidayRegion` names one | The same source as the calendar (`src/lib/holidays.ts`) | **Worked out on the phone**; Malaysia from the gazette |
+| The airports each destination is flown to, and the one a train ride away | `destinations.json` (`airports`, `via`), names in `src/seasons/airports.json` | No — airports do not move |
+| Where Kuala Lumpur flies without a change of plane | `src/seasons/flights.json` | **Read through once a year** — routes open and close |
 
 ## How a moving festival works
 
@@ -74,6 +76,51 @@ months and say *每年日期不同* in the text.
 A date that belongs to one year goes in `events.json`; one that comes round
 every year gets a rule.
 
+## Direct or a change of plane
+
+Under the area chips is a second row: **从吉隆坡 · 全部 · 直飞 · 要转机**.
+Each card says how it is got to, and the sheet says it in full under 怎么去.
+
+It comes from two things kept apart because they age differently. Every
+destination names its airports, which do not move:
+
+```json
+"airports": ["SDJ", "AOJ", "AXT", "HNA", "GAJ"],
+"via": { "airports": ["NRT", "HND"], "t": "东京坐新干线到仙台约1.5小时、青森约3小时" },
+```
+
+`airports` is where you land for the place itself. `via` is only for where
+the usual way in is overland from a bigger airport — Huangshan by train from
+Hangzhou, Kyrgyzstan by road from Almaty — and says how to go on. It is not
+for anywhere a second flight is the normal way: Jiuzhaigou is flown to from
+Chengdu, so it has no `via`. The Chinese name of every code is in
+`airports.json`; a city with two airports writes them 东京·成田, so a card can
+say just 东京.
+
+`flights.json` is the routes, which do change:
+
+```json
+"checked": "2026-10",
+"from": "吉隆坡",
+"home": ["KUL", "SZB"],
+"direct": ["ADD", "ADL", …],
+"stop": { "CGQ": "福州", "DLC": "南京", "TYN": "昆明" },
+"seasonal": ["CTS", "HFE"],
+"charter": ["DNH", "DSN", "TXN"]
+```
+
+- `direct` — nonstop from KLIA or Subang.
+- `stop` — the same plane all the way, landing on the way in the city named;
+  in China that is where everyone clears immigration.
+- `seasonal` — flown some months only, like AirAsia X to Sapporo.
+- `charter` — sold mostly with tours.
+
+A place is **直飞** when any of these reach one of its airports, or one of its
+`via` airports, or when home is among them (KL itself, and Genting and
+Cameron by road). The best one is what the card says: nonstop before a stop,
+before seasonal, before a charter, and the place itself before somewhere a
+train ride away. Everything else is **要转机**.
+
 ## The yearly read-through
 
 Some time in the autumn, for the year about to start:
@@ -96,7 +143,15 @@ Some time in the autumn, for the year about to start:
    the ones that are not.
 4. **Set `"reviewed"`** at the top of `destinations.json` to the month you
    did it. The screen shows it as *资料核对于…*.
-5. `npm run seasons -- --format` puts both files back in the house layout,
+5. **Read the flights through.** The *Airlines and destinations* table on
+   Wikipedia's Kuala Lumpur International Airport page (and Subang's) lists
+   every route, with what is starting and ending. Add what opened to
+   `flights.json`, take out what stopped, and look up anything Chinese
+   or new: a "direct" route to a smaller Chinese city often stops on the way,
+   and goes under `stop`. Set `"checked"` to the month. `npm run seasons --
+   --flights` then lists every destination by how it is reached, so a place
+   that changed side is easy to see.
+6. `npm run seasons -- --format` puts the files back in the house layout,
    and `npm run build` checks them again before anything is published.
 
 All of it can be handed to a Claude Code session in this repository: "do the
@@ -120,6 +175,7 @@ Day), `LA` is Louisiana (Mardi Gras). Malaysia's codes are the gazette's,
   "region": "沙巴",
   "countries": ["MY"],
   "holidayRegion": "12",
+  "airports": ["BKI", "TWU", "SDK"],
   "places": "亚庇、京那巴鲁神山、仙本那…",
   "summary": "最佳：6–9月避暑花海，1–2月雪祭与粉雪滑雪",
   "climate": "…",
@@ -142,8 +198,9 @@ refuses: a missing field, a key it does not know (`offest` for `offset` would
 otherwise be ignored by the app and dropped by `--format`), a rating outside
 0–3, anything but twelve months, a destination with no best month, a country
 listed twice, a `holidayRegion` the library does not know, a rule it cannot
-read, an event naming an id that does not exist, and a year written into the
-evergreen file — 2027年, with or without a space. A year before 2020 is
+read, an event naming an id that does not exist, an airport that is not a
+three-letter code or has no name, a route listed under two kinds, and a year
+written into the evergreen file — 2027年, with or without a space. A year before 2020 is
 history and is left alone: 1987年列入世界遗产 stays true.
 
 `--format` runs the check first and writes nothing if it fails.
