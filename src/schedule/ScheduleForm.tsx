@@ -72,6 +72,13 @@ export default function ScheduleForm({
   )
   const [region, setRegion] = useState(item?.place?.region ?? prefill?.place?.region ?? '')
   const [city, setCity] = useState(item?.place?.city ?? prefill?.place?.city ?? '')
+  // A region belongs to its country: 海南 is no use on a trip moved to Taiwan.
+  // The city is left alone, as it always was — it is often the reason the
+  // country was wrong in the first place.
+  const pickCountry = (next: string | null) => {
+    if (next !== country) setRegion('')
+    setCountry(next)
+  }
   const [tripId, setTripId] = useState<number | null>(item?.trip_id ?? null)
   const [repeat, setRepeat] = useState<ScheduleRepeat | null>(item?.repeat ?? null)
   const schedule = useSchedule()
@@ -309,7 +316,7 @@ export default function ScheduleForm({
               <Field label="Country" hint="For Travel">
                 <CountrySelect
                   value={country}
-                  onChange={setCountry}
+                  onChange={pickCountry}
                   recent={recentCountries}
                   placeholder="Not set"
                   clearable

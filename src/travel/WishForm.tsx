@@ -42,6 +42,11 @@ export default function WishForm({
   const [name, setName] = useState(wish?.name ?? '')
   const [country, setCountry] = useState<string | null>(wish?.country ?? null)
   const [region, setRegion] = useState(wish?.region ?? '')
+  // A region belongs to its country, so a new country starts without one.
+  const pickCountry = (next: string | null) => {
+    if (next !== country) setRegion('')
+    setCountry(next)
+  }
   const [note, setNote] = useState(wish?.note ?? '')
   const [photo, setPhoto] = useState<Attachment | null>(wish?.photo ?? null)
   const [files, setFiles] = useState<Attachment[]>(wish?.attachments ?? [])
@@ -118,7 +123,7 @@ export default function WishForm({
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
           <Field label="Country">
-            <CountrySelect value={country} onChange={setCountry} />
+            <CountrySelect value={country} onChange={pickCountry} />
           </Field>
           {country && (
             <Field label="Region" hint="地区, like 海南 or Sabah">
