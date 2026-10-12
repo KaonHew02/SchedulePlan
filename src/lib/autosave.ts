@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react'
 import { driveIsConfigured } from './drive-config'
 import { hasLiveToken, saveToDrive } from './drive'
+import { tr } from './i18n'
 import { onSaved, readSettings } from './store'
 
 /** Long enough that a burst of edits is one upload, short enough to matter. */
@@ -62,7 +63,10 @@ export function useDriveAutosave(): AutoState {
               hasLiveToken()
                 ? {
                     kind: 'error',
-                    message: err instanceof Error ? err.message : 'Drive refused that.',
+                    message:
+                      err instanceof Error
+                        ? err.message
+                        : tr('Drive refused that.', 'Drive 拒绝了这个请求。'),
                   }
                 : { kind: 'needs-tap' },
             )

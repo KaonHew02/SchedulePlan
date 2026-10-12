@@ -1,3 +1,5 @@
+import { tr } from './i18n'
+
 /**
  * Reading text off a photo, and guessing what it means.
  *
@@ -41,12 +43,22 @@ let starting: Promise<Worker> | null = null
  */
 const LANGUAGES = 'eng+chi_sim'
 
-const SAY: Record<string, string> = {
-  'loading tesseract core': 'Loading the reader',
-  'initializing tesseract': 'Loading the reader',
-  'loading language traineddata': 'Loading English and Chinese',
-  'initializing api': 'Getting ready',
-  'recognizing text': 'Reading the page',
+/**
+ * What the reader says it is doing, in words a person can read. Kept in both
+ * languages and picked as each step comes in, not once when the file loads,
+ * or the steps would stay in whichever language the app opened in.
+ */
+const SAY: Record<string, { en: string; zh: string }> = {
+  'loading tesseract core': { en: 'Loading the reader', zh: '正在载入识别器' },
+  'initializing tesseract': { en: 'Loading the reader', zh: '正在载入识别器' },
+  'loading language traineddata': { en: 'Loading English and Chinese', zh: '正在载入英文和中文' },
+  'initializing api': { en: 'Getting ready', zh: '正在准备' },
+  'recognizing text': { en: 'Reading the page', zh: '正在识别页面' },
+}
+
+const say = (status: string): string => {
+  const words = SAY[status]
+  return words ? tr(words.en, words.zh) : tr('Working', '处理中')
 }
 
 async function getWorker(onProgress?: (progress: OcrProgress) => void): Promise<Worker> {
@@ -62,13 +74,18 @@ async function getWorker(onProgress?: (progress: OcrProgress) => void): Promise<
     try {
       ;({ createWorker } = await import('tesseract.js'))
     } catch {
-      throw new Error("Couldn't load the text reader. Check your connection and try again.")
+      throw new Error(
+        tr(
+          "Couldn't load the text reader. Check your connection and try again.",
+          '没能载入文字识别器。请检查网络后再试。',
+        ),
+      )
     }
 
     const created = await createWorker(LANGUAGES, 1, {
       logger: (message) => {
         onProgress?.({
-          status: SAY[message.status] ?? 'Working',
+          status: say(message.status),
           progress: Number(message.progress) || 0,
         })
       },
@@ -110,9 +127,9 @@ export async function readText(
   onProgress?: (progress: OcrProgress) => void,
 ): Promise<string> {
   const engine = await getWorker(onProgress)
-  onProgress?.({ status: 'Reading the page', progress: 0 })
+  onProgress?.({ status: tr('Reading the page', '正在识别页面'), progress: 0 })
   const result = await engine.recognize(source)
-  onProgress?.({ status: 'Done', progress: 1 })
+  onProgress?.({ status: tr('Done', '完成'), progress: 1 })
   return (result.data.text ?? '').replace(CJK_GAP, '$1').replace(DATE_GAP, '$1$2')
 }
 

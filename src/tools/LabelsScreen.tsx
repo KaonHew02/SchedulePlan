@@ -9,6 +9,8 @@ import {
   useTags,
   type TagKind,
 } from '../lib/store'
+import { tr } from '../lib/i18n'
+import { tagName } from '../lib/tags'
 
 /**
  * Editing the chips — schedule tags on one setting, expense categories on the
@@ -35,14 +37,14 @@ export default function LabelsScreen({
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const noun = kind === 'tags' ? 'tag' : 'category'
+  const noun = kind === 'tags' ? tr('tag', '标签') : tr('category', '分类')
 
   function guard(work: () => void) {
     try {
       setError(null)
       work()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That did not work.')
+      setError(err instanceof Error ? err.message : tr('That did not work.', '没有成功。'))
     }
   }
 
@@ -50,19 +52,27 @@ export default function LabelsScreen({
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
-          <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
+          <button
+            onClick={onBack}
+            aria-label={tr('Back to More', '返回「更多」')}
+            className="p-1.5 text-neutral-400"
+          >
             <ChevronLeft />
           </button>
           <h1 className="text-[19px] font-semibold tracking-tight">
-            {kind === 'tags' ? 'Schedule tags' : 'Expense categories'}
+            {kind === 'tags'
+              ? tr('Schedule tags', '日程标签')
+              : tr('Expense categories', '开销分类')}
           </h1>
         </div>
       </header>
 
       <main className="px-5 pb-28 lg:max-w-2xl lg:px-8 lg:pb-10">
         <p className="pb-4 pt-1 text-[13px] leading-5 text-neutral-500">
-          These are yours. Rename them, change the emoji, delete the ones you never use, add the
-          ones you do.
+          {tr(
+            'These are yours. Rename them, change the emoji, delete the ones you never use, add the ones you do.',
+            '这些都由你决定：可以改名、换表情，删掉用不上的，加上用得着的。',
+          )}
         </p>
 
         {error && (
@@ -76,13 +86,13 @@ export default function LabelsScreen({
                 <TagEditor
                   initialLabel={tag.label}
                   initialEmoji={tag.emoji}
-                  submitLabel="Save"
+                  submitLabel={tr('Save', '保存')}
                   onCancel={() => setEditing(null)}
                   onSubmit={(label, emoji) =>
                     guard(() => {
                       updateTag(tag.id, label, emoji, kind)
                       setEditing(null)
-                      onToast('Updated')
+                      onToast(tr('Updated', '已更新'))
                     })
                   }
                   onDelete={() => {
@@ -92,7 +102,11 @@ export default function LabelsScreen({
                     // asking first.
                     setEditing(null)
                     const cleared = deleteTag(tag.id, kind)
-                    onToast(cleared ? `Deleted, ${cleared} untagged` : 'Deleted')
+                    onToast(
+                      cleared
+                        ? tr(`Deleted, ${cleared} untagged`, `已删除，已从 ${cleared} 项中移除`)
+                        : tr('Deleted', '已删除'),
+                    )
                   }}
                 />
               </div>
@@ -103,8 +117,8 @@ export default function LabelsScreen({
                 className="flex w-full items-center gap-3 py-3.5 text-left active:bg-neutral-50"
               >
                 <span className="w-6 text-center text-[16px]">{tag.emoji}</span>
-                <span className="flex-1 text-[15px]">{tag.label}</span>
-                <span className="text-[13px] text-neutral-300">Edit</span>
+                <span className="flex-1 text-[15px]">{tagName(tag)}</span>
+                <span className="text-[13px] text-neutral-300">{tr('Edit', '编辑')}</span>
               </button>
             ),
           )}
@@ -112,13 +126,13 @@ export default function LabelsScreen({
           {adding ? (
             <div className="py-3">
               <TagEditor
-                submitLabel="Add"
+                submitLabel={tr('Add', '添加')}
                 onCancel={() => setAdding(false)}
                 onSubmit={(label, emoji) =>
                   guard(() => {
                     createTag(label, emoji, kind)
                     setAdding(false)
-                    onToast('Added')
+                    onToast(tr('Added', '已添加'))
                   })
                 }
               />
@@ -131,7 +145,7 @@ export default function LabelsScreen({
               }}
               className="w-full py-3.5 text-left text-[15px] text-neutral-400 active:bg-neutral-50"
             >
-              + New {noun}
+              {tr(`+ New ${noun}`, `+ 新建${noun}`)}
             </button>
           )}
         </div>

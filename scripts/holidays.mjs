@@ -287,6 +287,27 @@ if (!next.years[due]) {
   )
 }
 
+/*
+ * The app shows these names in Chinese from src/lib/holiday-names-zh.json.
+ * A holiday the gazette has never had before — a new state day, a renamed
+ * one — has no Chinese there and shows in English until it is added. Not a
+ * failure, and the day is still right; it is said so the next person to read
+ * the run knows which line to add. The endings are looked up the way
+ * `holidayName` in src/lib/holidays.ts does.
+ */
+const CHINESE = 'src/lib/holiday-names-zh.json'
+const ENDINGS = [/\s*\(extra holiday\)$/i, /\s*\(2nd day\)$/i, /\s*\(3rd day\)$/i]
+const chinese = existsSync(CHINESE) ? JSON.parse(readFileSync(CHINESE, 'utf8')) : {}
+const hasChinese = (name) => Boolean(chinese[name]) || ENDINGS.some((end) => end.test(name) && chinese[name.replace(end, '')])
+const unnamed = new Set(
+  [...Object.values(next.years).flatMap((year) => year.holidays), ...next.extras]
+    .map((holiday) => holiday.name)
+    .filter((name) => !hasChinese(name)),
+)
+if (unnamed.size) {
+  say(`No Chinese name yet in ${CHINESE}, so shown in English: ${[...unnamed].join(', ')}`)
+}
+
 const years = Object.keys(next.years)
 say(
   changed

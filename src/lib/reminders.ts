@@ -14,6 +14,7 @@
  */
 
 import { addDays, relativeDay, shortDate, todayISO } from './date'
+import { tr } from './i18n'
 import type { Reminder } from '../types'
 
 export const at = (date: string, time: string): number => new Date(`${date}T${time}`).getTime()
@@ -67,10 +68,11 @@ export function isActive(reminder: Reminder, now = Date.now()): boolean {
 export const isRange = (reminder: Reminder): boolean =>
   Boolean(reminder.end_date && reminder.end_date > reminder.date)
 
-const REPEAT_WORD: Record<Reminder['repeat'], string> = {
-  none: '',
-  daily: 'Every day',
-  weekly: 'Every week',
+/** Both languages kept side by side and picked at the moment of drawing, not when the app loads. */
+const REPEAT_WORD: Record<Reminder['repeat'], { en: string; zh: string }> = {
+  none: { en: '', zh: '' },
+  daily: { en: 'Every day', zh: '每天' },
+  weekly: { en: 'Every week', zh: '每周' },
 }
 
 /**
@@ -81,13 +83,18 @@ const REPEAT_WORD: Record<Reminder['repeat'], string> = {
  * repeat that is how often and when it stops.
  */
 export function dueLabel(reminder: Reminder): string {
-  const relative = relativeDay(reminder.date)
-  const start = ['Today', 'Tomorrow', 'Yesterday'].includes(relative)
-    ? relative
+  // Today, tomorrow and yesterday read better as words; any other day as its
+  // date rather than a weekday. Asked of the date itself, because the word
+  // relativeDay hands back is 今天 rather than Today when the app is in 中文.
+  const today = todayISO()
+  const start = [today, addDays(today, 1), addDays(today, -1)].includes(reminder.date)
+    ? relativeDay(reminder.date)
     : shortDate(reminder.date)
 
   if (reminder.repeat !== 'none') {
-    return `${REPEAT_WORD[reminder.repeat]} ${reminder.time} until ${shortDate(untilDate(reminder))}`
+    const word = REPEAT_WORD[reminder.repeat]
+    const until = shortDate(untilDate(reminder))
+    return tr(`${word.en} ${reminder.time} until ${until}`, `${word.zh} ${reminder.time}，至 ${until}`)
   }
   if (isRange(reminder)) {
     const end = shortDate(untilDate(reminder))

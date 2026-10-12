@@ -1,6 +1,7 @@
 import { ChevronRight } from '../components/Icons'
 import { relativeDay, shortDate } from '../lib/date'
 import type { Holiday } from '../lib/holidays'
+import { tr } from '../lib/i18n'
 import { occupies } from '../lib/store'
 import type { ScheduleItem } from '../types'
 import { HolidayLines } from './HolidayLine'
@@ -46,7 +47,7 @@ export default function MonthView({
       <HolidayLines holidays={holidays.get(anchor)} className="px-4 pb-2" />
 
       {selectedItems.length === 0 ? (
-        <p className="px-5 pb-6 text-[13px] text-neutral-300">Nothing scheduled</p>
+        <p className="px-5 pb-6 text-[13px] text-neutral-300">{tr('Nothing scheduled', '没有安排')}</p>
       ) : (
         <div className="space-y-2 px-4 pb-4">
           {selectedItems.map((item) => (

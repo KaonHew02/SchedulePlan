@@ -6,6 +6,7 @@ import { CameraIcon, ScanIcon, Spinner } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { plain } from '../lib/currency'
 import { readFile, saveBlob, scanFilter } from '../lib/files'
+import { tr } from '../lib/i18n'
 import { parseReceipt, readText, type OcrProgress, type ReceiptFields } from '../lib/ocr'
 import type { Attachment } from '../types'
 
@@ -53,7 +54,7 @@ export default function ReceiptScan({
   async function handle(file: File) {
     setError(null)
     setFound(null)
-    setProgress({ status: 'Flattening the photo', progress: 0 })
+    setProgress({ status: tr('Flattening the photo', '正在处理照片'), progress: 0 })
 
     let saved: Attachment
     try {
@@ -64,7 +65,7 @@ export default function ReceiptScan({
       setAttachment(saved)
     } catch (err) {
       setProgress(null)
-      setError(err instanceof Error ? err.message : "That photo couldn't be prepared.")
+      setError(err instanceof Error ? err.message : tr("That photo couldn't be prepared.", '这张照片处理不了。'))
       return
     }
 
@@ -82,13 +83,21 @@ export default function ReceiptScan({
       // The text goes with the image, so the expense stays searchable later.
       setAttachment({ ...saved, text: text.trim() || null })
       if (!text.trim()) {
-        setError('No text could be made out. Fill it in yourself — the photo is kept either way.')
+        setError(
+          tr(
+            'No text could be made out. Fill it in yourself — the photo is kept either way.',
+            '认不出任何文字，请自己填写。照片无论如何都会保留。',
+          ),
+        )
       }
     } catch (err) {
       setError(
         err instanceof Error
-          ? `${err.message} The photo is kept — fill the rest in yourself.`
-          : "That receipt couldn't be read.",
+          ? tr(
+              `${err.message} The photo is kept — fill the rest in yourself.`,
+              `${err.message} 照片已保留，其余请自己填写。`,
+            )
+          : tr("That receipt couldn't be read.", '这张收据读不出来。'),
       )
       setFound({ merchant: null, date: null, currency: null, total: null, candidates: [] })
     } finally {
@@ -101,7 +110,7 @@ export default function ReceiptScan({
   return (
     <Sheet
       onClose={onClose}
-      title="Scan a receipt"
+      title={tr('Scan a receipt', '扫描收据')}
       footer={
         ready ? (
           <button
@@ -117,7 +126,7 @@ export default function ReceiptScan({
             }
             className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
           >
-            Use this
+            {tr('Use this', '使用这些')}
           </button>
         ) : undefined
       }
@@ -125,8 +134,10 @@ export default function ReceiptScan({
       {!attachment && !progress && (
         <>
           <p className="pb-4 text-[14px] leading-6 text-neutral-500">
-            Lay the receipt flat and fill the frame. The photo is straightened and read on this
-            device — nothing is uploaded anywhere.
+            {tr(
+              'Lay the receipt flat and fill the frame. The photo is straightened and read on this device — nothing is uploaded anywhere.',
+              '把收据放平，让它占满画面。照片在这台设备上拉直和识别，不会上传到任何地方。',
+            )}
           </p>
           <button
             type="button"
@@ -134,11 +145,13 @@ export default function ReceiptScan({
             className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-neutral-200 py-10 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-500"
           >
             <CameraIcon className="h-7 w-7" />
-            <span className="text-[14px] font-medium">Take or choose a photo</span>
+            <span className="text-[14px] font-medium">{tr('Take or choose a photo', '拍照或选择照片')}</span>
           </button>
           <p className="pb-2 pt-3 text-[12px] leading-5 text-neutral-400">
-            The reader is a ~14 MB download the first time you use it, and it stays for the rest
-            of the session.
+            {tr(
+              'The reader is a ~14 MB download the first time you use it, and it stays for the rest of the session.',
+              '第一次使用时要下载约 14 MB 的识别程序，之后在这次使用期间都不用再下载。',
+            )}
           </p>
         </>
       )}
@@ -162,13 +175,16 @@ export default function ReceiptScan({
             {preview && (
               <img
                 src={preview}
-                alt="Scanned receipt"
+                alt={tr('Scanned receipt', '扫描的收据')}
                 className="h-28 w-24 shrink-0 rounded-xl border border-neutral-200 object-cover"
               />
             )}
             <div className="min-w-0 flex-1">
               <p className="text-[13px] leading-5 text-neutral-500">
-                Check every line before you use it. Nothing is saved until you save the expense.
+                {tr(
+                  'Check every line before you use it. Nothing is saved until you save the expense.',
+                  '使用前请逐项核对。保存支出之前，什么都不会存下来。',
+                )}
               </p>
               <button
                 type="button"
@@ -176,30 +192,30 @@ export default function ReceiptScan({
                 className="mt-2 flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
               >
                 <ScanIcon className="h-3.5 w-3.5" />
-                Retake
+                {tr('Retake', '重拍')}
               </button>
             </div>
           </div>
 
           <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">
-            <Field label="Where">
+            <Field label={tr('Where', '地点')}>
               <TextField
-                label="Merchant"
+                label={tr('Merchant', '商家')}
                 value={title}
                 onChange={setTitle}
-                placeholder="Shop name"
+                placeholder={tr('Shop name', '店名')}
               />
             </Field>
-            <Field label="Date">
-              <DateField value={date} onChange={setDate} placeholder="Pick a date" clearable />
+            <Field label={tr('Date', '日期')}>
+              <DateField value={date} onChange={setDate} placeholder={tr('Pick a date', '选择日期')} clearable />
             </Field>
-            <Field label="Amount">
+            <Field label={tr('Amount', '金额')}>
               <span className="flex items-center gap-2">
                 <input
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
                   inputMode="decimal"
-                  aria-label="Amount"
+                  aria-label={tr('Amount', '金额')}
                   placeholder="0.00"
                   className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-hidden placeholder:text-neutral-300"
                 />
@@ -211,7 +227,7 @@ export default function ReceiptScan({
           {found && found.candidates.length > 1 && (
             <div className="mt-3">
               <p className="pb-1.5 text-[12px] text-neutral-400">
-                Other amounts on the slip — tap one if the total is wrong
+                {tr('Other amounts on the slip — tap one if the total is wrong', '收据上的其他金额，总额不对就点一个')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {found.candidates.map((value) => (
@@ -235,7 +251,7 @@ export default function ReceiptScan({
           {attachment.text && (
             <details className="mt-4">
               <summary className="cursor-pointer text-[13px] text-neutral-400">
-                What it read
+                {tr('What it read', '识别出的文字')}
               </summary>
               <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-[12px] leading-5 text-neutral-600">
                 {attachment.text}

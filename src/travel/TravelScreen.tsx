@@ -5,7 +5,16 @@ import { ChevronRight, LinkIcon, PaperclipIcon, PinIcon, Plus } from '../compone
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { MONEY } from '../lib/features'
-import { CONTINENTS, cityKey, countryOf, placeLabel, type ContinentCode } from '../lib/places'
+import { tr } from '../lib/i18n'
+import {
+  CONTINENTS,
+  cityKey,
+  continentName,
+  countryName,
+  countryOf,
+  placeLabel,
+  type ContinentCode,
+} from '../lib/places'
 import {
   deleteWish,
   isTrip,
@@ -106,7 +115,7 @@ function WishCard({ wish, onOpen }: { wish: WishPlace; onOpen: () => void }) {
         <span className="truncate">
           {/* The region where it adds something: 海南 under a card called 三亚. */}
           {wish.region && cityKey(wish.region) !== cityKey(wish.name) && `${wish.region}, `}
-          {countryOf(wish.country)?.name ?? wish.country}
+          {countryName(wish.country)}
         </span>
       </span>
       {/*
@@ -167,8 +176,16 @@ function GoalBar({
     <div className="mt-3">
       <div className="flex items-baseline gap-2">
         <span className="flex-1 text-[13px] leading-5 text-neutral-600">
-          <span className="font-medium tabular-nums text-neutral-900">{value}</span> of{' '}
-          <span className="tabular-nums">{of}</span> {label}
+          {tr(
+            <>
+              <span className="font-medium tabular-nums text-neutral-900">{value}</span> of{' '}
+              <span className="tabular-nums">{of}</span> {label}
+            </>,
+            <>
+              <span className="font-medium tabular-nums text-neutral-900">{value}</span> /{' '}
+              <span className="tabular-nums">{of}</span> {label}
+            </>,
+          )}
         </span>
         <span
           className="rounded-full px-2.5 py-1 text-[13px] font-semibold tabular-nums"
@@ -392,22 +409,24 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="px-5 pb-2 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Travel</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">
+            {tr('Travel', '旅行')}
+          </h1>
           <p className="flex items-center gap-1.5 pt-0.5 text-[13px] text-neutral-500">
             <PinIcon className="h-3.5 w-3.5 text-neutral-400" />
             {here ? (
               <>
-                Today you are in{' '}
+                {tr('Today you are in', '今天你在')}{' '}
                 <span className="font-medium text-neutral-900">{placeLabel(here.place)}</span>
               </>
             ) : next ? (
               <>
-                Next up{' '}
+                {tr('Next up', '下一站')}{' '}
                 <span className="font-medium text-neutral-900">{placeLabel(next.place)}</span>
-                {`, ${rangeLabel(next.date, lastDay(next))}`}
+                {`${tr(', ', '，')}${rangeLabel(next.date, lastDay(next))}`}
               </>
             ) : (
-              'Nothing away in the diary'
+              tr('Nothing away in the diary', '日程里还没有出行安排')
             )}
           </p>
         </div>
@@ -418,46 +437,48 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           cap could go. */}
       <main className="px-5 pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] xl:items-start xl:gap-10">
         <div className="xl:sticky xl:top-4">
-        <p className="pb-3 pt-2 text-[13px] text-neutral-500">So far you have been to</p>
+        <p className="pb-3 pt-2 text-[13px] text-neutral-500">
+          {tr('So far you have been to', '目前你去过')}
+        </p>
 
         <div className="flex justify-between gap-2">
           <Ring
             value={stats.destinations}
             of={Math.max(settings.placeGoal, 1)}
-            label="destinations"
+            label={tr('destinations', '目的地')}
             colour="#A3E635"
             track="#F0F0F5"
           />
           <Ring
             value={stats.countries.length}
             of={Math.max(settings.travelGoal, 1)}
-            label="countries"
+            label={tr('countries', '国家')}
             colour="#6C5CE7"
             track="#F0F0F5"
           />
           <Ring
             value={stats.continents.length}
             of={6}
-            label="continents"
+            label={tr('continents', '大洲')}
             colour="#171717"
             track="#F0F0F5"
           />
         </div>
 
         <p className="mt-6 text-[14px] leading-5 text-neutral-600">
-          Which makes your travel goals completed by
+          {tr('Which makes your travel goals completed by', '旅行目标的完成度')}
         </p>
         <GoalBar
           value={stats.countries.length}
           of={settings.travelGoal}
-          label="countries"
+          label={tr('countries', '个国家')}
           colour="#6C5CE7"
           ink="#FFFFFF"
         />
         <GoalBar
           value={stats.destinations}
           of={settings.placeGoal}
-          label="places"
+          label={tr('places', '个地方')}
           colour="#A3E635"
           ink="#1C1917"
         />
@@ -466,7 +487,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
           <div className="mt-3 rounded-2xl bg-neutral-50 p-3">
             <div className="flex items-center gap-2">
               <label htmlFor="goal-countries" className="flex-1 text-[13px] text-neutral-600">
-                Countries to aim for
+                {tr('Countries to aim for', '目标国家数')}
               </label>
               <input
                 id="goal-countries"
@@ -479,7 +500,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             </div>
             <div className="mt-2 flex items-center gap-2">
               <label htmlFor="goal-places" className="flex-1 text-[13px] text-neutral-600">
-                Places to aim for
+                {tr('Places to aim for', '目标地方数')}
               </label>
               <input
                 id="goal-places"
@@ -491,9 +512,10 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             </div>
             <div className="mt-2.5 flex items-end gap-2">
               <p className="flex-1 text-[12px] leading-4 text-neutral-400">
-                A place is a city: Da Nang and Hoi An are two of them, and going back to
-                either one does not add a third. A region with no city named in it, like
-                海南 on its own, counts once, and so does a country with nothing else on it.
+                {tr(
+                  'A place is a city: Da Nang and Hoi An are two of them, and going back to either one does not add a third. A region with no city named in it, like 海南 on its own, counts once, and so does a country with nothing else on it.',
+                  '一个地方就是一座城市：岘港和会安算两个，再去其中一个也不会多算。没写城市的地区，比如只写了海南，算一个；什么都没写的国家也算一个。',
+                )}
               </p>
               <button
                 onClick={() => {
@@ -506,7 +528,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                 }}
                 className="shrink-0 rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
               >
-                Set
+                {tr('Set', '设定')}
               </button>
             </div>
           </div>
@@ -522,7 +544,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             }}
             className="mt-2 text-[12px] text-neutral-400"
           >
-            Change the goals
+            {tr('Change the goals', '修改目标')}
           </button>
         )}
 
@@ -533,13 +555,22 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         </div>
 
         <div className="min-w-0">
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 xl:pt-2">Trips</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 xl:pt-2">
+          {tr('Trips', '行程')}
+        </h2>
         {trips.length === 0 ? (
           <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center">
-            <p className="text-[14px] text-neutral-600">No trips recorded yet.</p>
+            <p className="text-[14px] text-neutral-600">{tr('No trips recorded yet.', '还没有行程。')}</p>
             <p className="mx-auto mt-1 max-w-[280px] text-[13px] leading-5 text-neutral-400">
-              A trip is a schedule item tagged ✈️ Travel with a country on it. Tag it in
-              Schedule, then open &ldquo;Add location, notes or files&rdquo; and pick the country.
+              {tr(
+                <>
+                  A trip is a schedule item tagged ✈️ Travel with a country on it. Tag it in
+                  Schedule, then open &ldquo;Add location, links, notes or files&rdquo; and pick the country.
+                </>,
+                <>
+                  行程就是标了 ✈️ 旅行、又选了国家的日程。先在日程里打上这个标签，再打开「添加地点、链接、备注或文件」，选好国家。
+                </>,
+              )}
             </p>
           </div>
         ) : (
@@ -560,12 +591,12 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                       <span className="block truncate text-[15px] font-medium">{trip.title}</span>
                       <span className="block truncate text-[12px] text-neutral-400">
                         {placeLabel(trip.place)} · {rangeLabel(span.start, span.end)}
-                        {nights > 1 && ` · ${nights} days`}
-                        {legs.length > 0 && ` · ${legs.length + 1} stops`}
+                        {nights > 1 && tr(` · ${nights} days`, ` · ${nights} 天`)}
+                        {legs.length > 0 && tr(` · ${legs.length + 1} stops`, ` · ${legs.length + 1} 站`)}
                         {(trip.plan ||
                           legs.some((leg) => leg.plan) ||
                           trip.links.length > 0) &&
-                          ' · has a page'}
+                          tr(' · has a page', ' · 有详情')}
                       </span>
                     </span>
                   </button>
@@ -581,19 +612,22 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         )}
 
         <div className="flex items-baseline justify-between pb-2 pt-8">
-          <h2 className="text-[13px] font-medium text-neutral-400">Wishlist</h2>
+          <h2 className="text-[13px] font-medium text-neutral-400">{tr('Wishlist', '心愿单')}</h2>
           <button
             onClick={() => setForm({ wish: null })}
             className="flex items-center gap-1 text-[13px] font-medium text-brand-500"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add
+            {tr('Add', '添加')}
           </button>
         </div>
 
         {wishlist.length === 0 ? (
           <p className="rounded-2xl bg-neutral-50 px-4 py-5 text-center text-[13px] leading-5 text-neutral-400">
-            Nowhere on the list yet. Add the places you keep meaning to go.
+            {tr(
+              'Nowhere on the list yet. Add the places you keep meaning to go.',
+              '心愿单还是空的。把一直想去的地方加进来吧。',
+            )}
           </p>
         ) : (
           // Wrapped, not a sideways-scrolling rail: a row you have to swipe
@@ -612,7 +646,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
         */}
         {stats.countries.length > 0 && (
           <>
-            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Places</h2>
+            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+              {tr('Places', '去过的地方')}
+            </h2>
             <div className="divide-y divide-neutral-100 border-y border-neutral-100">
               {stats.countries.map((code) => {
                 const count = stats.places[code] ?? 0
@@ -622,9 +658,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                     <CountryBadge code={code} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
-                        <span className="truncate text-[14px]">{countryOf(code)?.name ?? code}</span>
+                        <span className="truncate text-[14px]">{countryName(code)}</span>
                         <span className="ml-auto shrink-0 text-[13px] tabular-nums text-neutral-400">
-                          {count} {count === 1 ? 'place' : 'places'}
+                          {tr(`${count} ${count === 1 ? 'place' : 'places'}`, `${count} 个地方`)}
                         </span>
                       </div>
                       {where.map(({ region, cities }) => (
@@ -644,7 +680,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
         {stats.continents.length > 0 && (
           <>
-            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Continents</h2>
+            <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+              {tr('Continents', '大洲')}
+            </h2>
             <div className="divide-y divide-neutral-100 border-y border-neutral-100">
               {(Object.keys(CONTINENTS) as ContinentCode[]).map((code) => {
                 const been = stats.countries.filter(
@@ -655,7 +693,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
                     <span
                       className={`text-[14px] ${been ? 'text-neutral-900' : 'text-neutral-300'}`}
                     >
-                      {CONTINENTS[code]}
+                      {continentName(code)}
                     </span>
                     <span className="ml-auto text-[13px] tabular-nums text-neutral-400">
                       {been || '—'}
@@ -711,7 +749,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
             // The files are on the schedule item now, so their bytes stay.
             await deleteWish(visiting.id, true)
             setVisiting(null)
-            onToast(`${visiting.name} added to your trips`)
+            onToast(tr(`${visiting.name} added to your trips`, `已加入行程：${visiting.name}`))
           }}
         />
       )}

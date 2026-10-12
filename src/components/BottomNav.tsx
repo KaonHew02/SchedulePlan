@@ -1,5 +1,5 @@
 import type { Screen } from '../types'
-import { NAV } from './navItems'
+import { NAV, navLabel } from './navItems'
 
 export default function BottomNav({
   current,
@@ -28,7 +28,7 @@ export default function BottomNav({
         className="mx-auto grid max-w-md border-t border-neutral-100 bg-white/90 backdrop-blur-sm pb-safe sm:border-x sm:border-neutral-200 md:max-w-xl"
         style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
       >
-        {NAV.map(({ id, label, Icon }) => (
+        {NAV.map(({ id, label, zh, Icon }) => (
           <button
             key={id}
             onClick={() => onChange(id)}
@@ -39,7 +39,7 @@ export default function BottomNav({
           >
             <Icon className="w-[22px] h-[22px]" />
             <span className="w-full truncate px-0.5 text-center text-[10px] sm:text-[11px]">
-              {label}
+              {navLabel({ label, zh })}
             </span>
           </button>
         ))}

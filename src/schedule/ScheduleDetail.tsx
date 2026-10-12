@@ -15,6 +15,7 @@ import { daysBetween, longDate, relativeDay, shortDate, timeRange } from '../lib
 import { describeRepeat } from '../lib/repeat'
 import { money } from '../lib/currency'
 import { MONEY } from '../lib/features'
+import { tr } from '../lib/i18n'
 import { hostLabel } from '../lib/links'
 import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useExpenses, useSettings, useTags } from '../lib/store'
@@ -59,7 +60,9 @@ export default function ScheduleDetail({
       await action()
       // On success the parent closes this sheet.
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete. Please try again.')
+      setError(
+        err instanceof Error ? err.message : tr('Could not delete. Please try again.', '删除失败，请重试。'),
+      )
       setDeleting(false)
     }
   }
@@ -68,14 +71,17 @@ export default function ScheduleDetail({
     ? `${longDate(item.date)} – ${longDate(lastDay(item))}`
     : longDate(item.date)
   const clock = item.all_day
-    ? 'All day'
+    ? tr('All day', '全天')
     : spans
-      ? `from ${item.start_time}${item.end_time ? ` until ${item.end_time}` : ''}`
+      ? tr(
+          `from ${item.start_time}${item.end_time ? ` until ${item.end_time}` : ''}`,
+          `${item.start_time} 开始${item.end_time ? `，${item.end_time} 结束` : ''}`,
+        )
       : timeRange(item.start_time, item.end_time)
 
   return (
     <>
-      <Sheet onClose={onClose} title={spans ? 'Schedule' : relativeDay(item.date)}>
+      <Sheet onClose={onClose} title={spans ? tr('Schedule', '日程') : relativeDay(item.date)}>
         <div className="flex items-start gap-2.5">
           <span className="text-[20px] leading-8">{tagEmoji(tags, item.tag)}</span>
           <h3 className="text-[20px] font-semibold leading-8 tracking-tight">{item.title}</h3>
@@ -86,7 +92,10 @@ export default function ScheduleDetail({
         </p>
         {spans && (
           <p className="mt-0.5 text-[13px] text-neutral-400">
-            {daysBetween(item.date, lastDay(item))} days
+            {tr(
+              `${daysBetween(item.date, lastDay(item))} days`,
+              `共 ${daysBetween(item.date, lastDay(item))} 天`,
+            )}
           </p>
         )}
         {/* Read from the series' first day, not this copy's: "on the 31st"
@@ -143,7 +152,10 @@ export default function ScheduleDetail({
         {item.attachments.length > 0 && (
           <div className="mt-4">
             <p className="pb-2 text-[13px] text-neutral-400">
-              {item.attachments.length} attachment{item.attachments.length === 1 ? '' : 's'}
+              {tr(
+                `${item.attachments.length} attachment${item.attachments.length === 1 ? '' : 's'}`,
+                `${item.attachments.length} 个附件`,
+              )}
             </p>
             <div className="flex flex-wrap gap-2">
               {item.attachments.map((file) => (
@@ -159,7 +171,7 @@ export default function ScheduleDetail({
             <WalletIcon className="h-4 w-4 text-neutral-400" />
             <span className="text-[14px]">
               {expenses.length === 0 ? (
-                <span className="text-neutral-400">Nothing spent on this yet</span>
+                <span className="text-neutral-400">{tr('Nothing spent on this yet', '还没有开销')}</span>
               ) : (
                 <>
                   <span className="font-medium tabular-nums">
@@ -167,7 +179,10 @@ export default function ScheduleDetail({
                   </span>
                   <span className="text-neutral-400">
                     {' '}
-                    across {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'}
+                    {tr(
+                      `across ${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'}`,
+                      `共 ${expenses.length} 笔开销`,
+                    )}
                   </span>
                 </>
               )}
@@ -178,7 +193,7 @@ export default function ScheduleDetail({
               className="ml-auto flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[13px] font-medium shadow-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add
+              {tr('Add', '添加')}
             </button>
           </div>
         </div>
@@ -196,7 +211,7 @@ export default function ScheduleDetail({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-neutral-200 py-3 text-[15px] font-medium"
           >
             <PencilIcon />
-            Edit
+            {tr('Edit', '编辑')}
           </button>
           {/* One tap. Delete means delete — a second tap that only says
               "are you sure" is a step on every real deletion to catch the
@@ -211,27 +226,31 @@ export default function ScheduleDetail({
             className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-5 py-3 text-[15px] font-medium text-red-600 disabled:opacity-40"
           >
             <TrashIcon />
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? tr('Deleting...', '正在删除…') : tr('Delete', '删除')}
           </button>
         </div>
       </Sheet>
 
       {choosing && onSkip && (
-        <Popover anchor={deleteButton} label="Delete which" onClose={() => setChoosing(false)}>
+        <Popover
+          anchor={deleteButton}
+          label={tr('Delete which', '删除哪个')}
+          onClose={() => setChoosing(false)}
+        >
           <div className="w-[220px] p-1.5">
             <button
               type="button"
               onClick={() => remove(onSkip)}
               className="w-full rounded-xl px-3 py-2 text-left text-[14px] transition-colors hover:bg-neutral-100"
             >
-              Only {shortDate(item.date)}
+              {tr(`Only ${shortDate(item.date)}`, `仅删除 ${shortDate(item.date)}`)}
             </button>
             <button
               type="button"
               onClick={() => remove(onDelete)}
               className="w-full rounded-xl px-3 py-2 text-left text-[14px] text-red-600 transition-colors hover:bg-neutral-100"
             >
-              Every time it repeats
+              {tr('Every time it repeats', '每一次重复都删除')}
             </button>
           </div>
         </Popover>

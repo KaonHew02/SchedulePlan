@@ -4,6 +4,7 @@ import { CalendarIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { longDate } from '../lib/date'
 import { money } from '../lib/currency'
+import { tr } from '../lib/i18n'
 import { useCategories, useSchedule, useSettings } from '../lib/store'
 import { tagEmoji, tagLabel } from '../lib/tags'
 import type { Attachment, Expense } from '../types'
@@ -36,14 +37,14 @@ export default function ExpenseDetail({
     try {
       await onDelete()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete. Please try again.')
+      setError(err instanceof Error ? err.message : tr('Could not delete. Please try again.', '删除失败，请再试一次。'))
       setDeleting(false)
     }
   }
 
   return (
     <>
-      <Sheet onClose={onClose} title="Expense">
+      <Sheet onClose={onClose} title={tr('Expense', '支出')}>
         <p className="text-[28px] font-semibold tabular-nums tracking-tight">
           {money(expense.amount, expense.currency)}
         </p>
@@ -63,7 +64,7 @@ export default function ExpenseDetail({
         {linked && (
           <p className="mt-3 flex items-center gap-1.5 text-[14px] text-neutral-600">
             <CalendarIcon className="h-4 w-4 text-neutral-400" />
-            Part of {linked.title}
+            {tr(`Part of ${linked.title}`, `关联「${linked.title}」`)}
           </p>
         )}
 
@@ -76,8 +77,10 @@ export default function ExpenseDetail({
         {expense.attachments.length > 0 && (
           <div className="mt-4">
             <p className="pb-2 text-[13px] text-neutral-400">
-              {expense.attachments.length} attachment
-              {expense.attachments.length === 1 ? '' : 's'}
+              {tr(
+                `${expense.attachments.length} attachment${expense.attachments.length === 1 ? '' : 's'}`,
+                `${expense.attachments.length} 个附件`,
+              )}
             </p>
             <div className="flex flex-wrap gap-2">
               {expense.attachments.map((file) => (
@@ -95,7 +98,7 @@ export default function ExpenseDetail({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-neutral-200 py-3 text-[15px] font-medium"
           >
             <PencilIcon />
-            Edit
+            {tr('Edit', '编辑')}
           </button>
           {/* One tap. Delete means delete — a second tap that only says
               "are you sure" is a step on every real deletion to catch the
@@ -106,7 +109,7 @@ export default function ExpenseDetail({
             className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-5 py-3 text-[15px] font-medium text-red-600 disabled:opacity-40"
           >
             <TrashIcon />
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? tr('Deleting...', '正在删除…') : tr('Delete', '删除')}
           </button>
         </div>
       </Sheet>

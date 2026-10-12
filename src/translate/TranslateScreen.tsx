@@ -16,6 +16,7 @@ import {
   LANGUAGES,
   STARTER,
   isRtl,
+  languageName,
   languageOf,
   onVoices,
   speak,
@@ -24,6 +25,7 @@ import {
   type Language,
 } from '../lib/translate'
 import { deletePhrase, savePhrase, togglePhraseStar, usePhrases } from '../lib/store'
+import { tr, useLang } from '../lib/i18n'
 import type { Phrase } from '../types'
 
 /**
@@ -57,31 +59,34 @@ function LanguagePicker({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const chosen = languageOf(value)
+  const lang = useLang()
 
   /*
    * The ones a trip from here uses, then the rest alphabetically — the same
    * arrangement as the currency list, for the same reason. Five languages fit
    * in a list; fifty do not, and the five that were there before are still the
-   * first things on screen.
+   * first things on screen. Alphabetical by the name on screen, so in 中文 the
+   * rest are in pinyin order rather than in an English order nobody can see.
    */
   const ordered = useMemo(() => {
     const common = COMMON_LANGUAGES.map((code) => languageOf(code)).filter(
       (language): language is Language => Boolean(language),
     )
     const rest = LANGUAGES.filter((language) => !COMMON_LANGUAGES.includes(language.code)).sort(
-      (a, b) => a.name.localeCompare(b.name),
+      (a, b) => (lang === 'zh' ? a.zh.localeCompare(b.zh, 'zh-CN') : a.name.localeCompare(b.name)),
     )
     return [...common, ...rest]
-  }, [])
+  }, [lang])
 
-  // Matched on both names, because half the time you know it as 'Khmer' and
-  // half the time you are looking for ខ្មែរ.
+  // Matched on every name it has, because half the time you know it as
+  // 'Khmer' or 高棉语 and half the time you are looking for ខ្មែរ.
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase()
     if (!text) return ordered
     return ordered.filter(
       (language) =>
         language.name.toLowerCase().includes(text) ||
+        language.zh.includes(text) ||
         language.native.toLowerCase().includes(text) ||
         language.code.toLowerCase().startsWith(text),
     )
@@ -113,14 +118,14 @@ function LanguagePicker({
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search"
-              aria-label="Search languages"
+              placeholder={tr('Search', '搜索')}
+              aria-label={tr('Search languages', '搜索语言')}
               className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
             />
             <div className="no-scrollbar max-h-[228px] overflow-y-auto">
               {matches.length === 0 && (
                 <p className="px-3 py-4 text-center text-[13px] text-neutral-400">
-                  No language matches that.
+                  {tr('No language matches that.', '没有符合的语言。')}
                 </p>
               )}
               {matches.map((language) => (
@@ -131,8 +136,11 @@ function LanguagePicker({
                   // row in a list is not the place to print one.
                   title={
                     voiceFor(language.speech, voices)
-                      ? language.name
-                      : `${language.name} — this device has no voice for it, so it can be shown but not spoken`
+                      ? languageName(language)
+                      : tr(
+                          `${language.name} — this device has no voice for it, so it can be shown but not spoken`,
+                          `${language.zh}：这台设备没有这种语音，只能显示，不能朗读`,
+                        )
                   }
                   onClick={() => {
                     onChange(language.code)
@@ -150,14 +158,14 @@ function LanguagePicker({
                     {language.native}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12px] text-neutral-400">
-                    {language.name}
+                    {languageName(language)}
                   </span>
                   {/* Said here rather than when you press speak, so the choice
                       is made knowing what the phone can do with it. */}
                   {!voiceFor(language.speech, voices) && (
                     <SpeakerOffIcon
                       className="h-3.5 w-3.5 shrink-0 text-neutral-300"
-                      aria-label="No voice on this device"
+                      aria-label={tr('No voice on this device', '这台设备没有这种语音')}
                     />
                   )}
                 </button>
@@ -196,13 +204,13 @@ function ShowSheet({
     <div
       className="fixed inset-0 z-50 flex flex-col bg-white"
       role="dialog"
-      aria-label="The phrase, large"
+      aria-label={tr('The phrase, large', '放大的短语')}
     >
       <div className="flex items-center justify-between px-5 pt-4">
         <span className="text-[13px] text-neutral-400">{language?.native ?? ''}</span>
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={tr('Close', '关闭')}
           className="-mr-1.5 p-1.5 text-neutral-400"
         >
           <Close />
@@ -243,7 +251,7 @@ function PhraseRow({
 
       <button
         onClick={() => void togglePhraseStar(phrase.id)}
-        aria-label={phrase.starred ? 'Unstar' : 'Star'}
+        aria-label={phrase.starred ? tr('Unstar', '取消收藏') : tr('Star', '收藏')}
         className={`shrink-0 p-1.5 ${phrase.starred ? 'text-amber-500' : 'text-neutral-300'}`}
       >
         <StarIcon className="h-[17px] w-[17px]" filled={phrase.starred} />
@@ -252,7 +260,7 @@ function PhraseRow({
       {speakable && (
         <button
           onClick={() => speak(phrase.result, target!.speech, voices)}
-          aria-label="Say it"
+          aria-label={tr('Say it', '朗读')}
           className="shrink-0 p-1.5 text-neutral-400"
         >
           <SpeakerIcon className="h-[17px] w-[17px]" />
@@ -261,15 +269,28 @@ function PhraseRow({
 
       <button
         onClick={() =>
-          void deletePhrase(phrase.id).then(() => onToast('Removed from the book'))
+          void deletePhrase(phrase.id).then(() =>
+            onToast(tr('Removed from the book', '已从短语本移除')),
+          )
         }
-        aria-label="Remove"
+        aria-label={tr('Remove', '移除')}
         className="shrink-0 p-1.5 text-neutral-300"
       >
         <TrashIcon className="h-[15px] w-[15px]" />
       </button>
     </div>
   )
+}
+
+/**
+ * Where an answer came from. `via` holds a translator's name, or 'your book'
+ * or 'no change', and is only made into a sentence here, so the line follows
+ * a switch of language even for an answer that arrived before it.
+ */
+function viaLine(via: string): string {
+  if (via === 'your book') return tr('via your book', '来自短语本')
+  if (via === 'no change') return tr('via no change', '原文不变')
+  return tr(`via ${via}`, `由 ${via} 翻译`)
 }
 
 export default function TranslateScreen({
@@ -337,7 +358,7 @@ export default function TranslateScreen({
       // arrives, and nobody standing at a counter taps save first.
       await savePhrase({ from, to, source: text, result: answer.text })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That did not work.')
+      setError(err instanceof Error ? err.message : tr('That did not work.', '没有成功。'))
     } finally {
       setBusy(false)
     }
@@ -362,7 +383,9 @@ export default function TranslateScreen({
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Translate</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">
+            {tr('Translate', '翻译')}
+          </h1>
         </div>
       </header>
 
@@ -370,15 +393,25 @@ export default function TranslateScreen({
         <div>
           <div className="rounded-2xl border border-neutral-200 p-4">
             <div className="flex items-center justify-between gap-3">
-              <LanguagePicker value={from} onChange={setFrom} label="Translate from" voices={voices} />
+              <LanguagePicker
+                value={from}
+                onChange={setFrom}
+                label={tr('Translate from', '源语言')}
+                voices={voices}
+              />
               <button
                 onClick={swap}
-                aria-label="Swap the two languages"
+                aria-label={tr('Swap the two languages', '互换两种语言')}
                 className="rounded-full border border-neutral-200 p-2 text-neutral-500 transition-colors hover:bg-neutral-50"
               >
                 <SwapIcon className="h-4 w-4" />
               </button>
-              <LanguagePicker value={to} onChange={setTo} label="Translate to" voices={voices} />
+              <LanguagePicker
+                value={to}
+                onChange={setTo}
+                label={tr('Translate to', '目标语言')}
+                voices={voices}
+              />
             </div>
 
             <textarea
@@ -393,8 +426,11 @@ export default function TranslateScreen({
                 }
               }}
               rows={2}
-              placeholder={`Type in ${languageOf(from)?.native ?? ''}`}
-              aria-label="What to translate"
+              placeholder={tr(
+                `Type in ${languageOf(from)?.native ?? ''}`,
+                `用${languageOf(from)?.zh ?? ''}输入`,
+              )}
+              aria-label={tr('What to translate', '要翻译的内容')}
               className="mt-3 w-full resize-none bg-transparent text-[17px] leading-7 outline-hidden placeholder:text-neutral-300"
             />
 
@@ -408,7 +444,7 @@ export default function TranslateScreen({
                   }}
                   className="text-[13px] text-neutral-400"
                 >
-                  Clear
+                  {tr('Clear', '清空')}
                 </button>
               )}
               <button
@@ -417,7 +453,7 @@ export default function TranslateScreen({
                 className="ml-auto flex items-center gap-2 rounded-full bg-brand-500 px-4 py-2 text-[14px] font-medium text-white transition-opacity disabled:opacity-40"
               >
                 {busy && <Spinner className="h-4 w-4" />}
-                Translate
+                {tr('Translate', '翻译')}
               </button>
             </div>
           </div>
@@ -438,12 +474,12 @@ export default function TranslateScreen({
                     className="flex items-center gap-1.5 rounded-full bg-brand-500 px-3.5 py-2 text-[13px] font-medium text-white"
                   >
                     <SpeakerIcon className="h-4 w-4" />
-                    Say it
+                    {tr('Say it', '朗读')}
                   </button>
                 ) : (
                   <span className="flex items-center gap-1.5 rounded-full bg-neutral-200/70 px-3.5 py-2 text-[13px] text-neutral-500">
                     <SpeakerOffIcon className="h-4 w-4" />
-                    No {target?.name} voice
+                    {tr(<>No {target?.name} voice</>, <>没有{target?.zh}语音</>)}
                   </span>
                 )}
 
@@ -452,10 +488,10 @@ export default function TranslateScreen({
                   className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3.5 py-2 text-[13px] font-medium"
                 >
                   <ZoomIcon className="h-4 w-4 text-neutral-400" />
-                  Show it
+                  {tr('Show it', '放大显示')}
                 </button>
 
-                <span className="ml-auto text-[12px] text-neutral-400">via {result.via}</span>
+                <span className="ml-auto text-[12px] text-neutral-400">{viaLine(result.via)}</span>
               </div>
 
               {/*
@@ -465,9 +501,17 @@ export default function TranslateScreen({
               */}
               {!targetVoice && (
                 <p className="mt-2 text-[12px] leading-5 text-neutral-400">
-                  This device has no {target?.name} voice, so nothing would come out but an
-                  English accent reading the letters. Phones normally have one; on Windows it is
-                  Settings → Time &amp; Language → Speech → Add voices. Until then, Show it.
+                  {tr(
+                    <>
+                      This device has no {target?.name} voice, so nothing would come out but an
+                      English accent reading the letters. Phones normally have one; on Windows it is
+                      Settings → Time &amp; Language → Speech → Add voices. Until then, Show it.
+                    </>,
+                    <>
+                      这台设备没有{target?.zh}语音，读出来只会是英语口音在念字母。手机一般都有；Windows
+                      上在「设置 → 时间和语言 → 语音 → 添加语音」。在那之前，先用「放大显示」。
+                    </>,
+                  )}
                 </p>
               )}
             </div>
@@ -484,7 +528,7 @@ export default function TranslateScreen({
           {book.length > 0 && (
             <>
               <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-0">
-                Your phrases
+                {tr('Your phrases', '我的短语')}
               </h2>
               <div className="border-t border-neutral-100">
                 {book.map((phrase) => (
@@ -498,8 +542,10 @@ export default function TranslateScreen({
                 ))}
               </div>
               <p className="pt-3 text-[12px] leading-5 text-neutral-400">
-                Everything you translate is kept here, so it still works with no signal. Starred
-                phrases stay at the top.
+                {tr(
+                  'Everything you translate is kept here, so it still works with no signal. Starred phrases stay at the top.',
+                  '翻译过的内容都存在这里，没有信号也能用。收藏的短语排在最前面。',
+                )}
               </p>
             </>
           )}
@@ -509,7 +555,7 @@ export default function TranslateScreen({
               book.length > 0 ? 'pt-8' : 'pt-8 lg:pt-0'
             }`}
           >
-            Travel basics · 华语 → Tiếng Việt
+            {tr('Travel basics', '旅行常用语')} · 华语 → Tiếng Việt
           </h2>
           <div className="border-t border-neutral-100">
             {/* Not rows in the notebook: there is nothing to star or delete on

@@ -2,13 +2,14 @@ import { useRef, useState } from 'react'
 import { DateField, Field, chip, chipOpen } from '../components/FormFields'
 import { CheckIcon, RepeatIcon } from '../components/Icons'
 import Popover from '../components/Popover'
+import { tr } from '../lib/i18n'
 import {
-  WEEKDAY_LETTERS,
-  WEEKDAY_NAMES,
   choiceOf,
   presetLabel,
   presetRule,
   unitName,
+  weekdayLetters,
+  weekdayNames,
   weekdayOf,
   type RepeatChoice,
 } from '../lib/repeat'
@@ -17,14 +18,16 @@ import type { RepeatUnit, ScheduleRepeat } from '../types'
 
 const UNITS: RepeatUnit[] = ['day', 'week', 'month', 'year']
 
-const CHIP_LABELS: Record<RepeatChoice, string> = {
-  never: 'Never',
-  day: 'Every day',
-  week: 'Every week',
-  month: 'Every month',
-  year: 'Every year',
-  custom: 'Custom',
-}
+/** What the chip says for each choice. A function, so it is asked in the language of the moment. */
+const chipLabel = (choice: RepeatChoice): string =>
+  ({
+    never: tr('Never', '不重复'),
+    day: tr('Every day', '每天'),
+    week: tr('Every week', '每周'),
+    month: tr('Every month', '每月'),
+    year: tr('Every year', '每年'),
+    custom: tr('Custom', '自定义'),
+  })[choice]
 
 /**
  * The Repeat rows of the schedule form.
@@ -108,30 +111,30 @@ export default function RepeatField({
   }
 
   const options: { value: RepeatChoice; label: string }[] = [
-    { value: 'never', label: 'Never' },
+    { value: 'never', label: tr('Never', '不重复') },
     ...UNITS.map((unit) => ({ value: unit, label: presetLabel(unit, date) })),
-    { value: 'custom', label: 'Custom…' },
+    { value: 'custom', label: tr('Custom…', '自定义…') },
   ]
 
   return (
     <>
-      <Field label="Repeat">
+      <Field label={tr('Repeat', '重复')}>
         <button
           ref={anchor}
           type="button"
           onClick={() => setOpen((was) => !was)}
-          aria-label="Repeat"
+          aria-label={tr('Repeat', '重复')}
           aria-expanded={open}
           className={`${chip} ${open ? chipOpen : ''}`}
         >
-          <span className={value ? '' : 'text-neutral-400'}>{CHIP_LABELS[choice]}</span>
+          <span className={value ? '' : 'text-neutral-400'}>{chipLabel(choice)}</span>
           <RepeatIcon className="h-4 w-4 text-neutral-400" />
         </button>
       </Field>
 
       {open && (
-        <Popover anchor={anchor} label="Repeat" onClose={() => setOpen(false)}>
-          <div className="w-[248px] p-1.5" role="listbox" aria-label="Repeat">
+        <Popover anchor={anchor} label={tr('Repeat', '重复')} onClose={() => setOpen(false)}>
+          <div className="w-[248px] p-1.5" role="listbox" aria-label={tr('Repeat', '重复')}>
             {options.map((option) => (
               <button
                 key={option.value}
@@ -151,20 +154,20 @@ export default function RepeatField({
 
       {value && choice === 'custom' && (
         <>
-          <Field label="Every">
+          <Field label={tr('Every', '每')}>
             <span className="flex items-center gap-2">
               <input
                 value={everyText}
                 onChange={(event) => typeEvery(event.target.value)}
                 onBlur={() => setEveryText(String(value.every))}
                 inputMode="numeric"
-                aria-label="Every how many"
+                aria-label={tr('Every how many', '间隔多少')}
                 className="w-12 rounded-xl bg-neutral-100 px-2 py-1.5 text-center text-[15px] tabular-nums outline-hidden focus:ring-2 focus:ring-brand-500/40"
               />
               <select
                 value={value.unit}
                 onChange={(event) => changeUnit(event.target.value as RepeatUnit)}
-                aria-label="Repeat unit"
+                aria-label={tr('Repeat unit', '重复单位')}
                 className="rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
               >
                 {UNITS.map((unit) => (
@@ -177,9 +180,9 @@ export default function RepeatField({
           </Field>
 
           {value.unit === 'week' && (
-            <Field label="On">
+            <Field label={tr('On', '星期')}>
               <span className="flex gap-1">
-                {WEEKDAY_LETTERS.map((letter, day) => {
+                {weekdayLetters().map((letter, day) => {
                   const on = value.weekdays.includes(day)
                   return (
                     <button
@@ -187,7 +190,7 @@ export default function RepeatField({
                       type="button"
                       onClick={() => toggleDay(day)}
                       aria-pressed={on}
-                      aria-label={WEEKDAY_NAMES[day]}
+                      aria-label={weekdayNames()[day]}
                       className={`h-8 w-8 rounded-full text-[12px] font-medium transition-colors ${
                         on
                           ? 'bg-brand-500 text-white'
@@ -205,12 +208,12 @@ export default function RepeatField({
       )}
 
       {value && (
-        <Field label="Until">
+        <Field label={tr('Until', '结束')}>
           <DateField
-            label="Repeat until"
+            label={tr('Repeat until', '重复结束日期')}
             value={value.until ?? ''}
             onChange={(until) => update({ until: until || null })}
-            placeholder="Forever"
+            placeholder={tr('Forever', '永不')}
             clearable
             min={date}
           />

@@ -6,6 +6,7 @@ import { CameraIcon, CheckIcon, Spinner, TrashIcon } from '../components/Icons'
 import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import { saveFile } from '../lib/files'
+import { tr } from '../lib/i18n'
 import { typedBefore } from '../lib/places'
 import { deleteWish, placesOf, saveWish, useSchedule, useWishlist } from '../lib/store'
 import type { Attachment, TripLink, WishPlace } from '../types'
@@ -76,9 +77,9 @@ export default function WishForm({
         attachments: files,
         links,
       })
-      onSaved(wish ? 'Updated' : 'Added to the wishlist')
+      onSaved(wish ? tr('Updated', '已更新') : tr('Added to the wishlist', '已加入心愿单'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save that.')
+      setError(err instanceof Error ? err.message : tr('Could not save that.', '没能保存。'))
       setBusy(false)
     }
   }
@@ -86,7 +87,7 @@ export default function WishForm({
   return (
     <Sheet
       onClose={onClose}
-      title={wish ? 'Edit place' : 'Somewhere to go'}
+      title={wish ? tr('Edit place', '编辑地点') : tr('Somewhere to go', '想去的地方')}
       footer={
         <>
           {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
@@ -96,17 +97,17 @@ export default function WishForm({
             disabled={busy}
             className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
           >
-            {busy ? 'Saving...' : 'Save'}
+            {busy ? tr('Saving...', '正在保存…') : tr('Save', '保存')}
           </button>
           {wish && (
             <button
               type="button"
               onClick={() => {
-                void deleteWish(wish.id).then(() => onSaved('Removed'))
+                void deleteWish(wish.id).then(() => onSaved(tr('Removed', '已移除')))
               }}
               className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
             >
-              Remove
+              {tr('Remove', '移除')}
             </button>
           )}
         </>
@@ -117,17 +118,22 @@ export default function WishForm({
           value={name}
           onChange={(event) => setName(event.target.value)}
           autoFocus={!wish}
-          placeholder="Where do you want to go?"
+          placeholder={tr('Where do you want to go?', '想去哪里？')}
           className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
-          <Field label="Country">
+          <Field label={tr('Country', '国家')}>
             <CountrySelect value={country} onChange={pickCountry} />
           </Field>
           {country && (
-            <Field label="Region" hint="地区, like 海南 or Sabah">
-              <TextField label="Region" value={region} onChange={setRegion} suggestions={regions} />
+            <Field label={tr('Region', '地区')} hint={tr('地区, like 海南 or Sabah', '比如海南、沙巴')}>
+              <TextField
+                label={tr('Region', '地区')}
+                value={region}
+                onChange={setRegion}
+                suggestions={regions}
+              />
             </Field>
           )}
           {/*
@@ -141,26 +147,30 @@ export default function WishForm({
             <NotesField
               value={note}
               onChange={setNote}
-              placeholder="Why you want to go — and anything worth keeping"
+              placeholder={tr(
+                'Why you want to go — and anything worth keeping',
+                '为什么想去，还有值得记下的一切',
+              )}
             />
           </div>
         </div>
 
         <div className="mt-4">
           <p className="pb-2 text-[13px] text-neutral-400">
-            Picture <span className="text-neutral-300">· the one on the card</span>
+            {tr('Picture', '图片')}{' '}
+            <span className="text-neutral-300">{tr('· the one on the card', '· 卡片上显示的那张')}</span>
           </p>
           {preview ? (
             <div className="relative">
               <img
                 src={preview}
-                alt={name || 'Wishlist place'}
+                alt={name || tr('Wishlist place', '心愿单地点')}
                 className="h-40 w-full rounded-2xl object-cover"
               />
               <button
                 type="button"
                 onClick={() => setPhoto(null)}
-                aria-label="Remove the picture"
+                aria-label={tr('Remove the picture', '移除图片')}
                 className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-red-600 shadow-sm"
               >
                 <TrashIcon />
@@ -174,7 +184,7 @@ export default function WishForm({
               className="flex w-full flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-neutral-200 py-8 text-neutral-400 transition-colors hover:border-neutral-300"
             >
               {busy ? <Spinner className="h-5 w-5" /> : <CameraIcon className="h-6 w-6" />}
-              <span className="text-[13px] font-medium">Add a picture</span>
+              <span className="text-[13px] font-medium">{tr('Add a picture', '添加图片')}</span>
             </button>
           )}
         </div>
@@ -191,7 +201,7 @@ export default function WishForm({
         </div>
 
         <div className="mt-4">
-          <p className="pb-2 text-[13px] text-neutral-400">Attachments</p>
+          <p className="pb-2 text-[13px] text-neutral-400">{tr('Attachments', '附件')}</p>
           <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
         </div>
 
@@ -203,11 +213,13 @@ export default function WishForm({
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 py-3 text-[14px] font-medium text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-700"
             >
               <CheckIcon className="h-4 w-4" />
-              I have been here
+              {tr('I have been here', '我去过这里')}
             </button>
             <p className="pt-2 text-[12px] leading-5 text-neutral-400">
-              Puts it in the schedule as a trip — with the country, so it counts — and takes it
-              off the wishlist. The note, the links and the files go with it.
+              {tr(
+                'Puts it in the schedule as a trip — with the country, so it counts — and takes it off the wishlist. The note, the links and the files go with it.',
+                '把它作为行程放进日程（带上国家，才会计数），并从心愿单移除。备注、链接和文件都会一起带过去。',
+              )}
             </p>
           </>
         )}
@@ -225,7 +237,9 @@ export default function WishForm({
             saveFile(file)
               .then(setPhoto)
               .catch((err: unknown) =>
-                setError(err instanceof Error ? err.message : "That picture couldn't be used."),
+                setError(
+                  err instanceof Error ? err.message : tr("That picture couldn't be used.", '这张图片用不了。'),
+                ),
               )
               .finally(() => setBusy(false))
           }}

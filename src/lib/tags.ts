@@ -1,4 +1,5 @@
 import type { Tag } from '../types'
+import { isZh } from './i18n'
 
 /**
  * What a new install starts with. These are only defaults — every one can be
@@ -59,8 +60,49 @@ export const findTag = (tags: Tag[], id: string | null): Tag | undefined =>
 export const tagEmoji = (tags: Tag[], id: string | null): string =>
   findTag(tags, id)?.emoji ?? NO_TAG
 
-export const tagLabel = (tags: Tag[], id: string | null): string =>
-  findTag(tags, id)?.label ?? ''
+/**
+ * The built-in tags and categories in Chinese, by id.
+ *
+ * A label is the user's own words and is shown as typed — except that the
+ * defaults were typed by this app, in English, on the day the notebook was
+ * made. So a built-in one still wearing its first name is shown in the app's
+ * language, and one renamed to anything at all keeps what it was renamed to.
+ */
+const DEFAULT_ZH: Record<string, { en: string; zh: string }> = Object.fromEntries(
+  (
+    [
+      ['personal', '个人'],
+      ['work', '工作'],
+      ['travel', '旅行'],
+      ['food', '美食'],
+      ['sports', '运动'],
+      ['event', '活动'],
+      ['other', '其他'],
+      ['food-drink', '餐饮'],
+      ['transport', '交通'],
+      ['stay', '住宿'],
+      ['shopping', '购物'],
+      ['tickets', '门票'],
+      ['groceries', '日用品'],
+      ['bills', '账单'],
+      ['other-spend', '其他'],
+    ] as const
+  ).map(([id, zh]) => [
+    id,
+    { en: [...DEFAULT_TAGS, ...DEFAULT_CATEGORIES].find((tag) => tag.id === id)!.label, zh },
+  ]),
+)
+
+/** What to call a tag or category on screen: its label, or the Chinese for a default left as it was. */
+export function tagName(tag: Tag): string {
+  const builtIn = DEFAULT_ZH[tag.id]
+  return isZh() && builtIn && tag.label === builtIn.en ? builtIn.zh : tag.label
+}
+
+export const tagLabel = (tags: Tag[], id: string | null): string => {
+  const tag = findTag(tags, id)
+  return tag ? tagName(tag) : ''
+}
 
 /** A readable, unique id for a new tag, so backups stay legible. */
 export function makeTagId(label: string, taken: string[]): string {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tr } from '../lib/i18n'
 import { applyUpdate, useUpdateReady } from '../lib/offline'
 
 /**
@@ -21,15 +22,15 @@ export default function UpdateBar() {
   return (
     <div className="fixed inset-x-0 bottom-[140px] z-30 flex justify-center px-4 mb-safe lg:bottom-8">
       <div className="animate-fade-in flex items-center gap-1 rounded-full bg-neutral-900 py-1.5 pl-4 pr-1.5 text-[13px] text-white shadow-lg">
-        <span className="mr-1">A new version is ready</span>
+        <span className="mr-1">{tr('A new version is ready', '新版本已准备好')}</span>
         <button onClick={() => setLater(true)} className="rounded-full px-3 py-1 text-neutral-400">
-          Later
+          {tr('Later', '稍后')}
         </button>
         <button
           onClick={applyUpdate}
           className="rounded-full bg-white px-3 py-1 font-medium text-neutral-900"
         >
-          Reload
+          {tr('Reload', '重新加载')}
         </button>
       </div>
     </div>

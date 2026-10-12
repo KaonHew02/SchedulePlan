@@ -1,3 +1,5 @@
+import { tr } from './i18n'
+
 /**
  * Turning a phrase into another language, and saying it out loud.
  *
@@ -27,6 +29,11 @@ export interface Language {
   /** What the translators want. */
   code: string
   name: string
+  /**
+   * The name in Chinese, for the picker in 中文. Written out rather than asked
+   * of Intl.DisplayNames, which older iPhones do not have.
+   */
+  zh: string
   /** What it calls itself, which is what somebody reading the screen wants. */
   native: string
   /** What `speechSynthesis` wants, which is not always the same string. */
@@ -43,58 +50,61 @@ export interface Language {
 export const COMMON_LANGUAGES = ['zh-CN', 'vi', 'en', 'ms', 'th', 'id', 'ja', 'ko', 'ta']
 
 export const LANGUAGES: Language[] = [
-  { code: 'zh-CN', name: 'Chinese (Simplified)', native: '华语', speech: 'zh-CN' },
-  { code: 'zh-TW', name: 'Chinese (Traditional)', native: '繁體中文', speech: 'zh-TW' },
-  { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', speech: 'vi-VN' },
-  { code: 'en', name: 'English', native: 'English', speech: 'en-US' },
-  { code: 'ms', name: 'Malay', native: 'Bahasa Melayu', speech: 'ms-MY' },
-  { code: 'th', name: 'Thai', native: 'ไทย', speech: 'th-TH' },
-  { code: 'id', name: 'Indonesian', native: 'Bahasa Indonesia', speech: 'id-ID' },
-  { code: 'ja', name: 'Japanese', native: '日本語', speech: 'ja-JP' },
-  { code: 'ko', name: 'Korean', native: '한국어', speech: 'ko-KR' },
-  { code: 'ta', name: 'Tamil', native: 'தமிழ்', speech: 'ta-IN' },
-  { code: 'ar', name: 'Arabic', native: 'العربية', speech: 'ar-SA' },
-  { code: 'bn', name: 'Bengali', native: 'বাংলা', speech: 'bn-BD' },
-  { code: 'my', name: 'Burmese', native: 'မြန်မာ', speech: 'my-MM' },
-  { code: 'cs', name: 'Czech', native: 'Čeština', speech: 'cs-CZ' },
-  { code: 'da', name: 'Danish', native: 'Dansk', speech: 'da-DK' },
-  { code: 'nl', name: 'Dutch', native: 'Nederlands', speech: 'nl-NL' },
-  { code: 'fil', name: 'Filipino', native: 'Filipino', speech: 'fil-PH' },
-  { code: 'fi', name: 'Finnish', native: 'Suomi', speech: 'fi-FI' },
-  { code: 'fr', name: 'French', native: 'Français', speech: 'fr-FR' },
-  { code: 'de', name: 'German', native: 'Deutsch', speech: 'de-DE' },
-  { code: 'el', name: 'Greek', native: 'Ελληνικά', speech: 'el-GR' },
-  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', speech: 'gu-IN' },
-  { code: 'he', name: 'Hebrew', native: 'עברית', speech: 'he-IL' },
-  { code: 'hi', name: 'Hindi', native: 'हिन्दी', speech: 'hi-IN' },
-  { code: 'hu', name: 'Hungarian', native: 'Magyar', speech: 'hu-HU' },
-  { code: 'it', name: 'Italian', native: 'Italiano', speech: 'it-IT' },
-  { code: 'jv', name: 'Javanese', native: 'Basa Jawa', speech: 'jv-ID' },
-  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', speech: 'kn-IN' },
-  { code: 'km', name: 'Khmer', native: 'ខ្មែរ', speech: 'km-KH' },
-  { code: 'lo', name: 'Lao', native: 'ລາວ', speech: 'lo-LA' },
-  { code: 'ml', name: 'Malayalam', native: 'മലയാളം', speech: 'ml-IN' },
-  { code: 'mr', name: 'Marathi', native: 'मराठी', speech: 'mr-IN' },
-  { code: 'ne', name: 'Nepali', native: 'नेपाली', speech: 'ne-NP' },
-  { code: 'no', name: 'Norwegian', native: 'Norsk', speech: 'nb-NO' },
-  { code: 'fa', name: 'Persian', native: 'فارسی', speech: 'fa-IR' },
-  { code: 'pl', name: 'Polish', native: 'Polski', speech: 'pl-PL' },
-  { code: 'pt', name: 'Portuguese', native: 'Português', speech: 'pt-BR' },
-  { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', speech: 'pa-IN' },
-  { code: 'ro', name: 'Romanian', native: 'Română', speech: 'ro-RO' },
-  { code: 'ru', name: 'Russian', native: 'Русский', speech: 'ru-RU' },
-  { code: 'si', name: 'Sinhala', native: 'සිංහල', speech: 'si-LK' },
-  { code: 'es', name: 'Spanish', native: 'Español', speech: 'es-ES' },
-  { code: 'sw', name: 'Swahili', native: 'Kiswahili', speech: 'sw-KE' },
-  { code: 'sv', name: 'Swedish', native: 'Svenska', speech: 'sv-SE' },
-  { code: 'te', name: 'Telugu', native: 'తెలుగు', speech: 'te-IN' },
-  { code: 'tr', name: 'Turkish', native: 'Türkçe', speech: 'tr-TR' },
-  { code: 'uk', name: 'Ukrainian', native: 'Українська', speech: 'uk-UA' },
-  { code: 'ur', name: 'Urdu', native: 'اردو', speech: 'ur-PK' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)', zh: '简体中文', native: '华语', speech: 'zh-CN' },
+  { code: 'zh-TW', name: 'Chinese (Traditional)', zh: '繁体中文', native: '繁體中文', speech: 'zh-TW' },
+  { code: 'vi', name: 'Vietnamese', zh: '越南语', native: 'Tiếng Việt', speech: 'vi-VN' },
+  { code: 'en', name: 'English', zh: '英语', native: 'English', speech: 'en-US' },
+  { code: 'ms', name: 'Malay', zh: '马来语', native: 'Bahasa Melayu', speech: 'ms-MY' },
+  { code: 'th', name: 'Thai', zh: '泰语', native: 'ไทย', speech: 'th-TH' },
+  { code: 'id', name: 'Indonesian', zh: '印尼语', native: 'Bahasa Indonesia', speech: 'id-ID' },
+  { code: 'ja', name: 'Japanese', zh: '日语', native: '日本語', speech: 'ja-JP' },
+  { code: 'ko', name: 'Korean', zh: '韩语', native: '한국어', speech: 'ko-KR' },
+  { code: 'ta', name: 'Tamil', zh: '泰米尔语', native: 'தமிழ்', speech: 'ta-IN' },
+  { code: 'ar', name: 'Arabic', zh: '阿拉伯语', native: 'العربية', speech: 'ar-SA' },
+  { code: 'bn', name: 'Bengali', zh: '孟加拉语', native: 'বাংলা', speech: 'bn-BD' },
+  { code: 'my', name: 'Burmese', zh: '缅甸语', native: 'မြန်မာ', speech: 'my-MM' },
+  { code: 'cs', name: 'Czech', zh: '捷克语', native: 'Čeština', speech: 'cs-CZ' },
+  { code: 'da', name: 'Danish', zh: '丹麦语', native: 'Dansk', speech: 'da-DK' },
+  { code: 'nl', name: 'Dutch', zh: '荷兰语', native: 'Nederlands', speech: 'nl-NL' },
+  { code: 'fil', name: 'Filipino', zh: '菲律宾语', native: 'Filipino', speech: 'fil-PH' },
+  { code: 'fi', name: 'Finnish', zh: '芬兰语', native: 'Suomi', speech: 'fi-FI' },
+  { code: 'fr', name: 'French', zh: '法语', native: 'Français', speech: 'fr-FR' },
+  { code: 'de', name: 'German', zh: '德语', native: 'Deutsch', speech: 'de-DE' },
+  { code: 'el', name: 'Greek', zh: '希腊语', native: 'Ελληνικά', speech: 'el-GR' },
+  { code: 'gu', name: 'Gujarati', zh: '古吉拉特语', native: 'ગુજરાતી', speech: 'gu-IN' },
+  { code: 'he', name: 'Hebrew', zh: '希伯来语', native: 'עברית', speech: 'he-IL' },
+  { code: 'hi', name: 'Hindi', zh: '印地语', native: 'हिन्दी', speech: 'hi-IN' },
+  { code: 'hu', name: 'Hungarian', zh: '匈牙利语', native: 'Magyar', speech: 'hu-HU' },
+  { code: 'it', name: 'Italian', zh: '意大利语', native: 'Italiano', speech: 'it-IT' },
+  { code: 'jv', name: 'Javanese', zh: '爪哇语', native: 'Basa Jawa', speech: 'jv-ID' },
+  { code: 'kn', name: 'Kannada', zh: '卡纳达语', native: 'ಕನ್ನಡ', speech: 'kn-IN' },
+  { code: 'km', name: 'Khmer', zh: '高棉语', native: 'ខ្មែរ', speech: 'km-KH' },
+  { code: 'lo', name: 'Lao', zh: '老挝语', native: 'ລາວ', speech: 'lo-LA' },
+  { code: 'ml', name: 'Malayalam', zh: '马拉雅拉姆语', native: 'മലയാളം', speech: 'ml-IN' },
+  { code: 'mr', name: 'Marathi', zh: '马拉地语', native: 'मराठी', speech: 'mr-IN' },
+  { code: 'ne', name: 'Nepali', zh: '尼泊尔语', native: 'नेपाली', speech: 'ne-NP' },
+  { code: 'no', name: 'Norwegian', zh: '挪威语', native: 'Norsk', speech: 'nb-NO' },
+  { code: 'fa', name: 'Persian', zh: '波斯语', native: 'فارسی', speech: 'fa-IR' },
+  { code: 'pl', name: 'Polish', zh: '波兰语', native: 'Polski', speech: 'pl-PL' },
+  { code: 'pt', name: 'Portuguese', zh: '葡萄牙语', native: 'Português', speech: 'pt-BR' },
+  { code: 'pa', name: 'Punjabi', zh: '旁遮普语', native: 'ਪੰਜਾਬੀ', speech: 'pa-IN' },
+  { code: 'ro', name: 'Romanian', zh: '罗马尼亚语', native: 'Română', speech: 'ro-RO' },
+  { code: 'ru', name: 'Russian', zh: '俄语', native: 'Русский', speech: 'ru-RU' },
+  { code: 'si', name: 'Sinhala', zh: '僧伽罗语', native: 'සිංහල', speech: 'si-LK' },
+  { code: 'es', name: 'Spanish', zh: '西班牙语', native: 'Español', speech: 'es-ES' },
+  { code: 'sw', name: 'Swahili', zh: '斯瓦希里语', native: 'Kiswahili', speech: 'sw-KE' },
+  { code: 'sv', name: 'Swedish', zh: '瑞典语', native: 'Svenska', speech: 'sv-SE' },
+  { code: 'te', name: 'Telugu', zh: '泰卢固语', native: 'తెలుగు', speech: 'te-IN' },
+  { code: 'tr', name: 'Turkish', zh: '土耳其语', native: 'Türkçe', speech: 'tr-TR' },
+  { code: 'uk', name: 'Ukrainian', zh: '乌克兰语', native: 'Українська', speech: 'uk-UA' },
+  { code: 'ur', name: 'Urdu', zh: '乌尔都语', native: 'اردو', speech: 'ur-PK' },
 ]
 
 export const languageOf = (code: string): Language | undefined =>
   LANGUAGES.find((language) => language.code === code)
+
+/** Its name in the app's language: Vietnamese, or 越南语. */
+export const languageName = (language: Language): string => tr(language.name, language.zh)
 
 /** Right-to-left scripts, so the answer is not laid out backwards. */
 const RTL = new Set(['ar', 'he', 'fa', 'ur'])
@@ -150,7 +160,7 @@ export async function translate(
   to: string,
 ): Promise<Translation> {
   const trimmed = text.trim()
-  if (!trimmed) throw new Error('Nothing to translate.')
+  if (!trimmed) throw new Error(tr('Nothing to translate.', '没有要翻译的内容。'))
   if (from === to) return { text: trimmed, via: 'no change' }
 
   let offline = false
@@ -170,8 +180,8 @@ export async function translate(
 
   throw new Error(
     offline
-      ? 'No connection. Saved phrases below still work.'
-      : 'Neither translator answered. Try again in a moment.',
+      ? tr('No connection. Saved phrases below still work.', '没有网络。下面存好的短语照样能用。')
+      : tr('Neither translator answered. Try again in a moment.', '两个翻译服务都没有回应，请稍后再试。'),
   )
 }
 

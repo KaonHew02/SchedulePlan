@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { LinkIcon, Plus, TrashIcon } from './Icons'
+import { tr } from '../lib/i18n'
 import { hostLabel, safeUrl } from '../lib/links'
 import type { TripLink } from '../types'
 
@@ -38,7 +39,7 @@ export default function LinkEditor({
   function add() {
     const safe = safeUrl(url)
     if (!safe) {
-      setError('That does not look like a link.')
+      setError(tr('That does not look like a link.', '这看起来不像链接。'))
       return
     }
     onChange([
@@ -51,7 +52,7 @@ export default function LinkEditor({
   return (
     <div>
       <div className="flex items-baseline justify-between pb-2">
-        <p className="text-[13px] text-neutral-400">Links</p>
+        <p className="text-[13px] text-neutral-400">{tr('Links', '链接')}</p>
         {!adding && (
           <button
             type="button"
@@ -59,7 +60,7 @@ export default function LinkEditor({
             className="flex items-center gap-1 text-[13px] font-medium text-brand-500"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add
+            {tr('Add', '添加')}
           </button>
         )}
       </div>
@@ -82,7 +83,10 @@ export default function LinkEditor({
               <button
                 type="button"
                 onClick={() => onChange(links.filter((row) => row.id !== link.id))}
-                aria-label={`Remove ${link.label || hostLabel(link.url)}`}
+                aria-label={tr(
+                  `Remove ${link.label || hostLabel(link.url)}`,
+                  `移除「${link.label || hostLabel(link.url)}」`,
+                )}
                 className="shrink-0 p-1.5 text-neutral-300"
               >
                 <TrashIcon className="h-[15px] w-[15px]" />
@@ -112,9 +116,9 @@ export default function LinkEditor({
               event.preventDefault()
               add()
             }}
-            placeholder="Paste the link"
+            placeholder={tr('Paste the link', '粘贴链接')}
             inputMode="url"
-            aria-label="Link address"
+            aria-label={tr('Link address', '链接地址')}
             className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
           />
           <input
@@ -125,8 +129,8 @@ export default function LinkEditor({
               event.preventDefault()
               add()
             }}
-            placeholder="What is it? (optional)"
-            aria-label="What the link is"
+            placeholder={tr('What is it? (optional)', '这是什么？（选填）')}
+            aria-label={tr('What the link is', '链接说明')}
             className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
           />
           {error && <p className="pt-2 text-[12px] leading-5 text-amber-700">{error}</p>}
@@ -137,17 +141,20 @@ export default function LinkEditor({
               disabled={!url.trim()}
               className="rounded-full bg-brand-500 px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-40"
             >
-              Add link
+              {tr('Add link', '添加链接')}
             </button>
             <button type="button" onClick={reset} className="px-2 py-1.5 text-[13px] text-neutral-400">
-              Cancel
+              {tr('Cancel', '取消')}
             </button>
           </div>
         </div>
       ) : (
         links.length === 0 && (
           <p className="text-[13px] leading-5 text-neutral-300">
-            The booking, a map pin, the vlog &mdash; anything about this that lives somewhere else.
+            {tr(
+              <>The booking, a map pin, the vlog &mdash; anything about this that lives somewhere else.</>,
+              <>预订、地图定位、Vlog——和它有关、放在别处的任何东西。</>,
+            )}
           </p>
         )
       )}

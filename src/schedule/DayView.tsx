@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import EmptyState from '../components/EmptyState'
 import { minutesOf, nowTime, todayISO } from '../lib/date'
 import type { Holiday } from '../lib/holidays'
+import { tr } from '../lib/i18n'
 import { lastDay } from '../lib/store'
 import type { ScheduleItem } from '../types'
 import { HolidayLines } from './HolidayLine'
@@ -32,7 +33,7 @@ function NowLine({ time }: { time: string }) {
 /** What the left column says for this item on this day. */
 function Gutter({ item, day }: { item: ScheduleItem; day: string }) {
   if (item.all_day) {
-    return <span className="text-[11px] leading-5 text-neutral-400">All day</span>
+    return <span className="text-[11px] leading-5 text-neutral-400">{tr('All day', '全天')}</span>
   }
   if (day === item.date) {
     return <span className="text-[13px] font-medium leading-5 tabular-nums">{item.start_time}</span>
@@ -67,7 +68,10 @@ export default function DayView({
     return (
       <>
         <HolidayLines holidays={holidays} className="px-4 pt-1" />
-        <EmptyState title="Nothing scheduled" hint="Tap + to add something" />
+        <EmptyState
+          title={tr('Nothing scheduled', '没有安排')}
+          hint={tr('Tap + to add something', '点 + 添加')}
+        />
       </>
     )
   }

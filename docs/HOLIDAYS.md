@@ -25,6 +25,15 @@ the moon — Raya, Awal Muharram, Maulidur Rasul — can be a day out.
 Other countries do not need a yearly update: their rules (Easter, the Chinese
 calendar, "first Monday of June") work for any year.
 
+**In 中文** the names come from `src/lib/holiday-names-zh.json`: every name the
+calendar can show, Malaysia's and the library's, with its Chinese. The dates
+never depend on it — a name it does not have just shows in English. Endings
+such as "(extra holiday)" and "(2nd day)" are added on by the app, so
+"Malaysia Day (extra holiday)" needs only "Malaysia Day" in the file. If the
+gazette ever has a holiday it never had before, the daily run says so —
+"No Chinese name yet … shown in English: …" — and one line added to that file
+fixes it.
+
 ## How the daily check works
 
 `.github/workflows/holidays.yml` runs at 08:17 Malaysian time and does this:

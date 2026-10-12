@@ -2,7 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import CountryBadge from '../components/CountryBadge'
 import Flag from '../components/Flag'
 import { Plus } from '../components/Icons'
-import { countryOf, graticule, project, type Country } from '../lib/places'
+import { tr } from '../lib/i18n'
+import { countryName, countryOf, graticule, project, type Country } from '../lib/places'
 import { loadWorldMap, type WorldMap } from './worldmap'
 
 /**
@@ -337,7 +338,10 @@ export default function Globe({
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           className="w-full cursor-grab touch-none select-none active:cursor-grabbing"
           role="img"
-          aria-label={`Globe showing ${visited.length} countries visited`}
+          aria-label={tr(
+            `Globe showing ${visited.length} countries visited`,
+            `地球仪，已去过 ${visited.length} 个国家`,
+          )}
           onPointerDown={(event) => {
             // A hand on the globe outranks a turn it is in the middle of, or
             // the two would fight over the view for the rest of the flight.
@@ -509,7 +513,7 @@ export default function Globe({
             type="button"
             onClick={() => setZoom((was) => clamp(was * 1.4))}
             disabled={zoom >= MAX_ZOOM}
-            aria-label="Zoom in"
+            aria-label={tr('Zoom in', '放大')}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white/90 text-neutral-500 transition-colors hover:bg-neutral-50 disabled:opacity-30"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -518,7 +522,7 @@ export default function Globe({
             type="button"
             onClick={() => setZoom((was) => clamp(was / 1.4))}
             disabled={zoom <= MIN_ZOOM}
-            aria-label="Zoom out"
+            aria-label={tr('Zoom out', '缩小')}
             className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white/90 text-neutral-500 transition-colors hover:bg-neutral-50 disabled:opacity-30"
           >
             <span className="block h-[1.5px] w-3 rounded-full bg-current" />
@@ -535,9 +539,9 @@ export default function Globe({
         {country ? (
           <>
             <Flag code={country.code} className="h-[13px] w-[19px]" />
-            <span className="font-medium text-neutral-700">{country.name}</span>
+            <span className="font-medium text-neutral-700">{countryName(country.code)}</span>
             <span className={been.has(country.code) ? 'text-lime-600' : 'text-neutral-400'}>
-              {been.has(country.code) ? '· been there' : '· not yet'}
+              {been.has(country.code) ? tr('· been there', '· 去过') : tr('· not yet', '· 还没去')}
             </span>
             {/* The country's own share of the destinations ring. Only where
                 there is one to show: '· 0 places' under a country you have
@@ -545,13 +549,15 @@ export default function Globe({
             {(places[country.code] ?? 0) > 0 && (
               <span className="tabular-nums text-neutral-400">
                 · {places[country.code]}{' '}
-                {places[country.code] === 1 ? 'place' : 'places'}
+                {tr(places[country.code] === 1 ? 'place' : 'places', '个地方')}
               </span>
             )}
           </>
         ) : (
           <span className="text-neutral-400">
-            {visited.length === 0 ? 'Nowhere marked yet' : 'Drag to spin, scroll to zoom'}
+            {visited.length === 0
+              ? tr('Nowhere marked yet', '还没有标记任何地方')
+              : tr('Drag to spin, scroll to zoom', '拖动旋转，滚动缩放')}
           </span>
         )}
       </div>
@@ -576,8 +582,14 @@ export default function Globe({
                 onPointerLeave={() => setHovered(null)}
                 title={
                   count > 0
-                    ? `${place.name} — ${count} ${count === 1 ? 'place' : 'places'}`
-                    : `Show ${place.name} on the globe`
+                    ? tr(
+                        `${countryName(place.code)} — ${count} ${count === 1 ? 'place' : 'places'}`,
+                        `${countryName(place.code)} — ${count} 个地方`,
+                      )
+                    : tr(
+                        `Show ${countryName(place.code)} on the globe`,
+                        `在地球仪上显示${countryName(place.code)}`,
+                      )
                 }
                 aria-pressed={picked === place.code}
                 // The ring follows the tap, not the focus: a browser's own

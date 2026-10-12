@@ -11,6 +11,7 @@
  * would fill the browser's allowance in a fortnight.
  */
 
+import { tr } from './i18n'
 import { FILES, idbDelete, idbGet, idbKeys, idbPut } from './idb'
 import { isDataUrl } from './sanitize'
 import type { Attachment } from '../types'
@@ -44,7 +45,9 @@ async function decode(source: Blob): Promise<ImageBitmap> {
   try {
     return await createImageBitmap(source)
   } catch {
-    throw new Error("That image couldn't be read. Try a JPEG or PNG.")
+    throw new Error(
+      tr("That image couldn't be read. Try a JPEG or PNG.", '这张图片读不了，换成 JPEG 或 PNG 试试。'),
+    )
   }
 }
 
@@ -58,7 +61,10 @@ function canvasOf(width: number, height: number): HTMLCanvasElement {
 function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("That image couldn't be saved."))),
+      (blob) =>
+        blob
+          ? resolve(blob)
+          : reject(new Error(tr("That image couldn't be saved.", '这张图片没能保存。'))),
       type,
       quality,
     )
@@ -191,7 +197,12 @@ export async function saveFile(
   options: { scan?: boolean; name?: string } = {},
 ): Promise<Attachment> {
   if (file.size > MAX_FILE) {
-    throw new Error(`${file.name} is ${prettySize(file.size)}. The limit is 25 MB.`)
+    throw new Error(
+      tr(
+        `${file.name} is ${prettySize(file.size)}. The limit is 25 MB.`,
+        `${file.name} 有 ${prettySize(file.size)}，上限是 25 MB。`,
+      ),
+    )
   }
 
   let blob: Blob = file
@@ -264,7 +275,8 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error("That attachment couldn't be read."))
+    reader.onerror = () =>
+      reject(new Error(tr("That attachment couldn't be read.", '这个附件读不了。')))
     reader.readAsDataURL(blob)
   })
 }
@@ -275,7 +287,9 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
  * have written, and an http one would be a request to wherever they chose.
  */
 export async function writeFileFromDataUrl(id: string, dataUrl: string): Promise<void> {
-  if (!isDataUrl(dataUrl)) throw new Error('That attachment is not stored inside the file.')
+  if (!isDataUrl(dataUrl)) {
+    throw new Error(tr('That attachment is not stored inside the file.', '这个附件没有存在文件里。'))
+  }
   const response = await fetch(dataUrl)
   await idbPut(FILES, id, await response.blob())
 }

@@ -17,6 +17,7 @@
 import { useSyncExternalStore } from 'react'
 import { DB_KEY, FILES, RECORDS, idbGet, idbKeys, idbPut, persist } from './idb'
 import { deleteFiles, readFileAsDataUrl, writeFileFromDataUrl } from './files'
+import { tr } from './i18n'
 import { safeUrl } from './links'
 import { firstOccurrence, unitName, unroll } from './repeat'
 import * as safe from './sanitize'
@@ -450,7 +451,8 @@ async function flush(): Promise<void> {
   } catch (err) {
     setSaveState({
       saving: false,
-      error: err instanceof Error ? err.message : 'Could not save to this browser.',
+      error:
+        err instanceof Error ? err.message : tr('Could not save to this browser.', '无法保存到这个浏览器。'),
     })
     throw err
   }
@@ -584,7 +586,9 @@ function cleanLinks(links: TripLink[]): TripLink[] {
   const clean: TripLink[] = []
   for (const link of links) {
     const url = safeUrl(link.url)
-    if (!url) throw new Error(`"${link.url}" does not look like a link.`)
+    if (!url) {
+      throw new Error(tr(`"${link.url}" does not look like a link.`, `「${link.url}」看起来不像链接。`))
+    }
     clean.push({ id: nextId(clean), label: link.label.trim(), url })
   }
   return clean
@@ -592,27 +596,31 @@ function cleanLinks(links: TripLink[]): TripLink[] {
 
 function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
   const title = draft.title.trim()
-  if (!title) throw new Error('Please give this a title.')
-  if (!isRealDate(draft.date)) throw new Error('That date is not a real date.')
+  if (!title) throw new Error(tr('Please give this a title.', '请填写标题。'))
+  if (!isRealDate(draft.date)) throw new Error(tr('That date is not a real date.', '这个日期不存在。'))
 
   const endDate = draft.end_date && draft.end_date !== draft.date ? draft.end_date : null
   if (endDate) {
-    if (!isRealDate(endDate)) throw new Error('That end date is not a real date.')
-    if (endDate < draft.date) throw new Error('The end date is before the start date.')
+    if (!isRealDate(endDate)) throw new Error(tr('That end date is not a real date.', '结束日期不存在。'))
+    if (endDate < draft.date) {
+      throw new Error(tr('The end date is before the start date.', '结束日期早于开始日期。'))
+    }
   }
 
   // A whole-day item keeps a start time so sorting still works, but nothing
   // reads it and nothing validates it.
   const start = draft.all_day ? '00:00' : draft.start_time
   if (!draft.all_day && !isTime(start)) {
-    throw new Error('The start needs to be a time like 18:30.')
+    throw new Error(tr('The start needs to be a time like 18:30.', '开始时间要写成 18:30 这样。'))
   }
   const end = draft.all_day ? null : draft.end_time || null
-  if (end && !isTime(end)) throw new Error('The end needs to be a time like 20:00.')
+  if (end && !isTime(end)) {
+    throw new Error(tr('The end needs to be a time like 20:00.', '结束时间要写成 20:00 这样。'))
+  }
   // Only meaningful within one day. On a trip, 09:00 on the last day is
   // perfectly sensible even though it reads as "before" a 14:00 start.
   if (end && !endDate && end <= start) {
-    throw new Error('End time must be after the start time.')
+    throw new Error(tr('End time must be after the start time.', '结束时间必须晚于开始时间。'))
   }
 
   return {
@@ -644,10 +652,19 @@ function cleanScheduleDraft(draft: ScheduleDraft): ScheduleDraft {
 function cleanRepeat(rule: ScheduleRepeat | null, date: string): ScheduleRepeat | null {
   if (!rule) return null
   if (!Number.isInteger(rule.every) || rule.every < 1 || rule.every > safe.MAX_EVERY) {
-    throw new Error(`A repeat can be every 1 to ${safe.MAX_EVERY} ${unitName(rule.unit, 2)}.`)
+    throw new Error(
+      tr(
+        `A repeat can be every 1 to ${safe.MAX_EVERY} ${unitName(rule.unit, 2)}.`,
+        `重复间隔只能是 1 到 ${safe.MAX_EVERY} ${unitName(rule.unit, 2)}。`,
+      ),
+    )
   }
-  if (rule.until && !isRealDate(rule.until)) throw new Error('That repeat end is not a real date.')
-  if (rule.until && rule.until < date) throw new Error('The repeat ends before it starts.')
+  if (rule.until && !isRealDate(rule.until)) {
+    throw new Error(tr('That repeat end is not a real date.', '重复的结束日期不存在。'))
+  }
+  if (rule.until && rule.until < date) {
+    throw new Error(tr('The repeat ends before it starts.', '重复还没开始就结束了。'))
+  }
   return safe.repeat(rule, date)
 }
 
@@ -658,7 +675,7 @@ function cleanRepeat(rule: ScheduleRepeat | null, date: string): ScheduleRepeat 
  */
 function mustOccur(item: ScheduleItem): ScheduleItem {
   if (item.repeat && !firstOccurrence(item)) {
-    throw new Error('That repeat never lands on a day before it ends.')
+    throw new Error(tr('That repeat never lands on a day before it ends.', '这个重复在结束前一次都不会出现。'))
   }
   return item
 }
@@ -720,7 +737,7 @@ export const store = {
   async updateSchedule(id: number, draft: ScheduleDraft): Promise<ScheduleItem> {
     const db = readDb()
     const existing = db.schedule.find((item) => item.id === id)
-    if (!existing) throw new Error('That schedule item no longer exists.')
+    if (!existing) throw new Error(tr('That schedule item no longer exists.', '这条日程已经不存在了。'))
     const clean = cleanScheduleDraft(draft)
     const updated: ScheduleItem = mustOccur({
       id,
@@ -751,7 +768,7 @@ export const store = {
   async deleteSchedule(id: number): Promise<void> {
     const db = readDb()
     const existing = db.schedule.find((item) => item.id === id)
-    if (!existing) throw new Error('That schedule item no longer exists.')
+    if (!existing) throw new Error(tr('That schedule item no longer exists.', '这条日程已经不存在了。'))
     await writeDb({
       ...db,
       // Deleting a trip sets its legs free rather than leaving them pointing
@@ -776,9 +793,9 @@ export const store = {
   async skipDay(id: number, day: string): Promise<void> {
     const db = readDb()
     const existing = db.schedule.find((item) => item.id === id)
-    if (!existing) throw new Error('That schedule item no longer exists.')
+    if (!existing) throw new Error(tr('That schedule item no longer exists.', '这条日程已经不存在了。'))
     const rule = existing.repeat
-    if (!rule) throw new Error('That item does not repeat.')
+    if (!rule) throw new Error(tr('That item does not repeat.', '这条日程不重复。'))
     await writeDb({
       ...db,
       schedule: db.schedule.map((item) =>
@@ -802,10 +819,10 @@ export const byNewest = (a: { date: string; id: number }, b: { date: string; id:
 
 function cleanExpenseDraft(draft: ExpenseDraft): ExpenseDraft {
   const title = draft.title.trim()
-  if (!title) throw new Error('What was it for?')
-  if (!isRealDate(draft.date)) throw new Error('That date is not a real date.')
+  if (!title) throw new Error(tr('What was it for?', '这笔钱花在什么上？'))
+  if (!isRealDate(draft.date)) throw new Error(tr('That date is not a real date.', '这个日期不存在。'))
   if (!Number.isFinite(draft.amount) || draft.amount <= 0) {
-    throw new Error('Enter an amount above zero.')
+    throw new Error(tr('Enter an amount above zero.', '请输入大于 0 的金额。'))
   }
   return {
     date: draft.date,
@@ -834,7 +851,7 @@ export async function createExpense(draft: ExpenseDraft): Promise<Expense> {
 export async function updateExpense(id: number, draft: ExpenseDraft): Promise<Expense> {
   const db = readDb()
   const existing = db.expenses.find((expense) => expense.id === id)
-  if (!existing) throw new Error('That expense no longer exists.')
+  if (!existing) throw new Error(tr('That expense no longer exists.', '这笔支出已经不存在了。'))
   const updated: Expense = { id, ...cleanExpenseDraft(draft) }
   await writeDb({
     ...db,
@@ -847,7 +864,7 @@ export async function updateExpense(id: number, draft: ExpenseDraft): Promise<Ex
 export async function deleteExpense(id: number): Promise<void> {
   const db = readDb()
   const existing = db.expenses.find((expense) => expense.id === id)
-  if (!existing) throw new Error('That expense no longer exists.')
+  if (!existing) throw new Error(tr('That expense no longer exists.', '这笔支出已经不存在了。'))
   await writeDb({ ...db, expenses: db.expenses.filter((expense) => expense.id !== id) })
   void deleteFiles(existing.attachments.map((file) => file.id))
 }
@@ -879,8 +896,8 @@ function firstEmoji(input: string): string {
 
 function cleanTag(label: string, emoji: string): { label: string; emoji: string } {
   const trimmed = label.trim()
-  if (!trimmed) throw new Error('Give it a name.')
-  if (trimmed.length > 20) throw new Error('That name is too long for a chip.')
+  if (!trimmed) throw new Error(tr('Give it a name.', '请取个名字。'))
+  if (trimmed.length > 20) throw new Error(tr('That name is too long for a chip.', '名字太长，标签放不下。'))
   return { label: trimmed, emoji: firstEmoji(emoji) }
 }
 
@@ -891,7 +908,7 @@ export function createTag(label: string, emoji: string, kind: TagKind = 'tags'):
   const db = readDb()
   const clean = cleanTag(label, emoji)
   if (db[kind].some((tag) => tag.label.toLowerCase() === clean.label.toLowerCase())) {
-    throw new Error(`There is already a "${clean.label}".`)
+    throw new Error(tr(`There is already a "${clean.label}".`, `已经有「${clean.label}」了。`))
   }
   const tag: Tag = {
     id: makeTagId(
@@ -908,7 +925,7 @@ export function updateTag(id: string, label: string, emoji: string, kind: TagKin
   const db = readDb()
   const clean = cleanTag(label, emoji)
   if (db[kind].some((tag) => tag.id !== id && tag.label.toLowerCase() === clean.label.toLowerCase())) {
-    throw new Error(`There is already a "${clean.label}".`)
+    throw new Error(tr(`There is already a "${clean.label}".`, `已经有「${clean.label}」了。`))
   }
   const updated: Tag = { id, ...clean }
   void writeDb({ ...db, [kind]: db[kind].map((tag) => (tag.id === id ? updated : tag)) })
@@ -959,24 +976,30 @@ export function useReminders(): Reminder[] {
 
 function cleanReminderDraft(draft: ReminderDraft): ReminderDraft {
   const title = draft.title.trim()
-  if (!title) throw new Error('Please give this a title.')
-  if (!isRealDate(draft.date)) throw new Error('That date is not a real date.')
-  if (!isTime(draft.time)) throw new Error('The time needs to look like 18:30.')
+  if (!title) throw new Error(tr('Please give this a title.', '请填写标题。'))
+  if (!isRealDate(draft.date)) throw new Error(tr('That date is not a real date.', '这个日期不存在。'))
+  if (!isTime(draft.time)) {
+    throw new Error(tr('The time needs to look like 18:30.', '时间要写成 18:30 这样。'))
+  }
 
   const endDate = draft.end_date && draft.end_date !== draft.date ? draft.end_date : null
   if (endDate) {
-    if (!isRealDate(endDate)) throw new Error('That until date is not a real date.')
-    if (endDate < draft.date) throw new Error('The until date is before the start date.')
+    if (!isRealDate(endDate)) throw new Error(tr('That until date is not a real date.', '截止日期不存在。'))
+    if (endDate < draft.date) {
+      throw new Error(tr('The until date is before the start date.', '截止日期早于开始日期。'))
+    }
   }
   const endTime = draft.end_time || null
-  if (endTime && !isTime(endTime)) throw new Error('The until time needs to look like 18:30.')
+  if (endTime && !isTime(endTime)) {
+    throw new Error(tr('The until time needs to look like 18:30.', '截止时间要写成 18:30 这样。'))
+  }
   if (!endDate && endTime && endTime < draft.time) {
-    throw new Error('The until time is before the start time.')
+    throw new Error(tr('The until time is before the start time.', '截止时间早于开始时间。'))
   }
   // Repeating with nothing to stop it is how a reminder becomes noise. Every
   // repeat needs a last day.
   if (draft.repeat !== 'none' && !endDate) {
-    throw new Error('A repeating reminder needs an until date.')
+    throw new Error(tr('A repeating reminder needs an until date.', '重复的提醒需要一个截止日期。'))
   }
 
   return {
@@ -1007,7 +1030,7 @@ export function createReminder(draft: ReminderDraft): Reminder {
 export function updateReminder(id: number, draft: ReminderDraft): Reminder {
   const db = readDb()
   const existing = db.reminders.find((reminder) => reminder.id === id)
-  if (!existing) throw new Error('That reminder no longer exists.')
+  if (!existing) throw new Error(tr('That reminder no longer exists.', '这条提醒已经不存在了。'))
   const updated: Reminder = { ...existing, ...cleanReminderDraft(draft) }
   void writeDb({
     ...db,
@@ -1067,8 +1090,8 @@ export async function saveWish(
 ): Promise<WishPlace> {
   const db = readDb()
   const name = wish.name.trim()
-  if (!name) throw new Error('Give the place a name.')
-  if (!wish.country) throw new Error('Pick a country.')
+  if (!name) throw new Error(tr('Give the place a name.', '请给这个地方取个名字。'))
+  if (!wish.country) throw new Error(tr('Pick a country.', '请选择国家。'))
 
   const existing = wish.id ? db.wishlist.find((row) => row.id === wish.id) : undefined
   const saved: WishPlace = {
@@ -1186,38 +1209,57 @@ export function countIn(data: Partial<Snapshot>): number {
 /** Everything both ways in are agreed on: it is a backup, and it is readable. */
 function validateSnapshot(candidate: unknown): Partial<Snapshot> {
   if (!safe.isRecord(candidate) || !Array.isArray(candidate.schedule)) {
-    throw new Error("That file isn't a SchedulePlan backup.")
+    throw new Error(tr("That file isn't a SchedulePlan backup.", '这个文件不是 SchedulePlan 的备份。'))
   }
   const data = candidate as Partial<Snapshot>
   if (data.format && data.format !== FORMAT) {
-    throw new Error(`That file is a ${String(data.format)} backup, not a SchedulePlan one.`)
+    throw new Error(
+      tr(
+        `That file is a ${String(data.format)} backup, not a SchedulePlan one.`,
+        `这个文件是 ${String(data.format)} 的备份，不是 SchedulePlan 的。`,
+      ),
+    )
   }
 
   for (const [index, raw] of data.schedule!.entries()) {
     const item = raw as unknown
     if (!safe.isRecord(item) || typeof item.title !== 'string' || typeof item.date !== 'string') {
-      throw new Error(`Entry ${index + 1} in that file is missing a title or a date.`)
+      throw new Error(
+        tr(
+          `Entry ${index + 1} in that file is missing a title or a date.`,
+          `文件里第 ${index + 1} 条缺少标题或日期。`,
+        ),
+      )
     }
     // Refused rather than repaired: there is no guessing which day was meant,
     // and a date that does not exist stops every screen that draws it.
     if (!isRealDate(item.date)) {
-      throw new Error(`Entry ${index + 1} in that file has "${item.date}" as its date.`)
+      throw new Error(
+        tr(
+          `Entry ${index + 1} in that file has "${item.date}" as its date.`,
+          `文件里第 ${index + 1} 条的日期是「${item.date}」，不是有效日期。`,
+        ),
+      )
     }
   }
   for (const [index, raw] of (Array.isArray(data.reminders) ? data.reminders : []).entries()) {
     const reminder = raw as unknown
     if (safe.isRecord(reminder) && !isRealDate(reminder.date)) {
-      throw new Error(`Reminder ${index + 1} in that file has no real date.`)
+      throw new Error(
+        tr(`Reminder ${index + 1} in that file has no real date.`, `文件里第 ${index + 1} 条提醒的日期无效。`),
+      )
     }
   }
   for (const [index, raw] of (Array.isArray(data.expenses) ? data.expenses : []).entries()) {
     const expense = raw as unknown
     if (safe.isRecord(expense) && !isRealDate(expense.date)) {
-      throw new Error(`Expense ${index + 1} in that file has no real date.`)
+      throw new Error(
+        tr(`Expense ${index + 1} in that file has no real date.`, `文件里第 ${index + 1} 笔支出的日期无效。`),
+      )
     }
   }
   if (data.files !== undefined && !Array.isArray(data.files)) {
-    throw new Error("That file's attachments aren't readable.")
+    throw new Error(tr("That file's attachments aren't readable.", '这个文件里的附件读不出来。'))
   }
   return data
 }
@@ -1388,7 +1430,7 @@ export async function savePhrase(
   const db = readDb()
   const source = phrase.source.trim()
   const result = phrase.result.trim()
-  if (!source || !result) throw new Error('Nothing to keep.')
+  if (!source || !result) throw new Error(tr('Nothing to keep.', '没有可保存的内容。'))
 
   const same = db.phrases.find(
     (row) => row.from === phrase.from && row.to === phrase.to && row.source === source,
@@ -1453,10 +1495,10 @@ export async function saveTripLink(
 ): Promise<void> {
   const db = readDb()
   const item = db.schedule.find((row) => row.id === id)
-  if (!item) throw new Error('That trip no longer exists.')
+  if (!item) throw new Error(tr('That trip no longer exists.', '这趟旅行已经不存在了。'))
 
   const url = safeUrl(link.url)
-  if (!url) throw new Error('That does not look like a link.')
+  if (!url) throw new Error(tr('That does not look like a link.', '这看起来不像链接。'))
 
   const saved: TripLink = {
     id: link.id ?? nextId(item.links),
@@ -1484,7 +1526,7 @@ export async function saveTripLink(
 export async function saveTripFiles(id: number, attachments: Attachment[]): Promise<void> {
   const db = readDb()
   const existing = db.schedule.find((item) => item.id === id)
-  if (!existing) throw new Error('That trip no longer exists.')
+  if (!existing) throw new Error(tr('That trip no longer exists.', '这趟旅行已经不存在了。'))
 
   await writeDb({
     ...db,

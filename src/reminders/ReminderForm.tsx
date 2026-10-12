@@ -1,16 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { DateField, Field, NotesField, Segmented, TimeField } from '../components/FormFields'
 import Sheet from '../components/Sheet'
-import { daysBetween, nextHalfHour, todayISO } from '../lib/date'
+import { daysBetween, nextHalfHour, shortDate, todayISO } from '../lib/date'
+import { tr } from '../lib/i18n'
 import { createReminder, deleteReminder, updateReminder } from '../lib/store'
 import type { Reminder, Repeat } from '../types'
 
 const FORM_ID = 'reminder-form'
 
-const REPEATS: { value: Repeat; label: string }[] = [
-  { value: 'none', label: 'Once' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
+/** A function, so the labels are in whichever language the app is in when the form is drawn. */
+const repeats = (): { value: Repeat; label: string }[] => [
+  { value: 'none', label: tr('Once', '一次') },
+  { value: 'daily', label: tr('Daily', '每天') },
+  { value: 'weekly', label: tr('Weekly', '每周') },
 ]
 
 export default function ReminderForm({
@@ -56,16 +58,16 @@ export default function ReminderForm({
       const saved = { title, date, time, end_date: until || null, end_time: untilTime || null, repeat, notes: notes || null }
       if (reminder) updateReminder(reminder.id, saved)
       else createReminder(saved)
-      onSaved(reminder ? 'Updated' : 'Added')
+      onSaved(reminder ? tr('Updated', '已更新') : tr('Added', '已添加'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save. Please try again.')
+      setError(err instanceof Error ? err.message : tr('Could not save. Please try again.', '保存失败，请再试一次。'))
     }
   }
 
   return (
     <Sheet
       onClose={onClose}
-      title={reminder ? 'Edit reminder' : 'New reminder'}
+      title={reminder ? tr('Edit reminder', '编辑提醒') : tr('New reminder', '新建提醒')}
       footer={
         <>
           {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
@@ -74,18 +76,18 @@ export default function ReminderForm({
             form={FORM_ID}
             className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white"
           >
-            Save
+            {tr('Save', '保存')}
           </button>
           {reminder && (
             <button
               type="button"
               onClick={() => {
                 deleteReminder(reminder.id)
-                onSaved('Deleted')
+                onSaved(tr('Deleted', '已删除'))
               }}
               className="mt-2 w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
             >
-              Delete
+              {tr('Delete', '删除')}
             </button>
           )}
         </>
@@ -96,34 +98,37 @@ export default function ReminderForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           autoFocus={!reminder}
-          placeholder="Remind me to..."
+          placeholder={tr('Remind me to...', '提醒我…')}
           className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
-          <Field label="From">
+          <Field label={tr('From', '开始')}>
             <DateField value={date} onChange={moveStart} />
           </Field>
-          <Field label="Time">
-            <TimeField label="Time" value={time} onChange={setTime} />
+          <Field label={tr('Time', '时间')}>
+            <TimeField label={tr('Time', '时间')} value={time} onChange={setTime} />
           </Field>
-          <Field label="Until" hint={spans ? `${daysBetween(date, until)} days` : undefined}>
+          <Field
+            label={tr('Until', '结束')}
+            hint={spans ? tr(`${daysBetween(date, until)} days`, `${daysBetween(date, until)} 天`) : undefined}
+          >
             <DateField
-              label="Until date"
+              label={tr('Until date', '结束日期')}
               value={until}
               onChange={moveUntil}
-              placeholder="Same day"
+              placeholder={tr('Same day', '当天')}
               clearable
               rangeStart={date}
               min={date}
             />
           </Field>
-          <Field label="Until time">
+          <Field label={tr('Until time', '结束时间')}>
             <TimeField
-              label="Until time"
+              label={tr('Until time', '结束时间')}
               value={untilTime}
               onChange={setUntilTime}
-              placeholder="Optional"
+              placeholder={tr('Optional', '选填')}
               clearable
               relativeTo={spans ? null : time}
             />
@@ -134,12 +139,15 @@ export default function ReminderForm({
             choice appears with the until date rather than sitting disabled. */}
         {spans && (
           <div className="mt-4">
-            <p className="pb-1.5 text-[13px] text-neutral-400">Repeat until then</p>
-            <Segmented value={repeat} options={REPEATS} onChange={setRepeat} />
+            <p className="pb-1.5 text-[13px] text-neutral-400">{tr('Repeat until then', '重复到结束那天')}</p>
+            <Segmented value={repeat} options={repeats()} onChange={setRepeat} />
             <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
               {repeat === 'none'
-                ? 'One reminder, standing for the whole stretch.'
-                : `${repeat === 'daily' ? 'Every day' : 'Every week'} at ${time}, last one on ${until}.`}
+                ? tr('One reminder, standing for the whole stretch.', '只有一条提醒，整段时间都有效。')
+                : tr(
+                    `${repeat === 'daily' ? 'Every day' : 'Every week'} at ${time}, last one on ${until}.`,
+                    `${repeat === 'daily' ? '每天' : '每周'} ${time} 提醒，最后一次在 ${shortDate(until)}。`,
+                  )}
             </p>
           </div>
         )}
@@ -156,7 +164,7 @@ export default function ReminderForm({
             onClick={() => setShowNotes(true)}
             className="mt-4 text-[14px] text-neutral-400"
           >
-            + Add notes
+            {tr('+ Add notes', '+ 添加备注')}
           </button>
         )}
       </form>

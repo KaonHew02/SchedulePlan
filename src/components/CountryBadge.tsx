@@ -1,4 +1,4 @@
-import { countryOf } from '../lib/places'
+import { countryName, countryOf } from '../lib/places'
 
 /**
  * A country, as a two-letter badge.
@@ -50,7 +50,7 @@ export default function CountryBadge({
 
   return (
     <span
-      title={country?.name ?? undefined}
+      title={country ? countryName(country.code) : undefined}
       className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-md font-semibold tracking-wide ${tint} ${scale}`}
     >
       {country?.code ?? '··'}

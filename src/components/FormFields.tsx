@@ -4,6 +4,7 @@ import { CalendarIcon, ClockIcon, Close, ShrinkIcon, ZoomIcon } from './Icons'
 import Popover from './Popover'
 import TimePanel from './TimePicker'
 import { addDays, shortDate, todayISO, weekdayShort } from '../lib/date'
+import { isZh, tr } from '../lib/i18n'
 
 /** One row of a form: its label on the left, its control on the right. */
 export function Field({
@@ -36,26 +37,29 @@ export const chip =
 
 export const chipOpen = 'bg-neutral-200/70 ring-2 ring-brand-500/40'
 
-/** 'Today, 10 Sep' — the year only shows when it isn't this one. */
+/** 'Today, 10 Sep' · 今天 9月10日 — the year only shows when it isn't this one. */
 export function dateLabel(iso: string): string {
   const today = todayISO()
   const day =
     iso === today
-      ? 'Today'
+      ? tr('Today', '今天')
       : iso === addDays(today, 1)
-        ? 'Tomorrow'
+        ? tr('Tomorrow', '明天')
         : iso === addDays(today, -1)
-          ? 'Yesterday'
+          ? tr('Yesterday', '昨天')
           : weekdayShort(iso)
-  const year = iso.slice(0, 4) === today.slice(0, 4) ? '' : ` ${iso.slice(0, 4)}`
+  const thisYear = iso.slice(0, 4) === today.slice(0, 4)
+  // In Chinese the year leads the date rather than trailing it: 周四 2027年9月10日.
+  if (isZh()) return `${day} ${thisYear ? '' : `${iso.slice(0, 4)}年`}${shortDate(iso)}`
+  const year = thisYear ? '' : ` ${iso.slice(0, 4)}`
   return `${day}, ${shortDate(iso)}${year}`
 }
 
 export function DateField({
   value,
   onChange,
-  label = 'Date',
-  placeholder = 'Pick a date',
+  label = tr('Date', '日期'),
+  placeholder = tr('Pick a date', '选择日期'),
   clearable = false,
   rangeStart,
   min,
@@ -117,7 +121,7 @@ export function TimeField({
   value,
   onChange,
   label,
-  placeholder = 'Pick a time',
+  placeholder = tr('Pick a time', '选择时间'),
   clearable = false,
   relativeTo,
 }: {
@@ -245,7 +249,7 @@ export function Segmented<T extends string>({
 export function TextField({
   value,
   onChange,
-  placeholder = 'Optional',
+  placeholder = tr('Optional', '选填'),
   label,
   type = 'text',
   inputMode,
@@ -312,7 +316,7 @@ export function TextField({
 export function NotesField({
   value,
   onChange,
-  placeholder = 'Notes',
+  placeholder = tr('Notes', '备注'),
   className = '',
 }: {
   value: string
@@ -395,7 +399,11 @@ export function NotesField({
       <button
         type="button"
         onClick={() => setExpanded((was) => !was)}
-        aria-label={expanded ? 'Shrink the notes box' : 'Expand the notes box'}
+        aria-label={
+          expanded
+            ? tr('Shrink the notes box', '缩小备注框')
+            : tr('Expand the notes box', '放大备注框')
+        }
         aria-expanded={expanded}
         className="absolute right-0 top-0 rounded-lg p-1 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-500"
       >

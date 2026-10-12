@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import Confirm from './Confirm'
+import LanguageSelect from './LanguageSelect'
 import {
   CloudDownIcon,
   CloudIcon,
@@ -12,6 +13,7 @@ import {
 import { todayISO } from '../lib/date'
 import { useDriveAutosave, type AutoState } from '../lib/autosave'
 import { applyDrive, peekDrive, preloadDrive, saveToDrive } from '../lib/drive'
+import { tr } from '../lib/i18n'
 import { driveIsConfigured } from '../lib/drive-config'
 import {
   countIn,
@@ -37,6 +39,10 @@ import {
  * inside More, where it has a column's width and needs to hold together as a
  * block. On a laptop it is a light row pinned across the top of every screen,
  * where a black slab would shout over the content underneath it.
+ *
+ * The language switch rides along beside Auto. It is not about backups, but
+ * this is the one strip that is on every screen of a laptop and at the top of
+ * More on a phone — the two places someone looks for a setting like that.
  */
 
 /** A pending replace, held until the user has seen what it would do. */
@@ -53,11 +59,14 @@ function timeOf(iso: string): string {
 function autoNote(state: AutoState): string | null {
   switch (state.kind) {
     case 'waiting':
-      return 'Drive copy queued'
+      return tr('Drive copy queued', '等待存到 Drive')
     case 'saving':
-      return 'Copying to Drive…'
+      return tr('Copying to Drive…', '正在存到 Drive…')
     case 'needs-tap':
-      return 'Press To Drive once to sign in again — auto cannot open the Google window by itself.'
+      return tr(
+        'Press To Drive once to sign in again — auto cannot open the Google window by itself.',
+        '请按一次「存到 Drive」重新登录 — 自动保存没办法自己打开 Google 登录窗口。',
+      )
     case 'error':
       return state.message
     default:
@@ -99,7 +108,7 @@ export default function BackupBar({
     setError(null)
     setBusy(label)
     work()
-      .catch((err) => setError(err instanceof Error ? err.message : 'Something went wrong.'))
+      .catch((err) => setError(err instanceof Error ? err.message : tr('Something went wrong.', '出了点问题。')))
       .finally(() => setBusy(null))
   }
 
@@ -113,7 +122,7 @@ export default function BackupBar({
     link.click()
     // Revoking straight away can beat the download starting in some browsers.
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
-    onToast(`Exported ${countIn(data)} items`)
+    onToast(tr(`Exported ${countIn(data)} items`, `已导出 ${countIn(data)} 项`))
   }
 
   async function readChosenFile(file: File) {
@@ -121,10 +130,10 @@ export default function BackupBar({
     try {
       data = JSON.parse(await file.text()) as Snapshot
     } catch {
-      throw new Error("That file isn't readable JSON.")
+      throw new Error(tr("That file isn't readable JSON.", '这个文件不是可读的 JSON。'))
     }
     if (!Array.isArray(data?.schedule)) {
-      throw new Error("That file isn't a SchedulePlan backup.")
+      throw new Error(tr("That file isn't a SchedulePlan backup.", '这个文件不是 SchedulePlan 的备份。'))
     }
     setPending({ source: file.name, data })
   }
@@ -149,15 +158,18 @@ export default function BackupBar({
       if (fromDrive) {
         const count = await applyDrive(pending.data)
         setPending(null)
-        onToast(`Restored ${count} items`)
+        onToast(tr(`Restored ${count} items`, `已恢复 ${count} 项`))
         return
       }
       const { added, skipped } = await mergeIn(pending.data)
       setPending(null)
       onToast(
         added === 0
-          ? 'Everything in that file was already here'
-          : `Added ${added} items${skipped ? `, skipped ${skipped} already here` : ''}`,
+          ? tr('Everything in that file was already here', '文件里的内容这里都已经有了')
+          : tr(
+              `Added ${added} items${skipped ? `, skipped ${skipped} already here` : ''}`,
+              `已添加 ${added} 项${skipped ? `，跳过已有的 ${skipped} 项` : ''}`,
+            ),
       )
     })
   }
@@ -166,26 +178,26 @@ export default function BackupBar({
     {
       key: 'save',
       icon: CloudUpIcon,
-      label: 'To Drive',
+      label: tr('To Drive', '存到 Drive'),
       disabled: !configured,
       onClick: () =>
         run('save', async () => {
           const count = await saveToDrive()
-          onToast(`Saved ${count} items to Drive`)
+          onToast(tr(`Saved ${count} items to Drive`, `已把 ${count} 项存到 Drive`))
         }),
     },
     {
       key: 'load',
       icon: CloudDownIcon,
-      label: 'From Drive',
+      label: tr('From Drive', '从 Drive 取回'),
       disabled: !configured,
       onClick: () =>
         run('load', async () => {
           setPending({ source: 'Drive', data: await peekDrive() })
         }),
     },
-    { key: 'export', icon: DownloadIcon, label: 'Export', onClick: () => run('export', exportFile) },
-    { key: 'import', icon: UploadIcon, label: 'Import', onClick: () => fileInput.current?.click() },
+    { key: 'export', icon: DownloadIcon, label: tr('Export', '导出'), onClick: () => run('export', exportFile) },
+    { key: 'import', icon: UploadIcon, label: tr('Import', '导入'), onClick: () => fileInput.current?.click() },
   ]
 
   const note = autoNote(auto)
@@ -193,17 +205,17 @@ export default function BackupBar({
   const savedLabel = save.saving ? (
     <>
       <Spinner className="h-3.5 w-3.5" />
-      Saving
+      {tr('Saving', '正在保存')}
     </>
   ) : save.error ? (
-    <span className={dark ? 'text-red-400' : 'text-red-600'}>Not saved — tap to see why</span>
+    <span className={dark ? 'text-red-400' : 'text-red-600'}>{tr('Not saved — tap to see why', '没有保存 — 点这里看原因')}</span>
   ) : save.savedAt ? (
     <>
-      Saved {timeOf(save.savedAt)}
+      {tr('Saved', '已保存')} {timeOf(save.savedAt)}
       <CloudIcon className={`h-3.5 w-3.5 ${dark ? 'text-neutral-500' : 'text-brand-400'}`} />
     </>
   ) : (
-    'Your data'
+    tr('Your data', '你的资料')
   )
 
   const autoButton = (
@@ -220,7 +232,7 @@ export default function BackupBar({
       } ${dark ? '' : 'rounded-full'}`}
     >
       <RefreshIcon className="h-3.5 w-3.5" />
-      Auto
+      {tr('Auto', '自动')}
     </button>
   )
 
@@ -228,8 +240,10 @@ export default function BackupBar({
     <>
       {!configured && (
         <p className="px-1 pt-2 text-[12px] leading-5 text-neutral-400">
-          Drive is not set up in this build, so Export and Import are the second copy. See
-          docs/DRIVE.md.
+          {tr(
+            'Drive is not set up in this build, so Export and Import are the second copy. See docs/DRIVE.md.',
+            '这个版本没有设置 Drive，所以第二份副本要靠导出和导入。见 docs/DRIVE.md。',
+          )}
         </p>
       )}
 
@@ -247,7 +261,7 @@ export default function BackupBar({
 
       {save.error && (
         <p className="mt-2 rounded-xl bg-red-50 px-4 py-3 text-[13px] leading-5 text-red-700">
-          This browser would not save that change: {save.error}
+          {tr('This browser would not save that change:', '这个浏览器没能保存刚才的改动：')} {save.error}
         </p>
       )}
 
@@ -266,31 +280,32 @@ export default function BackupBar({
       {pending && (
         <Confirm
           title={
-            pending.source === 'Drive' ? (
-              <>
-                Replace the {itemCount()} items on this device with {countIn(pending.data)} from
-                Drive?
-              </>
-            ) : (
-              <>
-                Add {countIn(pending.data)} items from {pending.source} to the {itemCount()} already
-                here?
-              </>
-            )
+            pending.source === 'Drive'
+              ? tr(
+                  `Replace the ${itemCount()} items on this device with ${countIn(pending.data)} from Drive?`,
+                  `用 Drive 上的 ${countIn(pending.data)} 项替换这台设备上的 ${itemCount()} 项？`,
+                )
+              : tr(
+                  `Add ${countIn(pending.data)} items from ${pending.source} to the ${itemCount()} already here?`,
+                  `把「${pending.source}」里的 ${countIn(pending.data)} 项加到这里已有的 ${itemCount()} 项中？`,
+                )
           }
           detail={
             pending.source === 'Drive'
-              ? 'This cannot be undone. Export first if you are unsure.'
-              : 'Nothing here is removed. Anything the file already matches is skipped rather than added twice.'
+              ? tr('This cannot be undone. Export first if you are unsure.', '这一步不能撤销。不确定的话，先导出一份。')
+              : tr(
+                  'Nothing here is removed. Anything the file already matches is skipped rather than added twice.',
+                  '这里的东西不会被删除。文件里和这里重复的会跳过，不会加两次。',
+                )
           }
           confirmLabel={
             busy === 'restore'
               ? pending.source === 'Drive'
-                ? 'Restoring...'
-                : 'Adding...'
+                ? tr('Restoring...', '正在恢复…')
+                : tr('Adding...', '正在添加…')
               : pending.source === 'Drive'
-                ? 'Replace'
-                : 'Add'
+                ? tr('Replace', '替换')
+                : tr('Add', '添加')
           }
           busy={busy === 'restore'}
           onConfirm={confirmApply}
@@ -323,6 +338,7 @@ export default function BackupBar({
             {savedLabel}
           </button>
 
+          <LanguageSelect />
           {autoButton}
 
           {actions.map(({ key, icon: Icon, label, onClick, disabled }) => (
@@ -352,7 +368,10 @@ export default function BackupBar({
           >
             {savedLabel}
           </button>
-          <span className="ml-auto">{autoButton}</span>
+          <span className="ml-auto flex items-center gap-1">
+            <LanguageSelect dark />
+            {autoButton}
+          </span>
         </div>
 
         {/*

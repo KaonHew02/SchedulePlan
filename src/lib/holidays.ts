@@ -1,5 +1,6 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import { MALAYSIAN_STATES, malaysianHolidays } from './holidays-my'
+import { isZh } from './i18n'
 import { lastDay, useSettings } from './store'
 import type { ScheduleItem } from '../types'
 
@@ -36,6 +37,66 @@ export interface Holiday {
 }
 
 type Library = typeof import('./holiday-rules').default
+
+// ---------------------------------------------------------------- names
+
+/*
+ * The names in Chinese. The calendar keeps every holiday under the name it
+ * came with — English, or the country's own language where the library has
+ * no English — and that name is what tells two days apart, so it never
+ * changes. What changes is what is printed: in 中文, `holidayName` looks the
+ * name up here.
+ *
+ * Fetched only by someone reading in Chinese, the first time a holiday is
+ * drawn, and the calendar draws again when it lands. A name the list does
+ * not have — a new holiday, a year the gazette renamed one — shows as it
+ * came, which is still the right day.
+ */
+let chinese: Record<string, string> | null = null
+let fetchingNames = false
+
+function loadNames(): void {
+  if (fetchingNames) return
+  fetchingNames = true
+  import('./holiday-names-zh.json')
+    .then((module) => {
+      chinese = module.default as Record<string, string>
+      changed()
+    })
+    .catch(() => {
+      // Shown in English this time; the next draw tries again.
+      fetchingNames = false
+    })
+}
+
+/**
+ * Endings a name can come with that the list need not carry for every
+ * holiday: the updater writes "(extra holiday)" on a day a Prime Minister
+ * gives after the gazette is printed, and the gazette numbers a holiday's
+ * later days. So Malaysia Day (extra holiday) is 马来西亚日 with its ending in
+ * Chinese, even though only Malaysia Day is in the list. scripts/holidays.mjs
+ * does the same lookup to say which new names have no Chinese yet.
+ */
+const ENDINGS: [RegExp, string][] = [
+  [/\s*\(extra holiday\)$/i, '（额外假期）'],
+  [/\s*\(2nd day\)$/i, '（第二天）'],
+  [/\s*\(3rd day\)$/i, '（第三天）'],
+]
+
+/** A holiday's name in the app's language. */
+export function holidayName(name: string): string {
+  if (!isZh()) return name
+  if (!chinese) {
+    loadNames()
+    return name
+  }
+  if (chinese[name]) return chinese[name]
+  for (const [ending, zh] of ENDINGS) {
+    const base = ending.test(name) ? chinese[name.replace(ending, '')] : undefined
+    if (base) return base + zh
+  }
+  return name
+}
 
 let library: Promise<Library> | null = null
 

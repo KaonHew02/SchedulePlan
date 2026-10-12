@@ -10,6 +10,7 @@
  */
 
 import { SP_DRIVE, driveIsConfigured } from './drive-config'
+import { tr } from './i18n'
 import { fullSnapshot, restore, updateSettings, type Snapshot } from './store'
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -92,7 +93,11 @@ function loadScript(): Promise<void> {
     script.onload = () => resolve()
     script.onerror = () => {
       scriptLoading = null
-      reject(new Error("Couldn't reach Google. Check your connection and try again."))
+      reject(
+        new Error(
+          tr("Couldn't reach Google. Check your connection and try again.", '连不上 Google。请检查网络后再试。'),
+        ),
+      )
     }
     document.head.appendChild(script)
   })
@@ -103,13 +108,23 @@ function loadScript(): Promise<void> {
 function popupProblem(error: PopupError): Error {
   if (error.type === 'popup_failed_to_open') {
     return new Error(
-      'The Google sign-in window was blocked. Tap the button again; if it keeps happening, allow pop-ups for this site.',
+      tr(
+        'The Google sign-in window was blocked. Tap the button again; if it keeps happening, allow pop-ups for this site.',
+        'Google 登录窗口被拦住了。请再点一次按钮；如果一直这样，请允许这个网站弹出窗口。',
+      ),
     )
   }
   if (error.type === 'popup_closed') {
-    return new Error('The Google window was closed before signing in finished. Tap the button to try again.')
+    return new Error(
+      tr(
+        'The Google window was closed before signing in finished. Tap the button to try again.',
+        '还没登录完，Google 窗口就被关掉了。请点按钮再试一次。',
+      ),
+    )
   }
-  return new Error('Google sign-in did not finish. Tap the button to try again.')
+  return new Error(
+    tr('Google sign-in did not finish. Tap the button to try again.', 'Google 登录没有完成。请点按钮再试一次。'),
+  )
 }
 
 async function getToken(): Promise<string> {
@@ -117,7 +132,11 @@ async function getToken(): Promise<string> {
   await loadScript()
 
   const oauth2 = window.google?.accounts?.oauth2
-  if (!oauth2) throw new Error("Couldn't load Google sign-in. Try again in a moment.")
+  if (!oauth2) {
+    throw new Error(
+      tr("Couldn't load Google sign-in. Try again in a moment.", 'Google 登录加载不出来。请稍后再试。'),
+    )
+  }
 
   tokenClient ??= oauth2.initTokenClient({
     client_id: SP_DRIVE.clientId,
@@ -127,7 +146,9 @@ async function getToken(): Promise<string> {
       answer = null
       if (!waiting) return
       if (response.error || !response.access_token) {
-        waiting.reject(new Error('Google sign-in was cancelled or refused.'))
+        waiting.reject(
+          new Error(tr('Google sign-in was cancelled or refused.', 'Google 登录被取消或被拒绝了。')),
+        )
         return
       }
       token = response.access_token
@@ -154,7 +175,14 @@ async function getToken(): Promise<string> {
       tokenClient!.requestAccessToken()
     } catch {
       answer = null
-      reject(new Error("Couldn't open the Google sign-in window. Allow pop-ups and retry."))
+      reject(
+        new Error(
+          tr(
+            "Couldn't open the Google sign-in window. Allow pop-ups and retry.",
+            '打不开 Google 登录窗口。请允许弹出窗口后重试。',
+          ),
+        ),
+      )
     }
   })
 }
@@ -181,18 +209,35 @@ async function call(url: string, init: RequestInit): Promise<Response> {
       headers: { ...init.headers, Authorization: `Bearer ${accessToken}` },
     })
   } catch {
-    throw new Error("Couldn't reach Google Drive. Check your connection.")
+    throw new Error(
+      tr("Couldn't reach Google Drive. Check your connection.", '连不上 Google Drive。请检查网络。'),
+    )
   }
 
   if (response.status === 401 || response.status === 403) {
     token = null // force a fresh consent next time rather than looping on a stale one
-    throw new Error('Google Drive refused that. Check the folder ID in drive-config.ts.')
+    throw new Error(
+      tr(
+        'Google Drive refused that. Check the folder ID in drive-config.ts.',
+        'Google Drive 拒绝了这个请求。请检查 drive-config.ts 里的文件夹 ID。',
+      ),
+    )
   }
   if (response.status === 404) {
-    throw new Error("That Drive folder doesn't exist, or this app can't see it.")
+    throw new Error(
+      tr(
+        "That Drive folder doesn't exist, or this app can't see it.",
+        '那个 Drive 文件夹不存在，或者本应用看不到它。',
+      ),
+    )
   }
   if (!response.ok) {
-    throw new Error(`Google Drive returned an error (${response.status}).`)
+    throw new Error(
+      tr(
+        `Google Drive returned an error (${response.status}).`,
+        `Google Drive 返回了错误（${response.status}）。`,
+      ),
+    )
   }
   return response
 }
@@ -253,7 +298,12 @@ export async function saveToDrive(): Promise<number> {
 export async function peekDrive(): Promise<Snapshot> {
   const existing = await findFile()
   if (!existing) {
-    throw new Error('There is no SchedulePlan file in that Drive folder yet.')
+    throw new Error(
+      tr(
+        'There is no SchedulePlan file in that Drive folder yet.',
+        '那个 Drive 文件夹里还没有 SchedulePlan 文件。',
+      ),
+    )
   }
   const response = await call(`${FILES}/${existing}?alt=media`, {})
   return (await response.json()) as Snapshot

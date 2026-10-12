@@ -1,20 +1,28 @@
 import { useState, type ReactNode } from 'react'
 import CountryBadge from '../components/CountryBadge'
 import Sheet from '../components/Sheet'
-import { useHolidayYear, type Holiday } from '../lib/holidays'
+import { holidayName, useHolidayYear, type Holiday } from '../lib/holidays'
+import { tr } from '../lib/i18n'
 import { countryName, countryOf } from '../lib/places'
 import { saveWish, useWishlist } from '../lib/store'
 import {
   FLIGHTS,
-  RATING_LABEL,
   RATING_TINT,
   airportName,
+  areaName,
+  datedSpanLabel,
   eventsIn,
+  homeName,
+  joinList,
   kindOf,
+  monthLabel,
   monthsLabel,
   nameOf,
+  namesOf,
+  ratingLabel,
   reachOf,
   regionOf,
+  stopName,
   townsOf,
   spanLabel,
   spansOf,
@@ -41,11 +49,12 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-const FLIGHT_ROWS: { kind: FlightKind; label: string; after?: string }[] = [
-  { kind: 'direct', label: '直飞' },
-  { kind: 'stop', label: '经停' },
-  { kind: 'seasonal', label: '季节性直飞', after: '（只在部分月份飞）' },
-  { kind: 'charter', label: '包机直飞', after: '（多随旅行团出售）' },
+/** Made when drawn, so it is in the language of the moment. */
+const flightRows = (): { kind: FlightKind; label: string; after?: string }[] => [
+  { kind: 'direct', label: tr('Direct', '直飞') },
+  { kind: 'stop', label: tr('One stop', '经停') },
+  { kind: 'seasonal', label: tr('Seasonal direct', '季节性直飞'), after: tr(' (some months only)', '（只在部分月份飞）') },
+  { kind: 'charter', label: tr('Charter', '包机直飞'), after: tr(' (mostly sold with tours)', '（多随旅行团出售）') },
 ]
 
 /**
@@ -57,43 +66,59 @@ function GettingThere({ d }: { d: Destination }) {
   const reach = reachOf(d)
   const home = reach.kind === 'home'
   const codes = [...d.airports, ...(d.via?.airports ?? [])]
-  const rows: { label: string; text: string }[] = []
+  const from = homeName()
+  // `connect` greys a row out: it is the way that needs a change of plane.
+  const rows: { label: string; text: string; connect?: boolean }[] = []
 
-  if (home && !reach.overland) rows.push({ label: '出发地', text: `就在${FLIGHTS.from}，不用坐飞机` })
-  for (const { kind, label, after = '' } of FLIGHT_ROWS) {
+  if (home && !reach.overland) {
+    rows.push({ label: tr('Home', '出发地'), text: tr(`Right here in ${from}, no flight needed`, `就在${from}，不用坐飞机`) })
+  }
+  for (const { kind, label, after = '' } of flightRows()) {
     const here = codes.filter((code) => kindOf(code) === kind)
     if (here.length === 0) continue
     const names = here.map((code) =>
-      kind === 'stop' ? `${airportName(code)}（在${FLIGHTS.stop[code]}经停）` : airportName(code),
+      kind === 'stop'
+        ? tr(`${airportName(code)} (stops in ${stopName(code)})`, `${airportName(code)}（在${stopName(code)}经停）`)
+        : airportName(code),
     )
-    rows.push({ label, text: names.join('、') + after })
+    rows.push({ label, text: joinList(names) + after })
   }
   // Only while something flies there: going on from Tokyo by train is no use
   // to know on a sheet that says Tokyo has no flight.
   const via = d.via?.airports.some((code) => kindOf(code) || FLIGHTS.home.includes(code))
-  if (d.via && via) rows.push({ label: home ? `从${FLIGHTS.from}` : '再坐车', text: d.via.t })
+  if (d.via && via) rows.push({ label: home ? tr(`From ${from}`, `从${from}`) : tr('Then overland', '再坐车'), text: d.via.t })
   const unflown = d.airports.filter((code) => !kindOf(code))
   if (!home && unflown.length > 0) {
-    rows.push({ label: '要转机', text: `转机飞到${unflown.map(airportName).join('、')}` })
+    const names = joinList(unflown.map(airportName))
+    rows.push({ label: tr('Connecting', '要转机'), text: tr(`Change planes to fly to ${names}`, `转机飞到${names}`), connect: true })
   }
-  if (rows.length === 0) rows.push({ label: '要转机', text: '目前没有民航航班飞到当地' })
+  if (rows.length === 0) {
+    rows.push({ label: tr('Connecting', '要转机'), text: tr('No airline flies there at the moment', '目前没有民航航班飞到当地'), connect: true })
+  }
 
   return (
     <>
       <ul className="space-y-1">
         {rows.map((row) => (
           <li key={row.label} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5">
-            <span className={row.label === '要转机' ? 'text-neutral-400' : 'font-medium text-emerald-700'}>{row.label}</span>
+            <span className={row.connect ? 'text-neutral-400' : 'font-medium text-emerald-700'}>{row.label}</span>
             <span className="text-neutral-700">{row.text}</span>
           </li>
         ))}
       </ul>
       <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-        航线核对于 {FLIGHTS.checked.replace('-', ' 年 ')} 月，常有增减，订票前以航空公司为准。
+        {tr(
+          `Routes checked ${checkedLabel()}. They come and go, so check with the airline before booking.`,
+          `航线核对于 ${FLIGHTS.checked.replace('-', ' 年 ')} 月，常有增减，订票前以航空公司为准。`,
+        )}
       </p>
     </>
   )
 }
+
+/** When the routes were read through, as October 2026. */
+const checkedLabel = () =>
+  new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(`${FLIGHTS.checked}-01T00:00:00`))
 
 interface HolidayRun {
   start: string
@@ -184,9 +209,10 @@ export default function DestinationSheet({
   // On the wishlist the region has a line of its own, so 九寨沟黄龙 in 四川
   // rather than 四川·九寨沟黄龙 in China.
   const wishName = d.part ?? name
-  const wished = wishlist.some(
-    (wish) => (wish.name === wishName || wish.name === name) && wish.country === home?.code,
-  )
+  // Under any of its names: a wish saved while the app was in the other
+  // language is the same wish.
+  const names = [wishName, ...namesOf(d)]
+  const wished = wishlist.some((wish) => names.includes(wish.name) && wish.country === home?.code)
 
   async function addWish() {
     if (!home) return
@@ -198,17 +224,17 @@ export default function DestinationSheet({
         region,
         note: [
           d.summary,
-          `最佳月份：${monthsLabel(best)}`,
-          ...(towns.length > 0 ? [`地方：${towns.join('、')}`] : []),
-          `去处：${d.places}`,
+          tr(`Best months: ${monthsLabel(best)}`, `最佳月份：${monthsLabel(best)}`),
+          ...(towns.length > 0 ? [tr(`Towns: ${joinList(towns)}`, `地方：${joinList(towns)}`)] : []),
+          tr(`Places: ${d.places}`, `去处：${d.places}`),
         ].join('\n'),
         photo: null,
         attachments: [],
         links: [],
       })
-      onToast(`${name} 已加入心愿单`)
+      onToast(tr(`${name} added to your wishlist`, `${name} 已加入心愿单`))
     } catch {
-      onToast('没能加入心愿单，请再试一次')
+      onToast(tr('Could not add it to your wishlist. Please try again.', '没能加入心愿单，请再试一次'))
     } finally {
       setSaving(false)
     }
@@ -225,7 +251,7 @@ export default function DestinationSheet({
             disabled={wished || saving}
             className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:bg-neutral-100 disabled:text-neutral-400"
           >
-            {wished ? '已在心愿单' : '加入心愿单'}
+            {wished ? tr('On your wishlist', '已在心愿单') : tr('Add to wishlist', '加入心愿单')}
           </button>
         ) : undefined
       }
@@ -237,26 +263,26 @@ export default function DestinationSheet({
         {/* Where it sits: 东亚 · 日本 · 北海道, or 中国 · 海南 when the part of
             the world and the country are one. */}
         <span className="truncate">
-          {[...new Set([d.area, d.country, ...(region ? [region] : [])])].join(' · ')}
+          {[...new Set([areaName(d.area), d.country, ...(region ? [region] : [])])].join(' · ')}
         </span>
       </div>
       <p className="pt-2 text-[15px] font-medium leading-6">{d.summary}</p>
 
       {towns.length > 0 && (
-        <Section title="地方">
-          <p className="text-[14px] leading-6 text-neutral-700">{towns.join('、')}</p>
+        <Section title={tr('Towns', '地方')}>
+          <p className="text-[14px] leading-6 text-neutral-700">{joinList(towns)}</p>
         </Section>
       )}
 
-      <Section title="主要去处">
+      <Section title={tr('Places to see', '主要去处')}>
         <p className="text-[14px] leading-6 text-neutral-700">{d.places}</p>
       </Section>
 
-      <Section title={`怎么去 · 从${FLIGHTS.from}出发`}>
+      <Section title={tr(`Getting there · from ${homeName()}`, `怎么去 · 从${homeName()}出发`)}>
         <GettingThere d={d} />
       </Section>
 
-      <Section title={`逐月 · 最佳 ${monthsLabel(best)}`}>
+      <Section title={tr(`Month by month · best ${monthsLabel(best)}`, `逐月 · 最佳 ${monthsLabel(best)}`)}>
         <ol className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-100">
           {d.notes.map((note, i) => (
             <li
@@ -265,11 +291,11 @@ export default function DestinationSheet({
                 i + 1 === month ? 'bg-brand-50' : ''
               }`}
             >
-              <span className="tabular-nums text-neutral-500">{i + 1}月</span>
+              <span className="tabular-nums text-neutral-500">{monthLabel(i + 1)}</span>
               <span
                 className={`justify-self-start rounded-full px-2 text-[11px] font-semibold leading-5 ${RATING_TINT[d.ratings[i]]}`}
               >
-                {RATING_LABEL[d.ratings[i]]}
+                {ratingLabel(d.ratings[i])}
               </span>
               <span className="text-neutral-700">{note}</span>
             </li>
@@ -277,7 +303,7 @@ export default function DestinationSheet({
         </ol>
       </Section>
 
-      <Section title="季节亮点">
+      <Section title={tr('Seasonal highlights', '季节亮点')}>
         <ul className="space-y-2">
           {d.highlights.map((h, i) => {
             const spans = spansOf(h, dates, year)
@@ -286,7 +312,7 @@ export default function DestinationSheet({
             // that December's.
             const when =
               spans && spans.length > 0
-                ? spans.map((span) => `${span.start.slice(0, 4)}年${spanLabel(span, h.rule)}`).join('、')
+                ? joinList(spans.map((span) => datedSpanLabel(span, h.rule)))
                 : monthsLabel(h.m)
             return (
               <li key={i} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5">
@@ -301,7 +327,7 @@ export default function DestinationSheet({
       </Section>
 
       {events.length > 0 && (
-        <Section title={`${year} 年的特别活动`}>
+        <Section title={tr(`Special events in ${year}`, `${year} 年的特别活动`)}>
           <ul className="space-y-2">
             {events.map((event, i) => (
               <li key={i} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)] gap-3 text-[13px] leading-5">
@@ -319,7 +345,7 @@ export default function DestinationSheet({
         for the country, rather than claiming a year with no holidays in it.
       */}
       {runs.length > 0 && (
-        <Section title={`${year} 年公众假期`}>
+        <Section title={tr(`Public holidays in ${year}`, `${year} 年公众假期`)}>
           <ul className="space-y-1">
             {runs.map((run) => (
               <li
@@ -328,10 +354,10 @@ export default function DestinationSheet({
               >
                 <span className="tabular-nums text-neutral-500">{spanLabel(run)}</span>
                 <span className="text-neutral-700">
-                  {run.name}
-                  {run.replacement && <span className="text-neutral-400"> · 补假</span>}
+                  {holidayName(run.name)}
+                  {run.replacement && <span className="text-neutral-400"> · {tr('day in lieu', '补假')}</span>}
                   {several && <span className="text-neutral-400"> · {countryName(run.country)}</span>}
-                  {run.estimated && <span className="text-neutral-400"> · 未确认</span>}
+                  {run.estimated && <span className="text-neutral-400"> · {tr('not confirmed', '未确认')}</span>}
                 </span>
               </li>
             ))}
@@ -339,13 +365,13 @@ export default function DestinationSheet({
         </Section>
       )}
 
-      <Section title="气候">
+      <Section title={tr('Climate', '气候')}>
         <p className="text-[14px] leading-6 text-neutral-700">{d.climate}</p>
       </Section>
-      <Section title="要避开">
+      <Section title={tr('What to avoid', '要避开')}>
         <p className="text-[14px] leading-6 text-neutral-700">{d.avoid}</p>
       </Section>
-      <Section title="出行贴士">
+      <Section title={tr('Tips', '出行贴士')}>
         <p className="pb-2 text-[14px] leading-6 text-neutral-700">{d.tips}</p>
       </Section>
     </Sheet>

@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
 import { ChevronDown } from './Icons'
 import Popover from './Popover'
-import { COMMON, CURRENCY_NAMES, readCache } from '../lib/currency'
+import { COMMON, CURRENCY_NAMES, currencyName, currencySearchText, readCache } from '../lib/currency'
+import { tr } from '../lib/i18n'
 
 /**
  * Picking a currency out of the hundred-odd the rate table carries.
@@ -9,12 +10,13 @@ import { COMMON, CURRENCY_NAMES, readCache } from '../lib/currency'
  * A plain dropdown of 160 three-letter codes is a scrolling exercise, so the
  * ones a trip from here actually uses sit at the top, and anything else is a
  * few keystrokes away. Typing matches the code or the name, because half the
- * time you know it as "baht" and not as THB.
+ * time you know it as "baht" and not as THB — and the name in either
+ * language, because the other half you know it as 泰铢.
  */
 export default function CurrencySelect({
   value,
   onChange,
-  label = 'Currency',
+  label = tr('Currency', '货币'),
   /** Extra codes to offer even if the rate table has not loaded. */
   extra = [],
 }: {
@@ -39,11 +41,7 @@ export default function CurrencySelect({
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase()
     if (!text) return codes
-    return codes.filter(
-      (code) =>
-        code.toLowerCase().includes(text) ||
-        (CURRENCY_NAMES[code] ?? '').toLowerCase().includes(text),
-    )
+    return codes.filter((code) => currencySearchText(code).includes(text))
   }, [codes, query])
 
   return (
@@ -72,14 +70,14 @@ export default function CurrencySelect({
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search"
-              aria-label="Search currencies"
+              placeholder={tr('Search', '搜索')}
+              aria-label={tr('Search currencies', '搜索货币')}
               className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
             />
             <div className="no-scrollbar max-h-[228px] overflow-y-auto">
               {matches.length === 0 && (
                 <p className="px-3 py-4 text-center text-[13px] text-neutral-400">
-                  No currency matches that.
+                  {tr('No currency matches that.', '没有符合的货币。')}
                 </p>
               )}
               {matches.map((code) => (
@@ -102,7 +100,7 @@ export default function CurrencySelect({
                     {code}
                   </span>
                   <span className="truncate text-[13px] text-neutral-500">
-                    {CURRENCY_NAMES[code] ?? ''}
+                    {currencyName(code)}
                   </span>
                 </button>
               ))}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import CountrySelect from './CountrySelect'
 import { aboutCountry, type HolidayCountry } from '../lib/holidays'
 import { MALAYSIA_YEARS } from '../lib/holidays-my'
+import { tr } from '../lib/i18n'
 import { updateSettings, useSettings } from '../lib/store'
 
 /**
@@ -37,32 +38,36 @@ export default function HolidaySettings() {
       <div className="divide-y divide-neutral-100 border-y border-neutral-100">
         <div className="flex items-center justify-between gap-3 py-3.5">
           <span className="min-w-0">
-            <span className="block text-[15px]">Public holidays</span>
-            <span className="block text-[13px] text-neutral-400">In red on the calendar</span>
+            <span className="block text-[15px]">{tr('Public holidays', '公共假期')}</span>
+            <span className="block text-[13px] text-neutral-400">
+              {tr('In red on the calendar', '在日历上用红色显示')}
+            </span>
           </span>
           <CountrySelect
             value={country}
             onChange={(code) => updateSettings({ holidayCountry: code, holidayRegion: null })}
-            label="Holidays of"
-            placeholder="None"
+            label={tr('Holidays of', '假期所属国家')}
+            placeholder={tr('None', '无')}
             clearable
-            clearLabel="No holidays"
+            clearLabel={tr('No holidays', '不显示假期')}
           />
         </div>
 
         {regions.length > 0 && (
           <div className="flex items-center justify-between gap-3 py-3.5">
             <span className="min-w-0">
-              <span className="block text-[15px]">State</span>
-              <span className="block text-[13px] text-neutral-400">For its own holidays too</span>
+              <span className="block text-[15px]">{tr('State', '州/地区')}</span>
+              <span className="block text-[13px] text-neutral-400">
+                {tr('For its own holidays too', '连当地自己的假期也显示')}
+              </span>
             </span>
             <select
               value={region ?? ''}
               onChange={(event) => updateSettings({ holidayRegion: event.target.value || null })}
-              aria-label="State or region"
+              aria-label={tr('State or region', '州或地区')}
               className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
             >
-              <option value="">Whole country</option>
+              <option value="">{tr('Whole country', '全国')}</option>
               {regions.map(([code, name]) => (
                 <option key={code} value={code}>
                   {name}
@@ -75,13 +80,22 @@ export default function HolidaySettings() {
 
       <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
         {info && !info.supported ? (
-          'There is no holiday list for this country yet.'
+          tr('There is no holiday list for this country yet.', '这个国家暂时还没有假期列表。')
         ) : (
           <>
-            On a trip abroad, that country's holidays show on the trip days too.{' '}
+            {tr(
+              "On a trip abroad, that country's holidays show on the trip days too. ",
+              '出国旅行时，旅行那几天也会显示当地的假期。',
+            )}
             {country === 'MY'
-              ? `Malaysia's dates come from the government's official list, which this app has for ${MALAYSIA_YEARS.first}–${MALAYSIA_YEARS.last} and checks for a new year every day. A later year shows as "not confirmed yet" until the list comes out.`
-              : 'The dates are worked out, so a holiday that follows the moon may be one day off.'}
+              ? tr(
+                  `Malaysia's dates come from the government's official list, which this app has for ${MALAYSIA_YEARS.first}–${MALAYSIA_YEARS.last} and checks for a new year every day. A later year shows as "not confirmed yet" until the list comes out.`,
+                  `马来西亚的日期来自政府公布的官方列表，本应用已有 ${MALAYSIA_YEARS.first}–${MALAYSIA_YEARS.last} 年的，并且每天检查有没有新一年的列表。之后的年份在列表公布前会显示「尚未确认」。`,
+                )
+              : tr(
+                  'The dates are worked out, so a holiday that follows the moon may be one day off.',
+                  '日期是推算出来的，所以按月亮定的假期可能会差一天。',
+                )}
           </>
         )}
       </p>

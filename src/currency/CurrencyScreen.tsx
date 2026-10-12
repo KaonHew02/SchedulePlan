@@ -5,8 +5,8 @@ import { RefreshIcon, Spinner, SwapIcon } from '../components/Icons'
 import { longDate } from '../lib/date'
 import {
   COMMON,
-  CURRENCY_NAMES,
   convert,
+  currencyName,
   effectiveRates,
   fetchRates,
   LOTS,
@@ -20,6 +20,7 @@ import {
   unitFor,
   unitLabel,
 } from '../lib/currency'
+import { tr } from '../lib/i18n'
 import { updateSettings, useSettings } from '../lib/store'
 import type { RateTable } from '../types'
 
@@ -82,8 +83,11 @@ function LotPicker({
         type="button"
         onClick={() => setOpen((was) => !was)}
         aria-expanded={open}
-        aria-label={`Quoted per ${group.format(lot)} ${code}. Tap to change the lot.`}
-        title="The lot this is quoted in — set it to match the board"
+        aria-label={tr(
+          `Quoted per ${group.format(lot)} ${code}. Tap to change the lot.`,
+          `按每 ${group.format(lot)} ${code} 报价。点一下可以更改单位。`,
+        )}
+        title={tr('The lot this is quoted in — set it to match the board', '报价单位，调成和兑换店牌价上的一样')}
         className={`-mx-1 rounded-md px-1 underline decoration-neutral-400 decoration-dotted underline-offset-4 transition-colors hover:bg-neutral-200/70 ${
           open ? 'bg-neutral-200/70' : ''
         }`}
@@ -92,10 +96,10 @@ function LotPicker({
       </button>
 
       {open && (
-        <Popover anchor={anchor} label={`Lot for ${code}`} onClose={() => setOpen(false)}>
+        <Popover anchor={anchor} label={tr(`Lot for ${code}`, `${code} 的报价单位`)} onClose={() => setOpen(false)}>
           <div className="w-[176px] p-1.5">
             <p className="px-2.5 pb-1 pt-1 text-[12px] leading-4 text-neutral-400">
-              Quote {code} per
+              {tr(`Quote ${code} per`, `${code} 按每多少报价`)}
             </p>
             {LOTS.map((choice) => (
               <button
@@ -111,7 +115,7 @@ function LotPicker({
               >
                 {group.format(choice)}
                 {choice === unitFor(code) && (
-                  <span className="text-[11px] font-normal text-neutral-400">usual</span>
+                  <span className="text-[11px] font-normal text-neutral-400">{tr('usual', '通常')}</span>
                 )}
               </button>
             ))}
@@ -167,7 +171,7 @@ export default function CurrencyScreen() {
     try {
       setTable(await fetchRates(settings.currency, force))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't get rates.")
+      setError(err instanceof Error ? err.message : tr("Couldn't get rates.", '没能取得汇率。'))
     } finally {
       setLoading(false)
     }
@@ -244,11 +248,11 @@ export default function CurrencyScreen() {
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Currency</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('Currency', '汇率')}</h1>
           <button
             onClick={() => void load(true)}
             disabled={loading}
-            aria-label="Refresh rates"
+            aria-label={tr('Refresh rates', '刷新汇率')}
             className="-mr-1.5 p-1.5 text-neutral-400 disabled:opacity-40"
           >
             {loading ? <Spinner className="h-[18px] w-[18px]" /> : <RefreshIcon className="h-[18px] w-[18px]" />}
@@ -269,17 +273,17 @@ export default function CurrencyScreen() {
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               inputMode="decimal"
-              aria-label="Amount to convert"
+              aria-label={tr('Amount to convert', '要换算的金额')}
               className="min-w-0 flex-1 bg-transparent text-[26px] font-semibold tabular-nums tracking-tight outline-hidden"
             />
-            <CurrencySelect value={from} onChange={setFrom} label="Convert from" />
+            <CurrencySelect value={from} onChange={setFrom} label={tr('Convert from', '原货币')} />
           </div>
 
           <div className="my-3 flex items-center gap-3">
             <div className="h-px flex-1 bg-neutral-100" />
             <button
               onClick={swap}
-              aria-label="Swap the two currencies"
+              aria-label={tr('Swap the two currencies', '对调两种货币')}
               className="rounded-full border border-neutral-200 p-2 text-neutral-500 transition-colors hover:bg-neutral-50"
             >
               <SwapIcon className="h-4 w-4" />
@@ -297,7 +301,7 @@ export default function CurrencyScreen() {
                 plain(result, to)
               )}
             </span>
-            <CurrencySelect value={to} onChange={setTo} label="Convert to" />
+            <CurrencySelect value={to} onChange={setTo} label={tr('Convert to', '目标货币')} />
           </div>
         </div>
 
@@ -313,7 +317,10 @@ export default function CurrencyScreen() {
                   value={manualDraft}
                   onChange={(event) => setManualDraft(event.target.value)}
                   inputMode="decimal"
-                  aria-label={`${inTerms} per ${unitLabel(priced, lots)} ${priced}`}
+                  aria-label={tr(
+                    `${inTerms} per ${unitLabel(priced, lots)} ${priced}`,
+                    `每 ${unitLabel(priced, lots)} ${priced} 换多少 ${inTerms}`,
+                  )}
                   className="w-24 rounded-lg bg-white px-2 py-1 text-right text-[14px] tabular-nums outline-hidden ring-1 ring-neutral-200"
                 />
                 <span className="shrink-0 text-[13px] text-neutral-500">{inTerms}</span>
@@ -321,13 +328,13 @@ export default function CurrencyScreen() {
                   onClick={saveManual}
                   className="ml-auto rounded-full bg-brand-500 px-3 py-1.5 text-[13px] font-medium text-white"
                 >
-                  Set
+                  {tr('Set', '设定')}
                 </button>
                 <button
                   onClick={() => setEditingRate(false)}
                   className="rounded-full px-2 py-1.5 text-[13px] text-neutral-400"
                 >
-                  Cancel
+                  {tr('Cancel', '取消')}
                 </button>
               </div>
             ) : (
@@ -346,7 +353,7 @@ export default function CurrencyScreen() {
                   </span>
                   {overridden && (
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-                      Yours
+                      {tr('Yours', '自定')}
                     </span>
                   )}
                   <button
@@ -359,21 +366,27 @@ export default function CurrencyScreen() {
                     }}
                     className="ml-auto text-[13px] font-medium text-brand-500"
                   >
-                    {overridden ? 'Change' : 'Use my rate'}
+                    {overridden ? tr('Change', '更改') : tr('Use my rate', '用我的汇率')}
                   </button>
                 </div>
                 <p className="mt-1 text-[12px] leading-5 text-neutral-400">
                   {overridden ? (
                     <>
-                      Your own rate, used for the converter and for new expenses.{' '}
+                      {tr(
+                        'Your own rate, used for the converter and for new expenses.',
+                        '你自己的汇率，换算和新的支出都会用它。',
+                      )}{' '}
                       <button onClick={clearManual} className="underline">
-                        Back to the market rate
+                        {tr('Back to the market rate', '改回市场汇率')}
                       </button>
                     </>
                   ) : table ? (
-                    `Market rate from ${longDate(table.date)} · tap the lot to match the board`
+                    tr(
+                      `Market rate from ${longDate(table.date)} · tap the lot to match the board`,
+                      `${longDate(table.date)} 的市场汇率 · 点单位可以对照牌价调整`,
+                    )
                   ) : (
-                    'No rates loaded yet'
+                    tr('No rates loaded yet', '还没有载入汇率')
                   )}
                 </p>
               </>
@@ -389,8 +402,10 @@ export default function CurrencyScreen() {
 
         {rate === null && !loading && (
           <p className="mt-3 rounded-xl bg-neutral-50 px-4 py-3 text-[13px] leading-5 text-neutral-500">
-            No rate for {from} to {to} in the table. Tap refresh, or set one yourself once rates
-            have loaded.
+            {tr(
+              `No rate for ${from} to ${to} in the table. Tap refresh, or set one yourself once rates have loaded.`,
+              `表里没有 ${from} 换 ${to} 的汇率。点刷新，或者等汇率载入后自己设定一个。`,
+            )}
           </p>
         )}
 
@@ -410,7 +425,10 @@ export default function CurrencyScreen() {
             million for a notebook kept in dong, one for a notebook kept in
             ringgit. Only the currency being priced takes an override. */}
         <h2 className="pb-1 pt-8 text-[13px] font-medium tabular-nums text-neutral-400 lg:pt-0">
-          {unitLabel(settings.currency)} {settings.currency} buys
+          {tr(
+            `${unitLabel(settings.currency)} ${settings.currency} buys`,
+            `${unitLabel(settings.currency)} ${settings.currency} 可以换`,
+          )}
         </h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           {COMMON.filter((code) => code !== settings.currency).map((code) => {
@@ -428,7 +446,7 @@ export default function CurrencyScreen() {
                 <span className="w-11 shrink-0 text-[14px] font-medium leading-6">{code}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] leading-6 text-neutral-400">
-                    {CURRENCY_NAMES[code] ?? ''}
+                    {currencyName(code)}
                   </span>
                   {back !== null && (
                     <span className="block text-[12px] leading-4 tabular-nums text-neutral-400">
@@ -447,7 +465,7 @@ export default function CurrencyScreen() {
                 </span>
                 {settings.manualRates[code] && (
                   <span className="shrink-0 text-[11px] font-medium leading-6 text-amber-600">
-                    yours
+                    {tr('yours', '自定')}
                   </span>
                 )}
               </button>
@@ -456,16 +474,18 @@ export default function CurrencyScreen() {
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-6">
-          <span className="text-[13px] text-neutral-500">Totals are shown in</span>
+          <span className="text-[13px] text-neutral-500">{tr('Totals are shown in', '合计显示为')}</span>
           <CurrencySelect
             value={settings.currency}
             onChange={(code) => updateSettings({ currency: code })}
-            label="Home currency"
+            label={tr('Home currency', '本国货币')}
           />
         </div>
         <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-          Changing this changes what new expenses are recorded in. Expenses already saved keep the
-          currency and the rate they were entered at.
+          {tr(
+            'Changing this changes what new expenses are recorded in. Expenses already saved keep the currency and the rate they were entered at.',
+            '改了以后，新的支出会用这个货币记录。已保存的支出保留当时的货币和汇率。',
+          )}
         </p>
         </div>
       </main>

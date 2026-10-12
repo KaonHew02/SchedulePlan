@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from '../components/EmptyState'
 import Fab from '../components/Fab'
+import { tr } from '../lib/i18n'
 import { dueAt, dueLabel, groupOf, isActive, isRange, occurrenceDays, at } from '../lib/reminders'
 import { toggleReminder, useReminders } from '../lib/store'
 import type { Reminder } from '../types'
 import ReminderForm from './ReminderForm'
+
+/**
+ * The section names in Chinese. The English name stays the section's key —
+ * the list below is grouped and coloured by it — and only the heading is
+ * swapped, so the grouping cannot depend on which language is on.
+ */
+const SECTION_ZH: Record<string, string> = {
+  Overdue: '已过期',
+  Today: '今天',
+  Upcoming: '即将到来',
+  Done: '已完成',
+}
 
 function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
   const active = !reminder.done && isRange(reminder) && isActive(reminder)
@@ -13,7 +26,7 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
     <div className="flex items-start gap-3 border-b border-neutral-100 px-5 py-3.5">
       <button
         onClick={() => toggleReminder(reminder.id)}
-        aria-label={reminder.done ? 'Mark as not done' : 'Mark as done'}
+        aria-label={reminder.done ? tr('Mark as not done', '标为未完成') : tr('Mark as done', '标为完成')}
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
           reminder.done ? 'border-brand-500 bg-brand-500' : 'border-neutral-300'
         }`}
@@ -42,7 +55,7 @@ function Row({ reminder, onOpen }: { reminder: Reminder; onOpen: () => void }) {
           </span>
           {active && (
             <span className="mt-[3px] shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">
-              On now
+              {tr('On now', '进行中')}
             </span>
           )}
         </div>
@@ -121,13 +134,13 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-baseline justify-between px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Reminders</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('Reminders', '提醒')}</h1>
           {canAsk && (
             <button
               onClick={() => void Notification.requestPermission().then(() => setCanAsk(false))}
               className="text-[13px] font-medium text-brand-500"
             >
-              Turn on alerts
+              {tr('Turn on alerts', '开启通知')}
             </button>
           )}
         </div>
@@ -135,7 +148,10 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
 
       <main className="pb-28 lg:px-8 lg:pb-10">
         {reminders.length === 0 ? (
-          <EmptyState title="Nothing to remember" hint="Tap + to add something" />
+          <EmptyState
+            title={tr('Nothing to remember', '没有要记的事')}
+            hint={tr('Tap + to add something', '点 + 添加')}
+          />
         ) : (
           // Four sections down one column leaves a laptop mostly empty, and
           // they are independent lists, so they pair up side by side.
@@ -152,7 +168,7 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
                     name === 'Overdue' ? 'text-red-600' : 'text-neutral-400'
                   }`}
                 >
-                  {name}
+                  {tr(name, SECTION_ZH[name] ?? name)}
                 </h2>
                 {rows.map((reminder) => (
                   <Row
@@ -168,12 +184,14 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
         )}
 
         <p className="px-5 pt-6 text-[12px] leading-5 text-neutral-300 lg:px-0">
-          Alerts only appear while SchedulePlan is open in a tab. There is no server to send them
-          when it is closed.
+          {tr(
+            'Alerts only appear while SchedulePlan is open in a tab. There is no server to send them when it is closed.',
+            '提醒只在 SchedulePlan 开着的时候弹出。没有服务器，关掉以后就收不到。',
+          )}
         </p>
       </main>
 
-      <Fab label="Add reminder" onClick={() => setForm({ reminder: null })} />
+      <Fab label={tr('Add reminder', '添加提醒')} onClick={() => setForm({ reminder: null })} />
 
       {form && (
         <ReminderForm

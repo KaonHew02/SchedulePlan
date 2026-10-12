@@ -5,10 +5,12 @@ import {
   dayNumber,
   isSameMonth,
   monthGrid,
+  monthShort,
   todayISO,
   weekDays,
   weekdayShort,
 } from '../lib/date'
+import { isZh, tr } from '../lib/i18n'
 
 /**
  * The calendar that opens under a date field.
@@ -49,20 +51,18 @@ export function CalendarPanel({
         <button
           type="button"
           onClick={() => setMonth(addMonths(month, -1))}
-          aria-label="Previous month"
+          aria-label={tr('Previous month', '上个月')}
           className="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="text-[14px] font-semibold tracking-tight">
-          {new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
-            new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1),
-          )}
+          {monthShort(month)}
         </span>
         <button
           type="button"
           onClick={() => setMonth(addMonths(month, 1))}
-          aria-label="Next month"
+          aria-label={tr('Next month', '下个月')}
           className="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-100"
         >
           <ChevronRight className="h-4 w-4" />
@@ -72,7 +72,8 @@ export function CalendarPanel({
       <div className="grid grid-cols-7 justify-items-center pb-1">
         {weekDays(month).map((day) => (
           <div key={day} className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-            {weekdayShort(day).slice(0, 2)}
+            {/* 'Mo' from 'Mon'; from 周一 the 一, which is the part that differs. */}
+            {isZh() ? weekdayShort(day).slice(-1) : weekdayShort(day).slice(0, 2)}
           </div>
         ))}
       </div>
@@ -122,7 +123,7 @@ export function CalendarPanel({
           }}
           className="flex-1 rounded-lg py-1.5 text-[13px] font-medium text-neutral-600 hover:bg-neutral-100"
         >
-          Today
+          {tr('Today', '今天')}
         </button>
         {onClear && (
           <button
@@ -130,7 +131,7 @@ export function CalendarPanel({
             onClick={onClear}
             className="flex-1 rounded-lg py-1.5 text-[13px] font-medium text-neutral-400 hover:bg-neutral-100"
           >
-            Clear
+            {tr('Clear', '清除')}
           </button>
         )}
       </div>

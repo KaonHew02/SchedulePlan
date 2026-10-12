@@ -14,6 +14,7 @@
  */
 
 import { todayISO } from './date'
+import { tr } from './i18n'
 import { rateMap } from './sanitize'
 import type { RateTable } from '../types'
 
@@ -102,6 +103,70 @@ export const CURRENCY_NAMES: Record<string, string> = {
   CZK: 'Czech koruna',
   HUF: 'Hungarian forint',
 }
+
+/**
+ * The same currencies in Chinese, written out rather than asked of
+ * Intl.DisplayNames: older iPhones do not have it, and where it does exist it
+ * calls the ringgit 林吉特, which is not what anyone here calls it.
+ */
+const CURRENCY_NAMES_ZH: Record<string, string> = {
+  MYR: '马来西亚令吉',
+  SGD: '新加坡元',
+  THB: '泰铢',
+  IDR: '印尼盾',
+  VND: '越南盾',
+  USD: '美元',
+  EUR: '欧元',
+  GBP: '英镑',
+  JPY: '日元',
+  KRW: '韩元',
+  CNY: '人民币',
+  HKD: '港元',
+  TWD: '新台币',
+  PHP: '菲律宾比索',
+  AUD: '澳元',
+  NZD: '新西兰元',
+  INR: '印度卢比',
+  CAD: '加元',
+  CHF: '瑞士法郎',
+  AED: '阿联酋迪拉姆',
+  BND: '文莱元',
+  KHR: '柬埔寨瑞尔',
+  LAK: '老挝基普',
+  MMK: '缅甸元',
+  NPR: '尼泊尔卢比',
+  LKR: '斯里兰卡卢比',
+  PKR: '巴基斯坦卢比',
+  BDT: '孟加拉塔卡',
+  TRY: '土耳其里拉',
+  ZAR: '南非兰特',
+  BRL: '巴西雷亚尔',
+  MXN: '墨西哥比索',
+  SAR: '沙特里亚尔',
+  QAR: '卡塔尔里亚尔',
+  EGP: '埃及镑',
+  RUB: '俄罗斯卢布',
+  SEK: '瑞典克朗',
+  NOK: '挪威克朗',
+  DKK: '丹麦克朗',
+  PLN: '波兰兹罗提',
+  CZK: '捷克克朗',
+  HUF: '匈牙利福林',
+}
+
+/** What to call a currency on screen, in the app's language. Blank for one neither list knows. */
+export function currencyName(code: string): string {
+  const en = CURRENCY_NAMES[code] ?? ''
+  return tr(en, CURRENCY_NAMES_ZH[code] ?? en)
+}
+
+/**
+ * Everything a search for a currency should match: the code and both names,
+ * whichever language is on — a phone in English still finds 泰铢, and one in
+ * 中文 still finds baht.
+ */
+export const currencySearchText = (code: string): string =>
+  `${code} ${CURRENCY_NAMES[code] ?? ''} ${CURRENCY_NAMES_ZH[code] ?? ''}`.toLowerCase()
 
 /** Currencies normally written without decimals. */
 const ZERO_DECIMAL = new Set(['JPY', 'KRW', 'VND', 'IDR', 'CLP', 'ISK', 'HUF'])
@@ -308,8 +373,11 @@ export async function fetchRates(base: string, force = false): Promise<RateTable
   if (cached?.base === base) return cached
   throw new Error(
     lastError instanceof TypeError
-      ? 'No connection, and no rates saved yet. Try again once you are online.'
-      : "Couldn't get today's rates. Try again in a moment.",
+      ? tr(
+          'No connection, and no rates saved yet. Try again once you are online.',
+          '没有网络，也还没存过汇率。连上网络后再试。',
+        )
+      : tr("Couldn't get today's rates. Try again in a moment.", '没能取得今天的汇率，请稍后再试。'),
   )
 }
 

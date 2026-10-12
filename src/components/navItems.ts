@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { MONEY } from '../lib/features'
+import { tr } from '../lib/i18n'
 import type { Screen } from '../types'
 import {
   BellIcon,
@@ -38,15 +39,22 @@ import {
  * back on would make eight, which BottomNav says is past what that bar can
  * hold — at that point one of the two belongs behind More.
  */
-export const NAV: { id: Screen; label: string; Icon: ComponentType<{ className?: string }> }[] = [
-  { id: 'schedule', label: 'Schedule', Icon: CalendarIcon },
-  { id: 'travel', label: 'Travel', Icon: GlobeIcon },
-  { id: 'seasons', label: 'Seasons', Icon: SunriseIcon },
+export const NAV: { id: Screen; label: string; zh: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { id: 'schedule', label: 'Schedule', zh: '日程', Icon: CalendarIcon },
+  { id: 'travel', label: 'Travel', zh: '旅行', Icon: GlobeIcon },
+  { id: 'seasons', label: 'Seasons', zh: '季节', Icon: SunriseIcon },
   ...(MONEY
-    ? [{ id: 'expenses' as const, label: 'Expenses', Icon: WalletIcon }]
+    ? [{ id: 'expenses' as const, label: 'Expenses', zh: '支出', Icon: WalletIcon }]
     : []),
-  { id: 'reminders', label: 'Reminders', Icon: BellIcon },
-  { id: 'currency', label: 'Currency', Icon: SwapIcon },
-  { id: 'translate', label: 'Translate', Icon: TranslateIcon },
-  { id: 'more', label: 'More', Icon: MoreIcon },
+  { id: 'reminders', label: 'Reminders', zh: '提醒', Icon: BellIcon },
+  { id: 'currency', label: 'Currency', zh: '汇率', Icon: SwapIcon },
+  { id: 'translate', label: 'Translate', zh: '翻译', Icon: TranslateIcon },
+  { id: 'more', label: 'More', zh: '更多', Icon: MoreIcon },
 ]
+
+/**
+ * A module's name in the app's language. Both are kept on the entry rather
+ * than worked out once here, because this list is made when the app loads
+ * and the language can change after that.
+ */
+export const navLabel = (item: { label: string; zh: string }): string => tr(item.label, item.zh)

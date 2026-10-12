@@ -6,6 +6,7 @@ import HolidaySettings from '../components/HolidaySettings'
 import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
 import { MONEY } from '../lib/features'
+import { tr } from '../lib/i18n'
 import LabelsScreen from '../tools/LabelsScreen'
 import ScanScreen from '../tools/ScanScreen'
 import { updateSettings, useSettings } from '../lib/store'
@@ -63,7 +64,7 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">More</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('More', '更多')}</h1>
         </div>
       </header>
 
@@ -76,32 +77,32 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
 
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
         <div>
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Tools</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">{tr('Tools', '工具')}</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
             icon={ScanIcon}
-            label="Document scanner"
-            hint="Read a booking or a page into the schedule"
+            label={tr('Document scanner', '文档扫描')}
+            hint={tr('Read a booking or a page into the schedule', '把订单或纸上的内容读进日程')}
             onClick={() => setPage('scan')}
           />
         </div>
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Calendar</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">{tr('Calendar', '日历')}</h2>
         <HolidaySettings />
 
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Labels</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">{tr('Labels', '标签')}</h2>
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
           <Row
             icon={TagIcon}
-            label="Schedule tags"
-            hint="The chips on the add form"
+            label={tr('Schedule tags', '日程标签')}
+            hint={tr('The chips on the add form', '添加表单上的那排标签')}
             onClick={() => setPage('tags')}
           />
           {MONEY && (
             <Row
               icon={WalletIcon}
-              label="Expense categories"
-              hint="How spending is grouped"
+              label={tr('Expense categories', '开销分类')}
+              hint={tr('How spending is grouped', '开销怎么分组')}
               onClick={() => setPage('categories')}
             />
           )}
@@ -110,38 +111,43 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
         </div>
 
         <div>
-        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">Money</h2>
+        <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-2">{tr('Money', '货币')}</h2>
         <div className="border-y border-neutral-100">
           <div className="flex items-center justify-between gap-3 py-3.5">
             <span className="min-w-0">
-              <span className="block text-[15px]">Shown in</span>
+              <span className="block text-[15px]">{tr('Shown in', '显示为')}</span>
               <span className="block text-[13px] text-neutral-400">
-                What totals are added up in
+                {tr('What totals are added up in', '合计用哪种货币来算')}
               </span>
             </span>
             <CurrencySelect
               value={settings.currency}
               onChange={(code) => updateSettings({ currency: code })}
-              label="Home currency"
+              label={tr('Home currency', '本币')}
             />
           </div>
         </div>
         <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-          The same setting as the one at the bottom of Currency, where the rates are.
+          {tr(
+            'The same setting as the one at the bottom of Currency, where the rates are.',
+            '和「汇率」页底部的设置是同一个。',
+          )}
         </p>
 
         </div>
         </div>
 
         <p className="pt-8 text-[13px] leading-5 text-neutral-500">
-          Your notebook is kept in this browser only. Tap the saved time in the bar to see
-          exactly where it lives, and how much room it is using.
+          {tr(
+            'Your notebook is kept in this browser only. Tap the saved time in the bar to see exactly where it lives, and how much room it is using.',
+            '你的记事本只保存在这个浏览器里。点上方栏里的保存时间，可以看到它具体存在哪里、占用了多少空间。',
+          )}
         </p>
 
         <div className="flex flex-col items-center gap-2 pb-8 pt-10">
           <Logo size={44} />
           <p className="text-[14px] font-medium tracking-tight">SchedulePlan</p>
-          <p className="text-[13px] text-neutral-300">Version 0.2</p>
+          <p className="text-[13px] text-neutral-300">{tr('Version 0.2', '版本 0.2')}</p>
         </div>
       </main>
 

@@ -14,6 +14,15 @@ when to go where.
 Seven tabs — Schedule, Travel, Seasons, Reminders, Currency, Translate, More.
 Everything else lives behind **More**.
 
+**English or 中文.** The switch sits beside **Auto** in the top bar on a
+laptop, and at the top of **More** on a phone. Every screen follows it,
+Seasons included — its 242 places have an English twin of every line. The
+choice is kept on the device, not in the notebook, so restoring a backup does
+not change it; the first time, the app opens in the phone's own language.
+Text is written in both languages side by side where it is used —
+`tr('Saved', '已保存')`, from `src/lib/i18n.ts` — so the two cannot drift
+apart unnoticed.
+
 **Expenses is parked.** `MONEY` in `lib/features.ts` is `false`, which takes
 out the tab, the bill split, the receipt scanner, the spend on a schedule item
 and the cost of a trip. Nothing is deleted and nothing recorded is lost —

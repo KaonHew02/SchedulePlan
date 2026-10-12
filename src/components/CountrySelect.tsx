@@ -2,24 +2,27 @@ import { useMemo, useRef, useState } from 'react'
 import { ChevronDown } from './Icons'
 import Popover from './Popover'
 import CountryBadge from './CountryBadge'
-import { COUNTRIES, countryOf } from '../lib/places'
+import { locale, tr, useLang } from '../lib/i18n'
+import { COUNTRIES, countryName, countryOf, countrySearchText } from '../lib/places'
 
 /**
  * Picking a country.
  *
- * Search matches the name or the code, and the list is short enough after two
- * keystrokes that ordering beyond alphabetical earns nothing. Recently used
- * ones are floated to the top, because a notebook's next trip is very often to
- * somewhere it already knows about.
+ * Search matches the name in either language or the code, and the list is
+ * short enough after two keystrokes that ordering beyond alphabetical earns
+ * nothing. Alphabetical by the name on screen: the table is kept in code
+ * order, which is near enough the English alphabet and no order at all in
+ * 中文. Recently used ones are floated to the top, because a notebook's next
+ * trip is very often to somewhere it already knows about.
  */
 export default function CountrySelect({
   value,
   onChange,
   recent = [],
-  label = 'Country',
-  placeholder = 'Pick a country',
+  label = tr('Country', '国家'),
+  placeholder = tr('Pick a country', '选择国家'),
   clearable = false,
-  clearLabel = 'No country',
+  clearLabel = tr('No country', '不选国家'),
 }: {
   value: string | null
   onChange: (code: string | null) => void
@@ -34,22 +37,25 @@ export default function CountrySelect({
   const anchor = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  // The list is sorted by the names it shows, so it is sorted again in the other language.
+  const lang = useLang()
 
   const ordered = useMemo(() => {
     const first = recent
       .map((code) => countryOf(code))
       .filter((country): country is NonNullable<typeof country> => Boolean(country))
     const seen = new Set(first.map((country) => country.code))
-    return [...first, ...COUNTRIES.filter((country) => !seen.has(country.code))]
-  }, [recent])
+    const rest = COUNTRIES.filter((country) => !seen.has(country.code))
+      .map((country) => ({ country, name: countryName(country.code) }))
+      .sort((a, b) => a.name.localeCompare(b.name, locale()))
+      .map(({ country }) => country)
+    return [...first, ...rest]
+  }, [recent, lang])
 
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase()
     if (!text) return ordered
-    return ordered.filter(
-      (country) =>
-        country.name.toLowerCase().includes(text) || country.code.toLowerCase() === text,
-    )
+    return ordered.filter((country) => countrySearchText(country.code).includes(text))
   }, [ordered, query])
 
   const chosen = countryOf(value)
@@ -72,7 +78,7 @@ export default function CountrySelect({
         {chosen ? (
           <>
             <CountryBadge code={chosen.code} />
-            <span className="truncate">{chosen.name}</span>
+            <span className="truncate">{countryName(chosen.code)}</span>
           </>
         ) : (
           <span className="text-neutral-400">{placeholder}</span>
@@ -87,8 +93,8 @@ export default function CountrySelect({
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search"
-              aria-label="Search countries"
+              placeholder={tr('Search', '搜索')}
+              aria-label={tr('Search countries', '搜索国家')}
               className="mb-1 w-full rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
             />
             <div className="no-scrollbar max-h-[228px] overflow-y-auto">
@@ -106,7 +112,7 @@ export default function CountrySelect({
               )}
               {matches.length === 0 && (
                 <p className="px-3 py-4 text-center text-[13px] text-neutral-400">
-                  No country matches that.
+                  {tr('No country matches that.', '没有匹配的国家。')}
                 </p>
               )}
               {matches.map((country) => (
@@ -127,7 +133,7 @@ export default function CountrySelect({
                       country.code === value ? 'font-medium text-brand-700' : ''
                     }`}
                   >
-                    {country.name}
+                    {countryName(country.code)}
                   </span>
                 </button>
               ))}

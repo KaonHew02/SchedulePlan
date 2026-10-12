@@ -5,6 +5,7 @@ import { DateField, Field } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, Close, Plus, TrashIcon } from '../components/Icons'
 import { shortDate, todayISO } from '../lib/date'
 import { effectiveRates, money, plain, rateBetween, rateLine, readCache } from '../lib/currency'
+import { tr } from '../lib/i18n'
 import {
   newLineId,
   newPersonId,
@@ -67,7 +68,15 @@ export function createSplit(currency: string): BillSplit {
  * The first person on a bill is the reader, and a sentence has to say so.
  * Left alone, the default name produces "Me had RM 50" and "ME'S SHARE".
  */
-const sayName = (name: string): string => (name === 'Me' ? 'You' : name)
+const sayName = (name: string): string => (name === 'Me' ? tr('You', '你') : name)
+
+/**
+ * The name on a card, a chip or a row. 'Me' is the one name typed by this app
+ * rather than by the reader, so in 中文 it reads 我. The bill itself keeps
+ * 'Me' whatever language is on — only the label changes — so switching
+ * language never turns the reader into somebody called 我.
+ */
+const showName = (name: string): string => (name === 'Me' ? tr('Me', '我') : name)
 
 /**
  * One line, edited in place.
@@ -97,13 +106,13 @@ function LineRow({
       <input
         value={line.label}
         onChange={(event) => onChange({ ...line, label: event.target.value })}
-        placeholder="What was it?"
-        aria-label="What this line was"
+        placeholder={tr('What was it?', '是什么？')}
+        aria-label={tr('What this line was', '这一项是什么')}
         className="min-w-0 flex-1 bg-transparent py-1 text-[14px] outline-hidden placeholder:text-neutral-300"
       />
       {each !== null && line.amount > 0 && (
         <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
-          {plain(each, currency)} ea
+          {tr(`${plain(each, currency)} ea`, `每人 ${plain(each, currency)}`)}
         </span>
       )}
       <input
@@ -114,12 +123,12 @@ function LineRow({
         }}
         inputMode="decimal"
         placeholder="0.00"
-        aria-label="Amount"
+        aria-label={tr('Amount', '金额')}
         className="w-20 shrink-0 bg-transparent py-1 text-right text-[14px] tabular-nums outline-hidden placeholder:text-neutral-300"
       />
       <button
         onClick={onRemove}
-        aria-label="Remove this line"
+        aria-label={tr('Remove this line', '删除这一项')}
         className="shrink-0 rounded-full p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
       >
         <Close className="h-3.5 w-3.5" />
@@ -170,7 +179,7 @@ function LineCard({
         {onRemoveCard && (
           <button
             onClick={onRemoveCard}
-            aria-label={`Remove ${title}`}
+            aria-label={tr(`Remove ${title}`, `删除「${title}」`)}
             className="shrink-0 rounded-full p-1 text-neutral-300 hover:bg-neutral-100 hover:text-neutral-500"
           >
             <TrashIcon className="h-3.5 w-3.5" />
@@ -200,7 +209,7 @@ function LineCard({
         className="mt-1.5 flex items-center gap-1 text-[13px] font-medium text-brand-500"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add item
+        {tr('Add item', '添加一项')}
       </button>
     </div>
   )
@@ -262,6 +271,9 @@ function ShareCard({
     if (!chosen || amount === null) return
     setBusy(true)
     try {
+      // The title and note below are not translated. They are written into
+      // the expense, where they become the reader's own words to edit, and a
+      // stored value does not change with the language the app is shown in.
       const draft = {
         date: split.date,
         title: split.title.trim() || 'Bill split',
@@ -281,14 +293,14 @@ function ShareCard({
       if (linked) {
         await updateExpense(linked.id, draft)
         onChange({ ...split, expense_person: chosen.person.id })
-        onToast('Expense updated')
+        onToast(tr('Expense updated', '支出已更新'))
       } else {
         const expense = await createExpense(draft)
         onChange({ ...split, expense_id: expense.id, expense_person: chosen.person.id })
-        onToast('Added to expenses')
+        onToast(tr('Added to expenses', '已加入支出'))
       }
     } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Could not save that expense.')
+      onToast(err instanceof Error ? err.message : tr('Could not save that expense.', '这笔支出保存失败。'))
     } finally {
       setBusy(false)
     }
@@ -299,7 +311,7 @@ function ShareCard({
   return (
     <>
       <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">
-        Put it in your expenses
+        {tr('Put it in your expenses', '记入你的支出')}
       </h2>
       <div className="rounded-2xl border border-neutral-200 p-4">
         {split.people.length > 1 && (
@@ -314,7 +326,7 @@ function ShareCard({
                     : 'border-neutral-200 text-neutral-600'
                 }`}
               >
-                {person.name}
+                {showName(person.name)}
               </button>
             ))}
           </div>
@@ -322,7 +334,10 @@ function ShareCard({
 
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[14px] text-neutral-500">
-            {sayName(chosen.person.name)} had {plain(chosen.had, split.currency)} of it
+            {tr(
+              `${sayName(chosen.person.name)} had ${plain(chosen.had, split.currency)} of it`,
+              `${sayName(chosen.person.name)}的份额是 ${plain(chosen.had, split.currency)}`,
+            )}
           </span>
           <span className="text-[19px] font-semibold tabular-nums">
             {amount === null ? <span className="text-neutral-300">—</span> : money(amount, home)}
@@ -331,20 +346,26 @@ function ShareCard({
 
         {foreign && rate !== null && (
           <p className="pt-1 text-[12px] leading-5 text-neutral-400">
-            {rateLine(split.currency, home, rate, settings.quoteUnits)} — frozen into the
-            expense, the way a receipt in a foreign currency is.
+            {tr(
+              `${rateLine(split.currency, home, rate, settings.quoteUnits)} — frozen into the expense, the way a receipt in a foreign currency is.`,
+              `${rateLine(split.currency, home, rate, settings.quoteUnits)}，会固定记进这笔支出，和外币收据一样。`,
+            )}
           </p>
         )}
 
         {foreign && rate === null ? (
           <p className="mt-3 rounded-xl bg-amber-50 px-3.5 py-3 text-[13px] leading-5 text-amber-800">
-            No rate for {split.currency} to {home} yet. Open Currency, refresh, and come back — or
-            set the rate you actually got.
+            {tr(
+              `No rate for ${split.currency} to ${home} yet. Open Currency, refresh, and come back — or set the rate you actually got.`,
+              `还没有 ${split.currency} 换 ${home} 的汇率。打开「汇率」刷新后再回来，或者设定你实际换到的汇率。`,
+            )}
           </p>
         ) : share <= 0 ? (
           <p className="mt-3 text-[13px] leading-5 text-neutral-400">
-            {sayName(chosen.person.name)} had nothing on this bill, so there is nothing to
-            record.
+            {tr(
+              `${sayName(chosen.person.name)} had nothing on this bill, so there is nothing to record.`,
+              `${sayName(chosen.person.name)}在这张账单上没有消费，没什么要记的。`,
+            )}
           </p>
         ) : (
           <>
@@ -354,16 +375,22 @@ function ShareCard({
               className="mt-4 w-full rounded-full bg-brand-500 py-2.5 text-[14px] font-medium text-white disabled:opacity-40"
             >
               {linked === null
-                ? 'Add to expenses'
+                ? tr('Add to expenses', '加入支出')
                 : stale
-                  ? 'Update the expense'
-                  : 'In your expenses'}
+                  ? tr('Update the expense', '更新这笔支出')
+                  : tr('In your expenses', '已在支出里')}
             </button>
             {linked !== null && (
               <p className="pt-2 text-center text-[12px] leading-5 text-neutral-400">
                 {stale
-                  ? `Recorded as ${money(linked.amount, linked.currency)} on ${shortDate(linked.date)} — this has moved since.`
-                  : `Recorded on ${shortDate(linked.date)}. Deleting it there does not touch the bill.`}
+                  ? tr(
+                      `Recorded as ${money(linked.amount, linked.currency)} on ${shortDate(linked.date)} — this has moved since.`,
+                      `${shortDate(linked.date)} 记为 ${money(linked.amount, linked.currency)}，之后账单有变动。`,
+                    )
+                  : tr(
+                      `Recorded on ${shortDate(linked.date)}. Deleting it there does not touch the bill.`,
+                      `已于 ${shortDate(linked.date)} 记录。在那边删除不会影响这张账单。`,
+                    )}
               </p>
             )}
           </>
@@ -434,34 +461,38 @@ export function SplitEditor({
       paidBy: split.paidBy === id ? (people[0]?.id ?? '') : split.paidBy,
       expense_person: split.expense_person === id ? null : split.expense_person,
     })
+    const who = person ? showName(person.name) : '此人'
     onToast(
       theirs === 0
-        ? `${person?.name ?? 'They'} removed`
-        : `${person?.name ?? 'They'} removed, with ${theirs} ${theirs === 1 ? 'line' : 'lines'}`,
+        ? tr(`${person?.name ?? 'They'} removed`, `已移除${who}`)
+        : tr(
+            `${person?.name ?? 'They'} removed, with ${theirs} ${theirs === 1 ? 'line' : 'lines'}`,
+            `已移除${who}，连同 ${theirs} 项`,
+          ),
     )
   }
 
   function owedNote(): string {
-    if (Math.abs(you?.net ?? 0) < 0.005) return 'Nobody owes anything yet'
+    if (Math.abs(you?.net ?? 0) < 0.005) return tr('Nobody owes anything yet', '还没有人欠钱')
     if ((you?.net ?? 0) > 0) {
       const others = split.people.length - 1
-      return `from ${others} ${others === 1 ? 'person' : 'people'}`
+      return tr(`from ${others} ${others === 1 ? 'person' : 'people'}`, `来自 ${others} 人`)
     }
-    return `to ${payer?.name ?? 'whoever paid'}`
+    return tr(`to ${payer?.name ?? 'whoever paid'}`, `付给${payer ? showName(payer.name) : '付钱的人'}`)
   }
 
   return (
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
-          <button onClick={onClose} aria-label="Back to bills" className="p-1.5 text-neutral-400">
+          <button onClick={onClose} aria-label={tr('Back to bills', '返回账单列表')} className="p-1.5 text-neutral-400">
             <ChevronLeft />
           </button>
           <input
             value={split.title}
             onChange={(event) => change({ ...split, title: event.target.value })}
-            placeholder="What are you splitting?"
-            aria-label="Bill name"
+            placeholder={tr('What are you splitting?', '要分哪笔账？')}
+            aria-label={tr('Bill name', '账单名称')}
             className="min-w-0 flex-1 bg-transparent text-[19px] font-semibold tracking-tight outline-hidden placeholder:text-neutral-300"
           />
         </div>
@@ -476,31 +507,36 @@ export function SplitEditor({
         */}
         <div className="rounded-2xl border border-neutral-200 p-4 lg:p-5">
           <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-400">
-            Bill total
+            {tr('Bill total', '账单总额')}
           </p>
           <p className="text-[30px] font-semibold tabular-nums tracking-tight lg:text-[34px]">
             {money(total, split.currency)}
           </p>
           <p className="text-[13px] text-neutral-400">
-            {split.people.length} {split.people.length === 1 ? 'person' : 'people'}
-            {payer ? ` · ${payer.name} paid` : ''}
+            {tr(
+              `${split.people.length} ${split.people.length === 1 ? 'person' : 'people'}`,
+              `${split.people.length} 人`,
+            )}
+            {payer ? tr(` · ${payer.name} paid`, ` · ${showName(payer.name)}付款`) : ''}
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-neutral-50 px-3.5 py-2.5">
               <p className="truncate text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                Your share
+                {tr('Your share', '你的份额')}
               </p>
               <p className="text-[18px] font-semibold tabular-nums">
                 {plain(you?.had ?? 0, split.currency)}
               </p>
               <p className="truncate text-[12px] text-neutral-400">
-                {total === 0 ? 'Nothing on the bill yet' : `of ${plain(total, split.currency)}`}
+                {total === 0
+                  ? tr('Nothing on the bill yet', '账单还是空的')
+                  : tr(`of ${plain(total, split.currency)}`, `共 ${plain(total, split.currency)}`)}
               </p>
             </div>
             <div className="rounded-xl bg-neutral-50 px-3.5 py-2.5">
               <p className="truncate text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                {(you?.net ?? 0) < -0.004 ? 'You owe' : 'Owed back'}
+                {(you?.net ?? 0) < -0.004 ? tr('You owe', '你要付') : tr('Owed back', '应收回')}
               </p>
               <p
                 className={`text-[18px] font-semibold tabular-nums ${
@@ -521,10 +557,10 @@ export function SplitEditor({
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
           <div>
             <div className="mt-6 divide-y divide-neutral-100 border-y border-neutral-100">
-              <Field label="Date">
+              <Field label={tr('Date', '日期')}>
                 <DateField value={split.date} onChange={(date) => change({ ...split, date })} />
               </Field>
-              <Field label="Currency">
+              <Field label={tr('Currency', '货币')}>
                 <CurrencySelect
                   value={split.currency}
                   onChange={(currency) => change({ ...split, currency })}
@@ -532,7 +568,7 @@ export function SplitEditor({
               </Field>
             </div>
 
-            <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">Who paid</h2>
+            <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">{tr('Who paid', '谁付的钱')}</h2>
             <div className="flex flex-wrap gap-2">
               {split.people.map((person) => (
                 <button
@@ -544,22 +580,25 @@ export function SplitEditor({
                       : 'border-neutral-200 text-neutral-600'
                   }`}
                 >
-                  {person.name}
+                  {showName(person.name)}
                 </button>
               ))}
             </div>
 
-            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Who was there</h2>
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">{tr('Who was there', '参加的人')}</h2>
             {split.people.map((person, index) => (
               <LineCard
                 key={person.id}
-                title={person.name}
-                badge={index === 0 ? 'you' : undefined}
+                title={showName(person.name)}
+                badge={index === 0 ? tr('you', '你') : undefined}
                 total={rows[index]?.own ?? 0}
                 currency={split.currency}
                 lines={ownLines(split, person.id)}
                 people={1}
-                hint="What they had. A line does not need a name — a single figure is fine."
+                hint={tr(
+                  'What they had. A line does not need a name — a single figure is fine.',
+                  '这个人的消费。不用写名称，只填一个数字也行。',
+                )}
                 onAdd={() => addLine(person.id)}
                 onChange={editLine}
                 onRemove={dropLine}
@@ -577,27 +616,30 @@ export function SplitEditor({
                     addPerson()
                   }
                 }}
-                placeholder="Add someone"
-                aria-label="New person's name"
+                placeholder={tr('Add someone', '添加一个人')}
+                aria-label={tr("New person's name", '新成员的名字')}
                 className="min-w-0 flex-1 bg-transparent text-[13px] outline-hidden placeholder:text-neutral-400"
               />
               <button
                 onClick={addPerson}
-                aria-label="Add this person"
+                aria-label={tr('Add this person', '添加这个人')}
                 className="shrink-0 rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Shared</h2>
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">{tr('Shared', '共享')}</h2>
             <LineCard
-              title="Shared by everyone"
+              title={tr('Shared by everyone', '大家共享')}
               total={shared.reduce((sum, line) => sum + line.amount, 0)}
               currency={split.currency}
               lines={shared}
               people={split.people.length}
-              hint="Rice, a jug, the plate of fries nobody counted. Only know the total? Put it here as one line."
+              hint={tr(
+                'Rice, a jug, the plate of fries nobody counted. Only know the total? Put it here as one line.',
+                '米饭、一壶饮料、没人算的那盘薯条。只知道总数？就在这里记成一项。',
+              )}
               onAdd={() => addLine(null)}
               onChange={editLine}
               onRemove={dropLine}
@@ -606,20 +648,24 @@ export function SplitEditor({
 
           <div>
             <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400 lg:mt-6 lg:pt-0">
-              Everyone pays
+              {tr('Everyone pays', '每人应付')}
             </h2>
             {total === 0 ? (
               <p className="border-y border-neutral-100 py-4 text-[13px] leading-5 text-neutral-500">
-                Put in what everyone had and the split works itself out.
+                {tr('Put in what everyone had and the split works itself out.', '填上每个人的消费，分账会自动算好。')}
               </p>
             ) : (
               <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                 {rows.map((row) => (
                   <div key={row.person.id} className="flex items-center gap-3 py-2.5">
-                    <span className="min-w-0 flex-1 truncate text-[14px]">{row.person.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-[14px]">{showName(row.person.name)}</span>
                     <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
-                      had {plain(row.had, split.currency)}
-                      {row.shared > 0.004 && ` · ${plain(row.shared, split.currency)} shared`}
+                      {tr(`had ${plain(row.had, split.currency)}`, `消费 ${plain(row.had, split.currency)}`)}
+                      {row.shared > 0.004 &&
+                        tr(
+                          ` · ${plain(row.shared, split.currency)} shared`,
+                          ` · 其中共享 ${plain(row.shared, split.currency)}`,
+                        )}
                     </span>
                     <span
                       className={`w-20 shrink-0 text-right text-[14px] font-medium tabular-nums ${
@@ -631,7 +677,7 @@ export function SplitEditor({
                       }`}
                     >
                       {Math.abs(row.net) < 0.005
-                        ? 'even'
+                        ? tr('even', '两清')
                         : `${row.net > 0 ? '+' : '−'}${plain(Math.abs(row.net), split.currency)}`}
                     </span>
                   </div>
@@ -639,19 +685,21 @@ export function SplitEditor({
               </div>
             )}
 
-            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">Settle up</h2>
+            <h2 className="pb-1 pt-6 text-[13px] font-medium text-neutral-400">{tr('Settle up', '结算')}</h2>
             {transfers.length === 0 ? (
               <p className="border-y border-neutral-100 py-4 text-[14px] text-neutral-500">
-                {total === 0 ? 'Nothing to settle yet.' : 'Everyone is square. Nothing to pay.'}
+                {total === 0
+                  ? tr('Nothing to settle yet.', '还没有要结算的。')
+                  : tr('Everyone is square. Nothing to pay.', '大家都两清了，不用付钱。')}
               </p>
             ) : (
               <>
                 <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                   {transfers.map((transfer, index) => (
                     <div key={index} className="flex items-center gap-2 py-3">
-                      <span className="text-[15px] font-medium">{transfer.from.name}</span>
+                      <span className="text-[15px] font-medium">{showName(transfer.from.name)}</span>
                       <ChevronRight className="h-4 w-4 text-neutral-300" />
-                      <span className="text-[15px] font-medium">{transfer.to.name}</span>
+                      <span className="text-[15px] font-medium">{showName(transfer.to.name)}</span>
                       <span className="ml-auto text-[15px] tabular-nums">
                         {money(transfer.amount, split.currency)}
                       </span>
@@ -659,8 +707,10 @@ export function SplitEditor({
                   ))}
                 </div>
                 <p className="pt-2 text-[12px] leading-5 text-neutral-400">
-                  {transfers.length} {transfers.length === 1 ? 'payment' : 'payments'} clears the
-                  whole thing.
+                  {tr(
+                    `${transfers.length} ${transfers.length === 1 ? 'payment' : 'payments'} clears the whole thing.`,
+                    `${transfers.length} 笔转账就能全部结清。`,
+                  )}
                 </p>
               </>
             )}
@@ -671,12 +721,12 @@ export function SplitEditor({
               <button
                 onClick={() => {
                   deleteSplit(split.id)
-                  onToast('Bill deleted')
+                  onToast(tr('Bill deleted', '账单已删除'))
                   onClose()
                 }}
                 className="w-full rounded-full border border-neutral-200 py-3 text-[15px] font-medium text-red-600"
               >
-                Delete this bill
+                {tr('Delete this bill', '删除这张账单')}
               </button>
             </div>
           </div>
@@ -700,8 +750,8 @@ export function SplitsList({ onOpen }: { onOpen: (id: number) => void }) {
     <main className="px-5 pb-28 lg:max-w-3xl lg:px-8 lg:pb-10">
       {ordered.length === 0 ? (
         <EmptyState
-          title="Nothing being split yet"
-          hint="Tap + to put in who was there and what each of them had"
+          title={tr('Nothing being split yet', '还没有分账')}
+          hint={tr('Tap + to put in who was there and what each of them had', '点 + 填上有谁、每人消费了多少')}
         />
       ) : (
         <div className="divide-y divide-neutral-100 border-y border-neutral-100">
@@ -716,12 +766,14 @@ export function SplitsList({ onOpen }: { onOpen: (id: number) => void }) {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium">
-                    {split.title || 'Untitled bill'}
+                    {split.title || tr('Untitled bill', '未命名账单')}
                   </span>
                   <span className="block truncate text-[12px] text-neutral-400">
-                    {shortDate(split.date)} · {split.people.length} people · your share{' '}
-                    {plain(yours?.had ?? 0, split.currency)}
-                    {inSpending && <span className="text-brand-500"> · in your expenses</span>}
+                    {tr(
+                      `${shortDate(split.date)} · ${split.people.length} people · your share ${plain(yours?.had ?? 0, split.currency)}`,
+                      `${shortDate(split.date)} · ${split.people.length} 人 · 你的份额 ${plain(yours?.had ?? 0, split.currency)}`,
+                    )}
+                    {inSpending && <span className="text-brand-500">{tr(' · in your expenses', ' · 已在支出里')}</span>}
                   </span>
                 </span>
                 <span className="shrink-0 text-[15px] tabular-nums">

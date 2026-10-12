@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import { addMinutes, nowTime } from '../lib/date'
+import { tr } from '../lib/i18n'
 
 /**
  * Hours down one column, minutes down the other.
@@ -158,7 +159,7 @@ export function TimePanel({
     <div className="w-[196px] p-1.5">
       <div className="flex gap-1">
         <Column
-          label="Hour"
+          label={tr('Hour', '小时')}
           values={HOURS}
           selected={currentHour}
           restingAt={baseHour}
@@ -170,7 +171,7 @@ export function TimePanel({
             so the highlight always lands on the value the item actually has.
             It used to show 08:37 sitting on 35. */}
         <Column
-          label="Minute"
+          label={tr('Minute', '分钟')}
           values={MINUTES}
           selected={currentMinute}
           restingAt={baseMinute}
@@ -187,7 +188,9 @@ export function TimePanel({
               onClick={() => pickAndClose(addMinutes(relativeTo, minutes))}
               className="flex-1 rounded-lg py-1.5 text-[12px] font-medium text-neutral-500 hover:bg-neutral-100"
             >
-              {minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
+              {minutes < 60
+                ? tr(`${minutes}m`, `${minutes}分钟`)
+                : tr(`${minutes / 60}h`, `${minutes / 60}小时`)}
             </button>
           ))}
         </div>
@@ -199,7 +202,7 @@ export function TimePanel({
           onClick={() => pickAndClose(nowTime())}
           className="flex-1 rounded-lg py-1.5 text-[13px] font-medium text-neutral-600 hover:bg-neutral-100"
         >
-          Now
+          {tr('Now', '现在')}
         </button>
         {onClear && (
           <button
@@ -207,7 +210,7 @@ export function TimePanel({
             onClick={onClear}
             className="flex-1 rounded-lg py-1.5 text-[13px] font-medium text-neutral-400 hover:bg-neutral-100"
           >
-            Clear
+            {tr('Clear', '清除')}
           </button>
         )}
       </div>

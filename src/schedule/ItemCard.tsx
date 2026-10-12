@@ -1,5 +1,6 @@
 import { PaperclipIcon, PinIcon, RepeatIcon } from '../components/Icons'
 import { dayOfSpan, daysBetween, minutesOf, nowTime, todayISO } from '../lib/date'
+import { tr } from '../lib/i18n'
 import { reflow } from '../lib/notes'
 import { lastDay, spansDays, useTags } from '../lib/store'
 import { tagEmoji, tintFor } from '../lib/tags'
@@ -53,7 +54,7 @@ export default function ItemCard({
   const running = isRunning(item, on)
 
   const when = item.all_day
-    ? 'All day'
+    ? tr('All day', '全天')
     : item.end_time && !spans
       ? `${item.start_time} – ${item.end_time}`
       : item.start_time
@@ -102,7 +103,7 @@ export default function ItemCard({
                   <span
                     className={`rounded-full ${tint.bar} px-2 py-0.5 text-[10px] font-semibold leading-4 text-white`}
                   >
-                    On now
+                    {tr('On now', '进行中')}
                   </span>
                 )}
               </span>
@@ -136,7 +137,10 @@ export default function ItemCard({
               <span className="mt-1 flex items-center gap-1 text-[12px] text-neutral-500">
                 {spans && (
                   <span className={`font-medium ${tint.text}`}>
-                    Day {dayOfSpan(item.date, on)}/{daysBetween(item.date, lastDay(item))}
+                    {tr(
+                      `Day ${dayOfSpan(item.date, on)}/${daysBetween(item.date, lastDay(item))}`,
+                      `第 ${dayOfSpan(item.date, on)}/${daysBetween(item.date, lastDay(item))} 天`,
+                    )}
                   </span>
                 )}
                 {spans && item.location && <span className="text-neutral-300">·</span>}

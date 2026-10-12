@@ -1,5 +1,6 @@
 import { dayNumber, todayISO, weekDays, weekdayShort } from '../lib/date'
 import type { Holiday } from '../lib/holidays'
+import { tr } from '../lib/i18n'
 import { onDay } from '../lib/store'
 import type { ScheduleItem } from '../types'
 import { HolidayLines } from './HolidayLine'
@@ -38,10 +39,13 @@ export default function WeekView({
                   day === today ? 'text-brand-500' : holiday ? 'text-rose-600' : 'text-neutral-900'
                 }`}
               >
-                {weekdayShort(day)} {dayNumber(day)}
+                {tr(
+                  `${weekdayShort(day)} ${dayNumber(day)}`,
+                  `${weekdayShort(day)} ${dayNumber(day)}日`,
+                )}
               </span>
               {dayItems.length === 0 && !holiday && (
-                <span className="text-[13px] text-neutral-300">Nothing scheduled</span>
+                <span className="text-[13px] text-neutral-300">{tr('Nothing scheduled', '没有安排')}</span>
               )}
             </button>
             <HolidayLines holidays={holiday} className="pb-2" />

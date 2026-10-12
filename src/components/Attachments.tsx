@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CameraIcon, FileIcon, PaperclipIcon, ScanIcon, Spinner, TrashIcon } from './Icons'
 import Sheet from './Sheet'
 import { isImage, prettySize, readFile, saveFile } from '../lib/files'
+import { tr } from '../lib/i18n'
 import { readText, type OcrProgress } from '../lib/ocr'
 import type { Attachment } from '../types'
 
@@ -119,7 +120,11 @@ export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }
     <button
       type="button"
       onClick={onOpen}
-      title={state === 'missing' ? `${file.name} — not in this browser` : file.name}
+      title={
+        state === 'missing'
+          ? tr(`${file.name} — not in this browser`, `${file.name} — 不在这个浏览器里`)
+          : file.name
+      }
       className="flex w-[72px] shrink-0 flex-col gap-1 text-left"
     >
       <span
@@ -136,7 +141,7 @@ export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }
         ) : state === 'missing' ? (
           <span className="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-amber-700">
             <FileIcon className="h-5 w-5" />
-            <span className="w-full truncate text-[9px] leading-none">missing</span>
+            <span className="w-full truncate text-[9px] leading-none">{tr('missing', '缺失')}</span>
           </span>
         ) : url && isImage(file.type) ? (
           <img src={url} alt={file.name} className="h-full w-full object-cover" />
@@ -147,7 +152,7 @@ export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }
         )}
         {file.kind === 'scan' && state === 'ready' && (
           <span className="absolute bottom-0 inset-x-0 bg-neutral-900/70 py-0.5 text-center text-[9px] font-medium text-white">
-            SCAN
+            {tr('SCAN', '扫描')}
           </span>
         )}
       </span>
@@ -198,7 +203,9 @@ export function AttachmentStrip({
       onChange([...files, ...added])
     } catch (err) {
       onChange([...files, ...added])
-      onError(err instanceof Error ? err.message : "That file couldn't be attached.")
+      onError(
+        err instanceof Error ? err.message : tr("That file couldn't be attached.", '这个文件没能添加。'),
+      )
     } finally {
       setBusy(false)
     }
@@ -220,15 +227,15 @@ export function AttachmentStrip({
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => pick.current?.click()} className={button}>
           {busy ? <Spinner className="h-3.5 w-3.5" /> : <PaperclipIcon className="h-3.5 w-3.5" />}
-          Attach
+          {tr('Attach', '文件')}
         </button>
         <button type="button" disabled={busy} onClick={() => photo.current?.click()} className={button}>
           <CameraIcon className="h-3.5 w-3.5" />
-          Photo
+          {tr('Photo', '拍照')}
         </button>
         <button type="button" disabled={busy} onClick={() => scan.current?.click()} className={button}>
           <ScanIcon className="h-3.5 w-3.5" />
-          Scan
+          {tr('Scan', '扫描')}
         </button>
       </div>
 
@@ -330,15 +337,21 @@ export function FileViewer({
 
   async function read() {
     setError(null)
-    setReading({ status: 'Starting', progress: 0 })
+    setReading({ status: tr('Starting', '准备中'), progress: 0 })
     try {
       const blob = await readFile(file.id)
-      if (!blob) throw new Error('That attachment is missing from this browser.')
+      if (!blob) {
+        throw new Error(
+          tr('That attachment is missing from this browser.', '这个浏览器里找不到这个附件。'),
+        )
+      }
       const text = await readText(blob, setReading)
       onText?.(text.trim() || '')
-      if (!text.trim()) setError('No text could be made out in that image.')
+      if (!text.trim()) {
+        setError(tr('No text could be made out in that image.', '这张图片里认不出文字。'))
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "That image couldn't be read.")
+      setError(err instanceof Error ? err.message : tr("That image couldn't be read.", '这张图片读不了。'))
     } finally {
       setReading(null)
     }
@@ -388,12 +401,14 @@ export function FileViewer({
 
       <p className="mt-2 text-[12px] text-neutral-400">
         {prettySize(file.size)}
-        {file.kind === 'scan' && ' · scanned'}
+        {file.kind === 'scan' && tr(' · scanned', ' · 已扫描')}
       </p>
 
       {file.text && (
         <div className="mt-3">
-          <p className="pb-1 text-[13px] font-medium text-neutral-400">Text read from it</p>
+          <p className="pb-1 text-[13px] font-medium text-neutral-400">
+            {tr('Text read from it', '识别出的文字')}
+          </p>
           <p className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-[13px] leading-5 text-neutral-700">
             {file.text}
           </p>
@@ -419,7 +434,7 @@ export function FileViewer({
             className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-4 py-2.5 text-[14px] font-medium disabled:opacity-40"
           >
             <ScanIcon className="h-4 w-4" />
-            {file.text ? 'Read again' : 'Read text'}
+            {file.text ? tr('Read again', '重新识别') : tr('Read text', '识别文字')}
           </button>
         )}
         <button
@@ -428,7 +443,7 @@ export function FileViewer({
           disabled={!url}
           className="rounded-full border border-neutral-200 px-4 py-2.5 text-[14px] font-medium disabled:opacity-40"
         >
-          Save a copy
+          {tr('Save a copy', '保存副本')}
         </button>
         {onRemove && (
           <button
@@ -437,7 +452,7 @@ export function FileViewer({
             className="flex items-center gap-1.5 rounded-full border border-neutral-200 px-4 py-2.5 text-[14px] font-medium text-red-600"
           >
             <TrashIcon />
-            Remove
+            {tr('Remove', '移除')}
           </button>
         )}
       </div>

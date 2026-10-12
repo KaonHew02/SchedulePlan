@@ -1,6 +1,6 @@
 import type { Screen } from '../types'
 import Logo from './Logo'
-import { NAV } from './navItems'
+import { NAV, navLabel } from './navItems'
 
 /**
  * The laptop and desktop version of the bottom nav. A bar pinned to the bottom
@@ -21,7 +21,7 @@ export default function SideNav({
       </div>
 
       <nav className="px-3">
-        {NAV.map(({ id, label, Icon }) => (
+        {NAV.map(({ id, label, zh, Icon }) => (
           <button
             key={id}
             onClick={() => onChange(id)}
@@ -33,7 +33,7 @@ export default function SideNav({
             }`}
           >
             <Icon className="h-[19px] w-[19px]" />
-            {label}
+            {navLabel({ label, zh })}
           </button>
         ))}
       </nav>

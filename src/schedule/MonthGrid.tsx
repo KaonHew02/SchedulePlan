@@ -3,6 +3,7 @@ import {
   dayNumber,
   isSameMonth,
   monthGrid,
+  monthTitle,
   shortDate,
   todayISO,
   weekDays,
@@ -11,7 +12,8 @@ import {
 import { onDay, useTags } from '../lib/store'
 import { tintFor } from '../lib/tags'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
-import type { Holiday } from '../lib/holidays'
+import { holidayName, type Holiday } from '../lib/holidays'
+import { isZh, tr } from '../lib/i18n'
 import type { ScheduleItem } from '../types'
 
 /**
@@ -70,19 +72,17 @@ export default function MonthGrid({
         <div className="flex items-center justify-between px-1 pb-1">
           <button
             onClick={() => onStepMonth(addMonths(anchor, -1))}
-            aria-label="Previous month"
+            aria-label={tr('Previous month', '上个月')}
             className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-[13px] font-semibold tracking-tight">
-            {new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
-              new Date(Number(anchor.slice(0, 4)), Number(anchor.slice(5, 7)) - 1, 1),
-            )}
+            {monthTitle(anchor)}
           </span>
           <button
             onClick={() => onStepMonth(addMonths(anchor, 1))}
-            aria-label="Next month"
+            aria-label={tr('Next month', '下个月')}
             className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100"
           >
             <ChevronRight className="h-4 w-4" />
@@ -96,7 +96,13 @@ export default function MonthGrid({
             key={day}
             className={`text-center text-neutral-400 ${compact ? 'text-[10px]' : 'text-[11px]'}`}
           >
-            {compact ? weekdayShort(day).slice(0, 2) : weekdayShort(day)}
+            {/* Two letters of 'Mon' is 'Mo'; two characters of 周一 is all of it,
+                so the Chinese keeps the 一 that tells the days apart. */}
+            {compact
+              ? isZh()
+                ? weekdayShort(day).slice(-1)
+                : weekdayShort(day).slice(0, 2)
+              : weekdayShort(day)}
           </div>
         ))}
       </div>
@@ -113,9 +119,14 @@ export default function MonthGrid({
             <button
               key={day}
               onClick={() => onSelect(day)}
-              aria-label={`${shortDate(day)}, ${count} scheduled${
-                holiday ? `, ${holiday.map((one) => one.name).join(', ')}` : ''
-              }`}
+              aria-label={tr(
+                `${shortDate(day)}, ${count} scheduled${
+                  holiday ? `, ${holiday.map((one) => holidayName(one.name)).join(', ')}` : ''
+                }`,
+                `${shortDate(day)}，${count} 项安排${
+                  holiday ? `，${holiday.map((one) => holidayName(one.name)).join('、')}` : ''
+                }`,
+              )}
               className={`flex flex-col items-center justify-center gap-1 ${
                 compact ? 'h-9' : 'h-12 md:h-16'
               }`}

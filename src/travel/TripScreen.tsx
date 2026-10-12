@@ -12,6 +12,7 @@ import {
 import { money } from '../lib/currency'
 import { daysBetween, rangeLabel } from '../lib/date'
 import { MONEY } from '../lib/features'
+import { tr } from '../lib/i18n'
 import { hostLabel, safeUrl } from '../lib/links'
 import { reflow } from '../lib/notes'
 import { placeLabel } from '../lib/places'
@@ -66,15 +67,20 @@ function LinkForm({
 
   async function save() {
     if (!safeUrl(url)) {
-      setError('That does not look like a link. Paste the whole address.')
+      setError(
+        tr(
+          'That does not look like a link. Paste the whole address.',
+          '这看起来不像链接，请粘贴完整的网址。',
+        ),
+      )
       return
     }
     try {
       await saveTripLink(tripId, { id: link?.id, label, url })
       onDone()
-      onToast(link ? 'Link updated' : 'Link saved')
+      onToast(link ? tr('Link updated', '链接已更新') : tr('Link saved', '链接已保存'))
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'That link would not save.')
+      setError(error instanceof Error ? error.message : tr('That link would not save.', '链接没能保存。'))
     }
   }
 
@@ -88,17 +94,17 @@ function LinkForm({
           setError(null)
         }}
         onKeyDown={(event) => event.key === 'Enter' && void save()}
-        placeholder="Paste the link"
+        placeholder={tr('Paste the link', '粘贴链接')}
         inputMode="url"
-        aria-label="Link address"
+        aria-label={tr('Link address', '链接地址')}
         className="w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
       />
       <input
         value={label}
         onChange={(event) => setLabel(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && void save()}
-        placeholder="What is it? (optional)"
-        aria-label="What the link is"
+        placeholder={tr('What is it? (optional)', '这是什么？（选填）')}
+        aria-label={tr('What the link is', '链接说明')}
         className="mt-2 w-full rounded-lg bg-white px-3 py-2 text-[14px] outline-hidden ring-1 ring-neutral-200 placeholder:text-neutral-300"
       />
       {error && <p className="pt-2 text-[12px] leading-5 text-amber-700">{error}</p>}
@@ -108,10 +114,10 @@ function LinkForm({
           disabled={!url.trim()}
           className="rounded-full bg-brand-500 px-3.5 py-1.5 text-[13px] font-medium text-white disabled:opacity-40"
         >
-          Save
+          {tr('Save', '保存')}
         </button>
         <button onClick={onDone} className="px-2 py-1.5 text-[13px] text-neutral-400">
-          Cancel
+          {tr('Cancel', '取消')}
         </button>
       </div>
     </div>
@@ -164,14 +170,22 @@ function LinkRow({
       </a>
       <button
         onClick={() => setEditing(true)}
-        aria-label={`Edit ${link.label || hostLabel(link.url)}`}
+        aria-label={tr(
+          `Edit ${link.label || hostLabel(link.url)}`,
+          `编辑「${link.label || hostLabel(link.url)}」`,
+        )}
         className="shrink-0 p-1.5 text-neutral-300"
       >
         <PencilIcon className="h-[15px] w-[15px]" />
       </button>
       <button
-        onClick={() => void deleteTripLink(tripId, link.id).then(() => onToast('Link removed'))}
-        aria-label={`Remove ${link.label || hostLabel(link.url)}`}
+        onClick={() =>
+          void deleteTripLink(tripId, link.id).then(() => onToast(tr('Link removed', '链接已移除')))
+        }
+        aria-label={tr(
+          `Remove ${link.label || hostLabel(link.url)}`,
+          `移除「${link.label || hostLabel(link.url)}」`,
+        )}
         className="shrink-0 p-1.5 text-neutral-300"
       >
         <TrashIcon className="h-[15px] w-[15px]" />
@@ -331,7 +345,11 @@ export default function TripScreen({
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-5 pb-3 pt-4 lg:px-8">
-          <button onClick={onBack} aria-label="Back to Travel" className="-ml-2 p-2 text-neutral-400">
+          <button
+            onClick={onBack}
+            aria-label={tr('Back to Travel', '返回旅行')}
+            className="-ml-2 p-2 text-neutral-400"
+          >
             <ChevronLeft />
           </button>
           <h1 className="min-w-0 truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
@@ -350,7 +368,7 @@ export default function TripScreen({
               </span>
               <span className="block truncate text-[13px] text-neutral-400">
                 {rangeLabel(span.start, span.end)}
-                {days > 1 && ` · ${days} days`}
+                {days > 1 && tr(` · ${days} days`, ` · ${days} 天`)}
               </span>
             </span>
             {MONEY && spent > 0 && (
@@ -358,7 +376,7 @@ export default function TripScreen({
                 <span className="block text-[15px] font-medium tabular-nums">
                   {money(spent, settings.currency)}
                 </span>
-                <span className="block text-[12px] text-neutral-400">spent</span>
+                <span className="block text-[12px] text-neutral-400">{tr('spent', '已花费')}</span>
               </span>
             )}
           </div>
@@ -379,7 +397,7 @@ export default function TripScreen({
           {legs.length > 0 ? (
             <>
               <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
-                Stops · {legs.length + 1}
+                {tr('Stops', '各站')} · {legs.length + 1}
               </h2>
               <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                 {[trip, ...legs].map((stop) => {
@@ -430,8 +448,11 @@ export default function TripScreen({
                             // not when there is, or the keyboard would cover
                             // the plan just opened to be read.
                             autoFocus={!stop.plan}
-                            placeholder="Write or paste the plan for this stop"
-                            label={`The plan for ${stop.title}`}
+                            placeholder={tr(
+                              'Write or paste the plan for this stop',
+                              '写下或粘贴这一站的计划',
+                            )}
+                            label={tr(`The plan for ${stop.title}`, `「${stop.title}」的计划`)}
                           />
                         </div>
                       )}
@@ -440,22 +461,32 @@ export default function TripScreen({
                 })}
               </div>
               <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-                Tap a stop to write or paste its plan. Saved as you go.
+                {tr(
+                  'Tap a stop to write or paste its plan. Saved as you go.',
+                  '点一站就能写下或粘贴它的计划，边写边自动保存。',
+                )}
               </p>
             </>
           ) : (
             <>
-              <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Plan</h2>
+              <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+                {tr('Plan', '计划')}
+              </h2>
               <PlanField
                 key={trip.id}
                 item={trip}
                 rows={8}
-                placeholder={'Day 1 — land, check in, bridge at night\nDay 2 — Hoi An, back for dinner\nBook the Ba Na Hills ticket before Friday'}
-                label="The plan for this trip"
+                placeholder={tr(
+                  'Day 1 — land, check in, bridge at night\nDay 2 — Hoi An, back for dinner\nBook the Ba Na Hills ticket before Friday',
+                  '第 1 天：落地、入住，晚上去看桥\n第 2 天：去会安，回来吃晚饭\n周五前订好巴拿山的门票',
+                )}
+                label={tr('The plan for this trip', '这次行程的计划')}
               />
               <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-                Saved as you go. This is the trip's own page — it does not show up in the diary
-                alongside the time.
+                {tr(
+                  "Saved as you go. This is the trip's own page — it does not show up in the diary alongside the time.",
+                  '边写边自动保存。这是行程自己的页面，不会和时间一起出现在日程里。',
+                )}
               </p>
             </>
           )}
@@ -463,14 +494,16 @@ export default function TripScreen({
 
         <div>
           <div className="flex items-baseline justify-between pb-1 pt-8 lg:pt-0">
-            <h2 className="text-[13px] font-medium text-neutral-400">Vlog &amp; links</h2>
+            <h2 className="text-[13px] font-medium text-neutral-400">
+              {tr('Vlog & links', 'Vlog 和链接')}
+            </h2>
             {!adding && (
               <button
                 onClick={() => setAdding(true)}
                 className="flex items-center gap-1 text-[13px] font-medium text-brand-500"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add
+                {tr('Add', '添加')}
               </button>
             )}
           </div>
@@ -481,8 +514,10 @@ export default function TripScreen({
 
           {trip.links.length === 0 && !adding ? (
             <p className="rounded-2xl bg-neutral-50 px-4 py-5 text-center text-[13px] leading-5 text-neutral-400">
-              The vlog, the hotel booking, a map — anything about this trip that lives somewhere
-              else.
+              {tr(
+                'The vlog, the hotel booking, a map — anything about this trip that lives somewhere else.',
+                'Vlog、酒店预订、地图——这次行程放在别处的任何东西。',
+              )}
             </p>
           ) : (
             <div className={trip.links.length ? 'border-t border-neutral-100' : ''}>
@@ -501,13 +536,17 @@ export default function TripScreen({
             attached somewhere else, which is a strange way to be offered a
             boarding pass slot.
           */}
-          <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">Photos &amp; files</h2>
+          <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">
+            {tr('Photos & files', '照片和文件')}
+          </h2>
           <AttachmentStrip
             files={trip.attachments}
             onChange={(files) => {
               setFileError(null)
               void saveTripFiles(trip.id, files).catch((error: unknown) =>
-                setFileError(error instanceof Error ? error.message : 'That would not save.'),
+                setFileError(
+                  error instanceof Error ? error.message : tr('That would not save.', '没能保存。'),
+                ),
               )
             }}
             onError={setFileError}
@@ -518,7 +557,9 @@ export default function TripScreen({
 
           {trip.notes && (
             <>
-              <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">Notes</h2>
+              <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
+                {tr('Notes', '备注')}
+              </h2>
               <p className="whitespace-pre-wrap text-[14px] leading-6 text-neutral-600">
                 {trip.notes}
               </p>

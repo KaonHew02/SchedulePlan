@@ -27,6 +27,13 @@
  * change of plane, which moves every few months and is read through with the
  * rest.
  *
+ * Every one of those is written in Chinese, and has an English twin for when
+ * the app is in English: destinations.en.json, events.en.json and
+ * airports.en.json. The English is words only — the ratings, months, rules
+ * and airports are the Chinese files' — so the check makes sure each twin says
+ * the same number of things in the same order, has no Chinese left in it, and
+ * names no year either.
+ *
  * The check runs before every build, so a file that would draw a broken
  * screen is never published. See docs/SEASONS.md.
  */
@@ -44,6 +51,9 @@ const EVENTS = join(ROOT, 'src/seasons/events.json')
 const AREAS_FILE = join(ROOT, 'src/seasons/areas.json')
 const AIRPORTS = join(ROOT, 'src/seasons/airports.json')
 const FLIGHTS = join(ROOT, 'src/seasons/flights.json')
+const DESTINATIONS_EN = join(ROOT, 'src/seasons/destinations.en.json')
+const EVENTS_EN = join(ROOT, 'src/seasons/events.en.json')
+const AIRPORTS_EN = join(ROOT, 'src/seasons/airports.en.json')
 const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
 /** The same list the screen groups by, so the two cannot disagree. */
@@ -66,6 +76,21 @@ const FLIGHT_KEYS = ['checked', 'from', 'home', 'direct', 'stop', 'seasonal', 'c
 const ROUTE_KINDS = ['direct', 'stop', 'seasonal', 'charter']
 
 const TEXT_FIELDS = ['id', 'area', 'country', 'region', 'places', 'summary', 'climate', 'avoid', 'tips']
+
+/** What an English destination may say, in the order --format writes it. */
+const ENGLISH_KEYS = [
+  'country', 'region', 'part', 'cities', 'places', 'summary', 'climate', 'notes', 'highlights', 'via', 'avoid', 'tips',
+]
+const ENGLISH_TEXT = ['country', 'region', 'places', 'summary', 'climate', 'avoid', 'tips']
+
+/**
+ * A year in an English sentence: 2027 standing alone. A height or a count of
+ * 1,000 and over is written with a comma — 2,050 m — and is not one.
+ */
+const A_YEAR_EN = /(?<![\d,.])20[2-9]\d(?![\d,])/
+
+/** Chinese left behind in the English: characters, or full-width punctuation. */
+const CHINESE = /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/
 
 /**
  * A year written into a sentence: 2027年, or 2027 年. Only 2020 onwards and
@@ -198,6 +223,45 @@ export function formatEvents(events) {
   )
 }
 
+/**
+ * The English twin in the same layout as the Chinese: a destination a block,
+ * a note a line and a highlight a line, so a change to one month is a change
+ * to one line.
+ */
+export function formatEnglish(english) {
+  const s = JSON.stringify
+  const block = ([id, e]) =>
+    [
+      `  ${s(id)}: {`,
+      ...['country', 'region'].map((key) => `    ${s(key)}: ${s(e[key])},`),
+      ...(e.part !== undefined ? [`    "part": ${s(e.part)},`] : []),
+      `    "cities": [${e.cities.map((c) => s(c)).join(', ')}],`,
+      ...['places', 'summary', 'climate'].map((key) => `    ${s(key)}: ${s(e[key])},`),
+      '    "notes": [',
+      e.notes.map((note) => `      ${s(note)}`).join(',\n'),
+      '    ],',
+      '    "highlights": [',
+      e.highlights.map((h) => `      ${s(h)}`).join(',\n'),
+      '    ],',
+      ...(e.via !== undefined ? [`    "via": ${s(e.via)},`] : []),
+      `    "avoid": ${s(e.avoid)},`,
+      `    "tips": ${s(e.tips)}`,
+      '  }',
+    ].join('\n')
+  return `{\n${Object.entries(english).map(block).join(',\n')}\n}\n`
+}
+
+export function formatEventsEnglish(events) {
+  const years = Object.keys(events).sort()
+  return (
+    '{\n' +
+    years
+      .map((year) => `  ${JSON.stringify(year)}: [\n${events[year].map((t) => `    ${JSON.stringify(t)}`).join(',\n')}\n  ]`)
+      .join(',\n') +
+    '\n}\n'
+  )
+}
+
 /** One airport a line, in code order. */
 export function formatAirports(names) {
   const lines = Object.keys(names)
@@ -277,6 +341,100 @@ export function checkFlights(flights, names) {
   // A names file that is not a list of names is the other check's to say.
   const named = typeof names === 'object' && names !== null ? names : {}
   for (const code of flights.home) if (!named[code]) say(`home airport ${code} has no name in ${shown(AIRPORTS)}`)
+  return problems
+}
+
+/**
+ * The English twins against the Chinese. Each English destination has the
+ * same id, the same number of towns, notes and highlights, a part and a via
+ * exactly where the Chinese has one, and names the place the same way round —
+ * a country that is one place (新加坡 in 新加坡) is Singapore in Singapore.
+ */
+export function checkEnglish(file, english, events, eventsEnglish, names, namesEnglish, flights) {
+  const problems = []
+  const say = (where, what) => problems.push(`${where}: ${what}`)
+  const text = (where, value) => {
+    if (typeof value !== 'string' || !value.trim()) return say(where, 'is missing')
+    if (CHINESE.test(value)) say(where, `still has Chinese ("${value.match(/.{0,10}[\u3400-\u9fff\u3000-\u303f\uff00-\uffef].{0,10}/)?.[0]}")`)
+    if (A_YEAR_EN.test(value)) say(where, `names a year ("${value.match(/.{0,12}20[2-9]\d.{0,12}/)?.[0]}") — write a height as 2,050 m`)
+  }
+
+  const en = shown(DESTINATIONS_EN)
+  if (typeof english !== 'object' || english === null || Array.isArray(english)) {
+    say(en, 'should map each destination id to its English')
+    english = {}
+  }
+  const ids = new Set(file.destinations.map((d) => d.id))
+  for (const id of Object.keys(english)) if (!ids.has(id)) say(en, `"${id}" is not a destination in ${shown(DESTINATIONS)}`)
+
+  for (const d of file.destinations) {
+    const e = english[d.id]
+    const at = `${en} ${d.id}`
+    if (!e) {
+      say(at, 'has no English')
+      continue
+    }
+    for (const key of unknownKeys(e, ENGLISH_KEYS)) say(at, `unknown key "${key}" — a typo?`)
+    for (const key of ENGLISH_TEXT) text(`${at} ${key}`, e[key])
+    if ((d.region === d.country) !== (e.region === e.country)) {
+      say(at, d.region === d.country ? 'region should be the country again, as in the Chinese' : 'region is the country again, but not in the Chinese')
+    }
+    if ((d.part === undefined) !== (e.part === undefined)) say(at, d.part === undefined ? 'has a part the Chinese has not' : 'part is missing')
+    else if (e.part !== undefined) text(`${at} part`, e.part)
+    if ((d.via === undefined) !== (e.via === undefined)) say(at, d.via === undefined ? 'has a via the Chinese has not' : 'via is missing')
+    else if (e.via !== undefined) text(`${at} via`, e.via)
+
+    if (!Array.isArray(e.cities) || e.cities.length !== d.cities.length) {
+      say(at, `cities should be ${d.cities.length}, as in the Chinese`)
+    } else {
+      e.cities.forEach((city, i) => text(`${at} city ${i + 1}`, city))
+      d.cities.forEach((city, i) => {
+        if (city === d.region && e.cities[i] !== e.region) say(at, `city ${i + 1} is the region in Chinese, so should be "${e.region}"`)
+      })
+      if (new Set(e.cities).size !== e.cities.length) say(at, 'a city is listed twice')
+    }
+    if (!Array.isArray(e.notes) || e.notes.length !== 12) say(at, 'notes should be twelve, January first')
+    else e.notes.forEach((note, i) => text(`${at} note ${i + 1}`, note))
+    if (!Array.isArray(e.highlights) || e.highlights.length !== d.highlights.length) {
+      say(at, `highlights should be ${d.highlights.length}, in the Chinese order`)
+    } else {
+      e.highlights.forEach((h, i) => text(`${at} highlight ${i + 1}`, h))
+    }
+  }
+
+  const ev = shown(EVENTS_EN)
+  if (typeof eventsEnglish !== 'object' || eventsEnglish === null || Array.isArray(eventsEnglish)) {
+    say(ev, 'should be an object of years')
+  } else {
+    for (const year of Object.keys(eventsEnglish)) if (!events[year]) say(ev, `${year} has no events in ${shown(EVENTS)}`)
+    for (const [year, list] of Object.entries(events)) {
+      const words = eventsEnglish[year]
+      if (!Array.isArray(words) || words.length !== list.length) say(`${ev} ${year}`, `should be ${list.length} lines, in the Chinese order`)
+      else words.forEach((t, i) => text(`${ev} ${year} #${i + 1}`, t))
+    }
+  }
+
+  const ap = shown(AIRPORTS_EN)
+  if (typeof namesEnglish !== 'object' || namesEnglish === null || Array.isArray(namesEnglish)) {
+    say(ap, 'should map each airport code to its English name')
+  } else {
+    for (const code of Object.keys(namesEnglish)) if (!(code in names)) say(ap, `${code} is not in ${shown(AIRPORTS)}`)
+    for (const [code, name] of Object.entries(names)) {
+      const english = namesEnglish[code]
+      text(`${ap} ${code}`, english)
+      // 东京·成田 is the city and which of its airports: Tokyo·Narita.
+      if (typeof english === 'string' && name.includes('·') !== english.includes('·')) {
+        say(`${ap} ${code}`, `"${english}" should split into city·airport exactly where "${name}" does`)
+      }
+    }
+  }
+
+  // flights.json names a stop's city in Chinese; the English is found through
+  // the airport in that city, so there has to be one.
+  const cities = new Set(Object.values(names).map((name) => name.split('·')[0]))
+  for (const [code, city] of Object.entries(flights.stop ?? {})) {
+    if (!cities.has(city)) say(shown(FLIGHTS), `the stop for ${code}, ${city}, is no airport's city in ${shown(AIRPORTS)} — its English name cannot be found`)
+  }
   return problems
 }
 
@@ -577,6 +735,7 @@ function review(file) {
     }
   }
   console.log(`\n${count} sentences to read again. Change what is out of date, then set "reviewed" in ${shown(DESTINATIONS)}.`)
+  console.log(`Change the same sentence in ${shown(DESTINATIONS_EN)} — the English does not follow by itself.`)
 }
 
 // ------------------------------------------------------------------- main
@@ -590,10 +749,17 @@ const file = JSON.parse(readFileSync(DESTINATIONS, 'utf8'))
 const events = JSON.parse(readFileSync(EVENTS, 'utf8'))
 const names = JSON.parse(readFileSync(AIRPORTS, 'utf8'))
 const flights = JSON.parse(readFileSync(FLIGHTS, 'utf8'))
+const english = JSON.parse(readFileSync(DESTINATIONS_EN, 'utf8'))
+const eventsEnglish = JSON.parse(readFileSync(EVENTS_EN, 'utf8'))
+const namesEnglish = JSON.parse(readFileSync(AIRPORTS_EN, 'utf8'))
 
 // Checked before anything is written, so --format never rewrites a file it
 // would have refused.
 const problems = [...checkFlights(flights, names), ...check(file, events, names, Array.isArray(flights.home) ? flights.home : [])]
+// The English is only worth comparing with Chinese that is itself sound.
+if (problems.length === 0) {
+  problems.push(...checkEnglish(file, english, events, eventsEnglish, names, namesEnglish, flights))
+}
 if (problems.length) {
   console.error(`Seasons: ${problems.length} problem${problems.length === 1 ? '' : 's'} in the data.\n`)
   for (const problem of problems) console.error(`  ${problem}`)
@@ -605,9 +771,15 @@ if (flag('--format')) {
   writeFileSync(EVENTS, formatEvents(events))
   writeFileSync(AIRPORTS, formatAirports(names))
   writeFileSync(FLIGHTS, formatFlights(flights))
-  console.log(`Rewrote ${[DESTINATIONS, EVENTS, AIRPORTS, FLIGHTS].map(shown).join(', ')}.`)
+  // The English in the Chinese order, so the two files read side by side.
+  const ordered = Object.fromEntries(file.destinations.map((d) => [d.id, english[d.id]]))
+  writeFileSync(DESTINATIONS_EN, formatEnglish(ordered))
+  writeFileSync(EVENTS_EN, formatEventsEnglish(eventsEnglish))
+  writeFileSync(AIRPORTS_EN, formatAirports(namesEnglish))
+  const written = [DESTINATIONS, EVENTS, AIRPORTS, FLIGHTS, DESTINATIONS_EN, EVENTS_EN, AIRPORTS_EN]
+  console.log(`Rewrote ${written.map(shown).join(', ')}.`)
 } else if (flag('--check')) {
-  console.log(`Seasons: ${file.destinations.length} destinations, all well formed.`)
+  console.log(`Seasons: ${file.destinations.length} destinations, all well formed, in Chinese and English.`)
 } else if (flag('--review')) {
   review(file)
 } else if (flag('--flights')) {

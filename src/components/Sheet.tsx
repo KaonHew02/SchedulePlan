@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Close } from './Icons'
+import { tr } from '../lib/i18n'
 
 interface Props {
   onClose: () => void
@@ -74,7 +75,7 @@ export default function Sheet({ onClose, title, children, footer }: Props) {
           <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={tr('Close', '关闭')}
             className="p-1.5 -mr-1.5 rounded-full text-neutral-400 hover:bg-neutral-100 active:bg-neutral-100"
           >
             <Close />

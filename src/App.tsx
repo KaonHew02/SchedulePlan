@@ -8,6 +8,7 @@ import UpdateBar from './components/UpdateBar'
 import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import { MONEY } from './lib/features'
+import { useLang } from './lib/i18n'
 import RemindersScreen from './reminders/RemindersScreen'
 import SeasonsScreen from './seasons/SeasonsScreen'
 import TranslateScreen from './translate/TranslateScreen'
@@ -34,6 +35,9 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('schedule')
   const [toast, setToast] = useState<string | null>(null)
   const [showData, setShowData] = useState(false)
+  // Read here so that changing the language draws everything again — every
+  // screen under this reads the language through `tr` as it draws.
+  useLang()
 
   return (
     <>

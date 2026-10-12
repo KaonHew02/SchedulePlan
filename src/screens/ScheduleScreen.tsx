@@ -16,6 +16,7 @@ import {
   weekTitle,
 } from '../lib/date'
 import { useHolidays } from '../lib/holidays'
+import { tr } from '../lib/i18n'
 import { firstOccurrence, occurrences } from '../lib/repeat'
 import {
   createExpense,
@@ -37,6 +38,10 @@ import WeekView from '../schedule/WeekView'
 import type { ExpenseDraft, ScheduleDraft, ScheduleItem, ViewMode } from '../types'
 
 const VIEWS: ViewMode[] = ['day', 'week', 'month']
+
+/** The toggle's words. The English is the mode itself, capitalised by the button's class. */
+const viewLabel = (mode: ViewMode): string =>
+  tr(mode, mode === 'day' ? '日' : mode === 'week' ? '周' : '月')
 
 /** The dates a view needs. */
 function rangeFor(view: ViewMode, anchor: string): { start: string; end: string } {
@@ -106,7 +111,7 @@ function ViewToggle({
             view === mode ? 'bg-white font-medium shadow-xs' : 'text-neutral-500'
           }`}
         >
-          {mode}
+          {viewLabel(mode)}
         </button>
       ))}
     </div>
@@ -186,31 +191,31 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
       setAnchor(saved.date)
     }
     setForm(null)
-    onToast(form?.item ? 'Updated' : 'Added')
+    onToast(form?.item ? tr('Updated', '已更新') : tr('Added', '已添加'))
   }
 
   async function remove(id: number) {
     await store.deleteSchedule(id)
     setDetail(null)
-    onToast('Deleted')
+    onToast(tr('Deleted', '已删除'))
   }
 
   /** Just this time round, out of a repeat. */
   async function skip(item: ScheduleItem) {
     await store.skipDay(item.id, item.date)
     setDetail(null)
-    onToast('Removed from this day')
+    onToast(tr('Removed from this day', '已从这天移除'))
   }
 
   async function saveExpense(draft: ExpenseDraft) {
     await createExpense(draft)
     setExpenseFor(null)
-    onToast('Expense added')
+    onToast(tr('Expense added', '已添加开销'))
   }
 
   const title =
     view === 'day'
-      ? `${relativeDay(anchor)}, ${shortDate(anchor)}`
+      ? tr(`${relativeDay(anchor)}, ${shortDate(anchor)}`, `${shortDate(anchor)} ${relativeDay(anchor)}`)
       : view === 'week'
         ? weekTitle(anchor)
         : monthTitle(anchor)
@@ -233,13 +238,13 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
                   onClick={() => setAnchor(todayISO())}
                   className="mr-1 text-[13px] font-medium text-brand-500"
                 >
-                  Today
+                  {tr('Today', '今天')}
                 </button>
               )}
-              <button onClick={() => step(-1)} aria-label="Previous" className="p-1">
+              <button onClick={() => step(-1)} aria-label={tr('Previous', '上一页')} className="p-1">
                 <ChevronLeft />
               </button>
-              <button onClick={() => step(1)} aria-label="Next" className="p-1">
+              <button onClick={() => step(1)} aria-label={tr('Next', '下一页')} className="p-1">
                 <ChevronRight />
               </button>
             </div>
@@ -303,10 +308,10 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
           )}
 
           <section>
-            <h2 className="pb-2 text-[13px] font-medium text-neutral-400">Up next</h2>
+            <h2 className="pb-2 text-[13px] font-medium text-neutral-400">{tr('Up next', '接下来')}</h2>
             {upNext.length === 0 ? (
               <p className="rounded-2xl bg-neutral-50 px-4 py-5 text-center text-[13px] leading-5 text-neutral-400">
-                Nothing ahead in the diary.
+                {tr('Nothing ahead in the diary.', '接下来没有安排。')}
               </p>
             ) : (
               <div className="space-y-2">
@@ -319,7 +324,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
         </aside>
       </main>
 
-      <Fab label="Add to schedule" onClick={() => setForm({ item: null })} />
+      <Fab label={tr('Add to schedule', '添加日程')} onClick={() => setForm({ item: null })} />
 
       {detail && (
         <ScheduleDetail

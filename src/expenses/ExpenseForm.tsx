@@ -8,7 +8,9 @@ import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { addDays, shortDate, todayISO } from '../lib/date'
 import { effectiveRates, money, rateBetween, rateLine, readCache } from '../lib/currency'
+import { tr } from '../lib/i18n'
 import { createTag, useCategories, useSchedule, useSettings } from '../lib/store'
+import { tagName } from '../lib/tags'
 import ReceiptScan, { type ScanResult } from './ReceiptScan'
 import type { Attachment, Expense, ExpenseDraft, TagId } from '../types'
 
@@ -44,18 +46,18 @@ function ScheduleLink({
       <button
         ref={anchor}
         type="button"
-        aria-label="Link to a schedule item"
+        aria-label={tr('Link to a schedule item', '关联日程')}
         onClick={() => setOpen((was) => !was)}
         className="flex min-w-0 items-center gap-1 rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] transition-colors hover:bg-neutral-200/70"
       >
         <span className={`truncate ${chosen ? '' : 'text-neutral-400'}`}>
-          {chosen ? chosen.title : 'Not linked'}
+          {chosen ? chosen.title : tr('Not linked', '未关联')}
         </span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
       </button>
 
       {open && (
-        <Popover anchor={anchor} label="Schedule items" onClose={() => setOpen(false)}>
+        <Popover anchor={anchor} label={tr('Schedule items', '日程')} onClose={() => setOpen(false)}>
           <div className="w-[260px] p-2">
             <button
               type="button"
@@ -65,12 +67,12 @@ function ScheduleLink({
               }}
               className="w-full rounded-lg px-3 py-2 text-left text-[14px] text-neutral-500 hover:bg-neutral-100"
             >
-              Not linked
+              {tr('Not linked', '未关联')}
             </button>
             <div className="no-scrollbar max-h-[220px] overflow-y-auto">
               {options.length === 0 ? (
                 <p className="px-3 py-4 text-center text-[13px] leading-5 text-neutral-400">
-                  Nothing in the schedule within three days of this date.
+                  {tr('Nothing in the schedule within three days of this date.', '这天前后三天内没有日程。')}
                 </p>
               ) : (
                 options.map((item) => (
@@ -169,10 +171,10 @@ export default function ExpenseForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim()) return setError('What was it for?')
-    if (!entered || entered <= 0) return setError('Enter an amount above zero.')
+    if (!title.trim()) return setError(tr('What was it for?', '花在什么上？'))
+    if (!entered || entered <= 0) return setError(tr('Enter an amount above zero.', '请输入大于 0 的金额。'))
     if (foreign && (!usedRate || usedRate <= 0)) {
-      return setError(`Enter the rate you got for 1 ${currency}.`)
+      return setError(tr(`Enter the rate you got for 1 ${currency}.`, `请输入 1 ${currency} 实际换到的汇率。`))
     }
 
     setError(null)
@@ -194,7 +196,7 @@ export default function ExpenseForm({
         attachments: files,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save. Please try again.')
+      setError(err instanceof Error ? err.message : tr('Could not save. Please try again.', '保存失败，请再试一次。'))
       setSaving(false)
     }
   }
@@ -203,7 +205,7 @@ export default function ExpenseForm({
     <>
       <Sheet
         onClose={onClose}
-        title={expense ? 'Edit expense' : 'Add an expense'}
+        title={expense ? tr('Edit expense', '编辑支出') : tr('Add an expense', '添加支出')}
         footer={
           <>
             {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
@@ -213,7 +215,7 @@ export default function ExpenseForm({
               disabled={saving}
               className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? tr('Saving...', '正在保存…') : tr('Save', '保存')}
             </button>
           </>
         }
@@ -223,7 +225,7 @@ export default function ExpenseForm({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             autoFocus={!expense}
-            placeholder="What was it for?"
+            placeholder={tr('What was it for?', '花在什么上？')}
             className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
           />
 
@@ -232,7 +234,7 @@ export default function ExpenseForm({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               inputMode="decimal"
-              aria-label="Amount"
+              aria-label={tr('Amount', '金额')}
               placeholder="0.00"
               className="min-w-0 flex-1 bg-transparent text-[28px] font-semibold tabular-nums tracking-tight outline-hidden placeholder:text-neutral-200"
             />
@@ -242,14 +244,14 @@ export default function ExpenseForm({
           {foreign && (
             <div className="mt-2 rounded-xl bg-neutral-50 px-3.5 py-3">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[13px] text-neutral-500">Rate</span>
+                <span className="text-[13px] text-neutral-500">{tr('Rate', '汇率')}</span>
                 <span className="flex items-baseline gap-1.5">
                   <span className="text-[13px] text-neutral-400">1 {currency} =</span>
                   <input
                     value={rate}
                     onChange={(event) => setRate(event.target.value)}
                     inputMode="decimal"
-                    aria-label={`${home} per ${currency}`}
+                    aria-label={tr(`${home} per ${currency}`, `每 1 ${currency} 换多少 ${home}`)}
                     placeholder="0.0000"
                     className="w-24 bg-transparent text-right text-[15px] tabular-nums outline-hidden placeholder:text-neutral-300"
                   />
@@ -258,38 +260,44 @@ export default function ExpenseForm({
               </div>
               <p className="mt-1.5 text-[13px] text-neutral-500">
                 {converted > 0 ? (
-                  <>
-                    Recorded as{' '}
-                    <span className="font-medium text-neutral-900">{money(converted, home)}</span>
-                    , and kept at this rate for good.
-                  </>
+                  tr(
+                    <>
+                      Recorded as{' '}
+                      <span className="font-medium text-neutral-900">{money(converted, home)}</span>
+                      , and kept at this rate for good.
+                    </>,
+                    <>
+                      记为 <span className="font-medium text-neutral-900">{money(converted, home)}</span>
+                      ，以后一直按这个汇率。
+                    </>,
+                  )
                 ) : (
-                  'Change it to the rate you actually got.'
+                  tr('Change it to the rate you actually got.', '改成你实际换到的汇率。')
                 )}
               </p>
             </div>
           )}
 
           <div className="mt-3 divide-y divide-neutral-100 border-y border-neutral-100">
-            <Field label="Date">
+            <Field label={tr('Date', '日期')}>
               <DateField value={date} onChange={setDate} />
             </Field>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {categories.map(({ id, label, emoji }) => (
+            {categories.map((tag) => (
               <button
-                key={id}
+                key={tag.id}
                 type="button"
-                onClick={() => setCategory(category === id ? null : id)}
+                onClick={() => setCategory(category === tag.id ? null : tag.id)}
                 className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-                  category === id
+                  category === tag.id
                     ? 'border-neutral-900 bg-neutral-900 text-white'
                     : 'border-neutral-200 text-neutral-600'
                 }`}
               >
-                <span className="mr-1">{emoji}</span>
-                {label}
+                <span className="mr-1">{tag.emoji}</span>
+                {tagName(tag)}
               </button>
             ))}
             {!newCategory && (
@@ -298,7 +306,7 @@ export default function ExpenseForm({
                 onClick={() => setNewCategory(true)}
                 className="rounded-full border border-dashed border-neutral-300 px-3 py-1.5 text-[13px] text-neutral-400"
               >
-                + New
+                {tr('+ New', '+ 新建')}
               </button>
             )}
           </div>
@@ -306,7 +314,7 @@ export default function ExpenseForm({
           {newCategory && (
             <div className="mt-2">
               <TagEditor
-                submitLabel="Add"
+                submitLabel={tr('Add', '添加')}
                 onCancel={() => setNewCategory(false)}
                 onSubmit={(label, emoji) => {
                   const created = createTag(label, emoji, 'categories')
@@ -324,14 +332,14 @@ export default function ExpenseForm({
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 py-3 text-[14px] font-medium text-neutral-500 transition-colors hover:border-neutral-400 hover:text-neutral-700"
             >
               <ScanIcon className="h-4 w-4" />
-              Scan a receipt
+              {tr('Scan a receipt', '扫描收据')}
             </button>
           )}
 
           {showDetails ? (
             <>
               <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">
-                <Field label="Part of">
+                <Field label={tr('Part of', '关联')}>
                   <ScheduleLink value={linked} date={date} onChange={setLinked} />
                 </Field>
                 <div className="py-3">
@@ -340,7 +348,7 @@ export default function ExpenseForm({
               </div>
 
               <div className="mt-4">
-                <p className="pb-2 text-[13px] text-neutral-400">Receipts and files</p>
+                <p className="pb-2 text-[13px] text-neutral-400">{tr('Receipts and files', '收据和文件')}</p>
                 <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
               </div>
             </>
@@ -350,7 +358,7 @@ export default function ExpenseForm({
               onClick={() => setShowDetails(true)}
               className="mt-4 text-[14px] text-neutral-400"
             >
-              + Link to schedule, add notes or files
+              {tr('+ Link to schedule, add notes or files', '+ 关联日程、添加备注或文件')}
             </button>
           )}
         </form>

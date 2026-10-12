@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tr } from '../lib/i18n'
 import { EMOJI_CHOICES } from '../lib/tags'
 
 /**
@@ -29,7 +30,7 @@ export default function TagEditor({
     try {
       onSubmit(label, emoji)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save that tag.')
+      setError(err instanceof Error ? err.message : tr('Could not save that tag.', '这个标签保存不了。'))
     }
   }
 
@@ -39,7 +40,7 @@ export default function TagEditor({
         <input
           value={emoji}
           onChange={(e) => setEmoji(e.target.value)}
-          aria-label="Emoji"
+          aria-label={tr('Emoji', '表情')}
           className="w-11 shrink-0 rounded-xl border border-neutral-200 py-2 text-center text-[17px] outline-hidden"
         />
         <input
@@ -47,7 +48,7 @@ export default function TagEditor({
           onChange={(e) => setLabel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
           autoFocus
-          placeholder="Tag name"
+          placeholder={tr('Tag name', '标签名称')}
           maxLength={20}
           className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-[15px] outline-hidden placeholder:text-neutral-300"
         />
@@ -76,7 +77,7 @@ export default function TagEditor({
           onClick={onCancel}
           className="flex-1 rounded-full border border-neutral-200 py-2 text-[14px] font-medium"
         >
-          Cancel
+          {tr('Cancel', '取消')}
         </button>
         {onDelete && (
           <button
@@ -84,7 +85,7 @@ export default function TagEditor({
             onClick={onDelete}
             className="rounded-full border border-neutral-200 px-4 py-2 text-[14px] font-medium text-red-600"
           >
-            Delete
+            {tr('Delete', '删除')}
           </button>
         )}
         <button

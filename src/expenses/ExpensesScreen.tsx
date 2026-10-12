@@ -5,6 +5,7 @@ import { Segmented } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, PaperclipIcon } from '../components/Icons'
 import { addMonths, monthTitle, relativeDay, shortDate, todayISO } from '../lib/date'
 import { money, plain } from '../lib/currency'
+import { tr, useLang } from '../lib/i18n'
 import {
   byNewest,
   createExpense,
@@ -15,7 +16,7 @@ import {
   useSettings,
   useSplits,
 } from '../lib/store'
-import { tagEmoji } from '../lib/tags'
+import { tagEmoji, tagName } from '../lib/tags'
 import type { Expense, ExpenseDraft, ExpensesTab } from '../types'
 import ExpenseDetail from './ExpenseDetail'
 import ExpenseForm, { conversionNote } from './ExpenseForm'
@@ -51,6 +52,8 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
   const [detail, setDetail] = useState<Expense | null>(null)
   const [form, setForm] = useState<{ expense: Expense | null } | null>(null)
   const [openSplit, setOpenSplit] = useState<number | null>(null)
+  // The breakdown below keeps category names in a memo, so it has to know when they change language.
+  const lang = useLang()
 
   const key = month.slice(0, 7)
 
@@ -64,16 +67,19 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
       sums.set(id, (sums.get(id) ?? 0) + expense.amount)
     }
     const breakdown = [...sums.entries()]
-      .map(([id, amount]) => ({
-        id,
-        amount,
-        label: categories.find((category) => category.id === id)?.label ?? 'Uncategorised',
-        emoji: categories.find((category) => category.id === id)?.emoji ?? '•',
-      }))
+      .map(([id, amount]) => {
+        const found = categories.find((category) => category.id === id)
+        return {
+          id,
+          amount,
+          label: found ? tagName(found) : tr('Uncategorised', '未分类'),
+          emoji: found?.emoji ?? '•',
+        }
+      })
       .sort((a, b) => b.amount - a.amount)
 
     return { rows, total, breakdown }
-  }, [expenses, key, categories])
+  }, [expenses, key, categories, lang])
 
   // Grouped by day, newest day first, so a week of a trip reads as days.
   const days = useMemo(() => {
@@ -91,13 +97,13 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
     else await createExpense(draft)
     setMonth(draft.date)
     setForm(null)
-    onToast(form?.expense ? 'Updated' : 'Added')
+    onToast(form?.expense ? tr('Updated', '已更新') : tr('Added', '已添加'))
   }
 
   async function remove(id: number) {
     await deleteExpense(id)
     setDetail(null)
-    onToast('Deleted')
+    onToast(tr('Deleted', '已删除'))
   }
 
   // The editor is a screen of its own, not a panel: it has its own back arrow
@@ -118,7 +124,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-4 lg:px-8">
           <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
-            {tab === 'spending' ? monthTitle(month) : 'Bill splits'}
+            {tab === 'spending' ? monthTitle(month) : tr('Bill splits', '分账')}
           </h1>
           {/* A month only means something to the spending list. */}
           {tab === 'spending' && (
@@ -128,13 +134,13 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
                   onClick={() => setMonth(todayISO())}
                   className="mr-1 text-[13px] font-medium text-brand-500"
                 >
-                  This month
+                  {tr('This month', '本月')}
                 </button>
               )}
-              <button onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month" className="p-1">
+              <button onClick={() => setMonth(addMonths(month, -1))} aria-label={tr('Previous month', '上个月')} className="p-1">
                 <ChevronLeft />
               </button>
-              <button onClick={() => setMonth(addMonths(month, 1))} aria-label="Next month" className="p-1">
+              <button onClick={() => setMonth(addMonths(month, 1))} aria-label={tr('Next month', '下个月')} className="p-1">
                 <ChevronRight />
               </button>
             </div>
@@ -145,8 +151,8 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
             <Segmented
               value={tab}
               options={[
-                { value: 'spending' as ExpensesTab, label: 'Spending' },
-                { value: 'splits' as ExpensesTab, label: 'Splits' },
+                { value: 'spending' as ExpensesTab, label: tr('Spending', '支出') },
+                { value: 'splits' as ExpensesTab, label: tr('Splits', '分账') },
               ]}
               onChange={setTab}
             />
@@ -164,8 +170,11 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
           </p>
           <p className="text-[13px] text-neutral-400">
             {rows.length === 0
-              ? 'Nothing recorded this month'
-              : `${rows.length} ${rows.length === 1 ? 'expense' : 'expenses'} this month`}
+              ? tr('Nothing recorded this month', '本月还没有记录')
+              : tr(
+                  `${rows.length} ${rows.length === 1 ? 'expense' : 'expenses'} this month`,
+                  `本月 ${rows.length} 笔支出`,
+                )}
           </p>
 
           {breakdown.length > 0 && (
@@ -199,7 +208,10 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
 
         <div className="min-w-0">
         {rows.length === 0 ? (
-          <EmptyState title="Nothing spent yet" hint="Tap + to record something" />
+          <EmptyState
+            title={tr('Nothing spent yet', '还没有支出')}
+            hint={tr('Tap + to record something', '点 + 记一笔')}
+          />
         ) : (
           days.map(([date, list]) => (
             <section key={date}>
@@ -252,7 +264,7 @@ export default function ExpensesScreen({ onToast }: { onToast: (message: string)
       )}
 
       <Fab
-        label={tab === 'spending' ? 'Add an expense' : 'New split'}
+        label={tab === 'spending' ? tr('Add an expense', '添加支出') : tr('New split', '新建分账')}
         onClick={() => {
           if (tab === 'spending') return setForm({ expense: null })
           setOpenSplit(createSplit(settings.currency).id)

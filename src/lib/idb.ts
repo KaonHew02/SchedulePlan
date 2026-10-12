@@ -12,6 +12,8 @@
  * rendered.
  */
 
+import { tr } from './i18n'
+
 const DB_NAME = 'scheduleplan'
 const DB_VERSION = 1
 
@@ -28,7 +30,14 @@ export function openDb(): Promise<IDBDatabase> {
 
   opening = new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
-      reject(new Error('This browser has no IndexedDB, so there is nowhere to keep your data.'))
+      reject(
+        new Error(
+          tr(
+            'This browser has no IndexedDB, so there is nowhere to keep your data.',
+            '这个浏览器没有 IndexedDB，所以没地方保存你的数据。',
+          ),
+        ),
+      )
       return
     }
     const request = indexedDB.open(DB_NAME, DB_VERSION)
@@ -40,11 +49,25 @@ export function openDb(): Promise<IDBDatabase> {
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () =>
-      reject(new Error("This browser blocked its own database. Private mode can do that."))
+      reject(
+        new Error(
+          tr(
+            'This browser blocked its own database. Private mode can do that.',
+            '这个浏览器拦住了自己的数据库。无痕模式可能会这样。',
+          ),
+        ),
+      )
     // Another tab is holding an older version open. Rare, and it resolves
     // itself the moment that tab is closed — say so rather than hanging.
     request.onblocked = () =>
-      reject(new Error('Another SchedulePlan tab is open with an older version. Close it and reload.'))
+      reject(
+        new Error(
+          tr(
+            'Another SchedulePlan tab is open with an older version. Close it and reload.',
+            '另一个 SchedulePlan 标签页开着旧版本。请关掉它再重新加载。',
+          ),
+        ),
+      )
   })
 
   // A failed open must not be cached, or every later call inherits the failure.
@@ -61,12 +84,18 @@ function run<T>(store: string, mode: IDBTransactionMode, work: (store: IDBObject
         const transaction = db.transaction(store, mode)
         const request = work(transaction.objectStore(store))
         request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error ?? new Error('The database refused that.'))
+        const refused = () => new Error(tr('The database refused that.', '数据库拒绝了这个操作。'))
+        request.onerror = () => reject(request.error ?? refused())
         transaction.onabort = () =>
           reject(
             transaction.error?.name === 'QuotaExceededError'
-              ? new Error('There is no room left in this browser. Remove some attachments.')
-              : (transaction.error ?? new Error('The database refused that.')),
+              ? new Error(
+                  tr(
+                    'There is no room left in this browser. Remove some attachments.',
+                    '这个浏览器没有空间了。请删掉一些附件。',
+                  ),
+                )
+              : (transaction.error ?? refused()),
           )
       }),
   )

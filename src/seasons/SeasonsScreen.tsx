@@ -1,18 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Segmented, Toggle } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, PlaneIcon } from '../components/Icons'
+import { isZh, tr } from '../lib/i18n'
 import DestinationSheet from './DestinationSheet'
 import {
   AREAS,
   EVENT_YEARS,
   FLIGHTS,
-  RATING_LABEL,
   RATING_TINT,
+  areaName,
+  countryIsArea,
   eventsIn,
+  firstOf,
   highlightMonths,
+  homeName,
+  joinList,
   matches,
+  monthLabel,
   nameOf,
   noChange,
+  ratingLabel,
   reachLabel,
   reachOf,
   seasonsOf,
@@ -38,6 +45,9 @@ import {
  * change with it; Chinese New Year, Ramadan, Easter and a year's one-off
  * events do, and those are worked out for it (see seasons.ts) — which is why
  * nothing has to be edited when the year turns.
+ *
+ * Both languages, like the rest of the app. The places themselves come in
+ * the app's language from useSeasons; the screen's own words are here.
  */
 
 type View = 'month' | 'year'
@@ -52,18 +62,26 @@ type Flight = 'all' | 'direct' | 'connect'
 /** What there is before the data arrives — one array, so the memos hold still. */
 const NO_DESTINATIONS: Destination[] = []
 
-const VIEWS: { value: View; label: string }[] = [
-  { value: 'month', label: '这个月去哪' },
-  { value: 'year', label: '全年日历' },
+// Functions rather than lists, so they are read in the language of the moment.
+const views = (): { value: View; label: string }[] => [
+  { value: 'month', label: tr('Where this month', '这个月去哪') },
+  { value: 'year', label: tr('Whole year', '全年日历') },
 ]
 
-const FLIGHT_CHOICES: { value: Flight; label: string }[] = [
-  { value: 'all', label: '全部' },
-  { value: 'direct', label: '直飞' },
-  { value: 'connect', label: '要转机' },
+const flightChoices = (): { value: Flight; label: string }[] => [
+  { value: 'all', label: tr('All', '全部') },
+  { value: 'direct', label: tr('Direct', '直飞') },
+  { value: 'connect', label: tr('Connecting', '要转机') },
 ]
+
+/** The area chip that is every area — a key no real area can have. */
+const ALL = 'all'
 
 const fits = (d: Destination, flight: Flight) => flight === 'all' || noChange(d) === (flight === 'direct')
+
+/** 2026-10 as October 2026, for the English footnotes. */
+const monthYear = (yyyyMm: string) =>
+  new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(`${yyyyMm}-01T00:00:00`))
 
 /*
  * What was on screen, kept for the next time the tab is opened. Switching to
@@ -79,7 +97,7 @@ const kept = {
   year: opened.getFullYear(),
   month: opened.getMonth() + 1,
   view: 'month' as View,
-  area: '全部',
+  area: ALL,
   query: '',
   flight: 'all' as Flight,
   onlyBest: false,
@@ -92,14 +110,14 @@ function YearStepper({ year, onChange }: { year: number; onChange: (year: number
       <button
         onClick={() => onChange(year - 1)}
         disabled={year <= thisYear - 1}
-        aria-label="上一年"
+        aria-label={tr('Previous year', '上一年')}
         className="rounded-full p-1.5 text-neutral-500 disabled:text-neutral-300"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
       <button
         onClick={() => onChange(thisYear)}
-        title="回到今年"
+        title={tr('Back to this year', '回到今年')}
         className="min-w-[3.5rem] text-center text-[14px] font-semibold tabular-nums"
       >
         {year}
@@ -107,7 +125,7 @@ function YearStepper({ year, onChange }: { year: number; onChange: (year: number
       <button
         onClick={() => onChange(year + 1)}
         disabled={year >= thisYear + 10}
-        aria-label="下一年"
+        aria-label={tr('Next year', '下一年')}
         className="rounded-full p-1.5 text-neutral-500 disabled:text-neutral-300"
       >
         <ChevronRight className="h-4 w-4" />
@@ -137,8 +155,8 @@ function Strip({ ratings, month }: { ratings: number[]; month: number }) {
  */
 function subtitle(d: Destination): string {
   const towns = townsOf(d)
-  const where = towns.length > 0 ? towns.slice(0, 4).join('、') : d.places.split('、').slice(0, 3).join('、')
-  return d.region !== d.country && d.country !== d.area ? `${d.country} · ${where}` : where
+  const where = joinList(towns.length > 0 ? towns.slice(0, 4) : firstOf(d.places, 3))
+  return d.region !== d.country && !countryIsArea(d) ? `${d.country} · ${where}` : where
 }
 
 function Card({
@@ -177,7 +195,7 @@ function Card({
           <span className="block truncate text-[12px] text-neutral-400">{subtitle(d)}</span>
         </span>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${RATING_TINT[r]}`}>
-          {RATING_LABEL[r]}
+          {ratingLabel(r)}
         </span>
       </span>
 
@@ -259,7 +277,10 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   const [query, setQueryState] = useState(kept.query)
   const [flight, setFlightState] = useState<Flight>(kept.flight)
   const [onlyBest, setOnlyBestState] = useState(kept.onlyBest)
-  const [open, setOpen] = useState<Destination | null>(null)
+  // The id, not the place: the place is a different object in each language,
+  // and a sheet left open across a switch should redraw in the new one.
+  const [openId, setOpenId] = useState<string | null>(null)
+  const setOpen = (d: Destination) => setOpenId(d.id)
 
   const setYear = (value: number) => setYearState((kept.year = value))
   const setMonth = (value: number) => setMonthState((kept.month = value))
@@ -273,12 +294,13 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   const events = eventsIn(year)
 
   const all = data?.destinations ?? NO_DESTINATIONS
+  const open = openId ? all.find((d) => d.id === openId) : undefined
   // The search first, then the flights and the area: each row of chips counts
   // what the search and the other row let through, so 樱花 shows at a glance
   // which parts of the world have any, and how many of those are 直飞.
   const searched = useMemo(() => all.filter((d) => matches(d, query.trim())), [all, query])
   const found = useMemo(() => searched.filter((d) => fits(d, flight)), [searched, flight])
-  const list = useMemo(() => found.filter((d) => area === '全部' || d.area === area), [found, area])
+  const list = useMemo(() => found.filter((d) => area === ALL || d.area === area), [found, area])
 
   const perArea = useMemo(() => {
     const counts = new Map<string, number>()
@@ -287,7 +309,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   }, [found])
 
   const perFlight = useMemo(() => {
-    const here = searched.filter((d) => area === '全部' || d.area === area)
+    const here = searched.filter((d) => area === ALL || d.area === area)
     const direct = here.filter(noChange).length
     return { all: here.length, direct, connect: here.length - direct }
   }, [searched, area])
@@ -315,9 +337,9 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
         <div className="px-5 pb-3 pt-4 lg:px-8">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">Seasons</h1>
+              <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('Seasons', '季节')}</h1>
               <p className="truncate pt-0.5 text-[13px] text-neutral-500">
-                全球旅行月历 · {seasonsOf(month)}
+                {tr('Where to go, month by month', '全球旅行月历')} · {seasonsOf(month)}
               </p>
             </div>
             <YearStepper year={year} onChange={setYear} />
@@ -333,7 +355,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             One row from md, not sm. The app is still a 448px column until md,
             and twelve to a row there is 28px a month — narrower than 10月.
           */}
-          <div className="mt-3 grid grid-cols-6 gap-1.5 md:grid-cols-12" role="group" aria-label="月份">
+          <div className="mt-3 grid grid-cols-6 gap-1.5 md:grid-cols-12" role="group" aria-label={tr('Months', '月份')}>
             {bestBy.map((count, i) => {
               const m = i + 1
               const on = m === month
@@ -342,7 +364,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                   key={m}
                   onClick={() => setMonth(m)}
                   aria-pressed={on}
-                  title={`${m}月：${count} 处正值最佳季节`}
+                  title={tr(`${monthLabel(m)}: ${count} at their best`, `${m}月：${count} 处正值最佳季节`)}
                   className={`flex flex-col items-center gap-1 rounded-xl px-1 pb-1.5 pt-1 transition-colors ${
                     on
                       ? 'bg-brand-500 text-white'
@@ -351,7 +373,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                         : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
-                  <span className="text-[13px] font-medium tabular-nums">{m}月</span>
+                  <span className="text-[13px] font-medium tabular-nums">{monthLabel(m)}</span>
                   <span className="flex h-1.5 w-full max-w-[2.5rem] items-end overflow-hidden rounded-full bg-black/5">
                     <span
                       className={`h-full rounded-full ${on ? 'bg-white' : 'bg-emerald-500'}`}
@@ -371,19 +393,22 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           {/* A set width: left to size itself, the pair squeezed 这个月去哪 onto two lines. */}
           <div className="w-full shrink-0 md:w-64">
-            <Segmented value={view} options={VIEWS} onChange={setView} />
+            <Segmented value={view} options={views()} onChange={setView} />
           </div>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索国家、城市或关键词：北海道、樱花、极光"
-            aria-label="搜索目的地"
+            placeholder={tr(
+              'Search a country, city or word: Hokkaido, cherry blossom, aurora',
+              '搜索国家、城市或关键词：北海道、樱花、极光',
+            )}
+            aria-label={tr('Search destinations', '搜索目的地')}
             className="min-w-0 flex-1 rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
           />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 pt-3" role="group" aria-label="地区">
-          {['全部', ...AREAS].map((name) => (
+        <div className="flex flex-wrap gap-1.5 pt-3" role="group" aria-label={tr('Areas', '地区')}>
+          {[ALL, ...AREAS].map((name) => (
             <button
               key={name}
               onClick={() => setArea(name)}
@@ -392,19 +417,20 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                 area === name ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600'
               }`}
             >
-              {name}
+              {name === ALL ? tr('All', '全部') : areaName(name)}
               <span className="ml-1 text-[11px] tabular-nums opacity-60">
-                {name === '全部' ? found.length : (perArea.get(name) ?? 0)}
+                {name === ALL ? found.length : (perArea.get(name) ?? 0)}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-2" role="group" aria-label={`从${FLIGHTS.from}的航班`}>
+        <div className="flex flex-wrap items-center gap-1.5 pt-2" role="group" aria-label={tr(`Flights from ${homeName()}`, `从${homeName()}的航班`)}>
           <span className="flex items-center gap-1 pr-1 text-[13px] text-neutral-500">
-            <PlaneIcon className="h-3.5 w-3.5" />从{FLIGHTS.from}
+            <PlaneIcon className="h-3.5 w-3.5" />
+            {tr(`From ${homeName()}`, `从${homeName()}`)}
           </span>
-          {FLIGHT_CHOICES.map((choice) => (
+          {flightChoices().map((choice) => (
             <button
               key={choice.value}
               onClick={() => setFlight(choice.value)}
@@ -421,15 +447,29 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
         {!data ? (
           <p className="py-16 text-center text-[13px] text-neutral-400">
-            {failed ? '没能载入目的地。连上网络后再打开一次。' : '正在载入目的地…'}
+            {failed
+              ? tr('Could not load the destinations. Connect to the internet and open this again.', '没能载入目的地。连上网络后再打开一次。')
+              : tr('Loading destinations…', '正在载入目的地…')}
           </p>
         ) : list.length === 0 ? (
           <div className="mt-6 rounded-2xl bg-neutral-50 px-4 py-8 text-center">
-            <p className="text-[14px] text-neutral-600">没有找到{query.trim() && `「${query.trim()}」`}</p>
+            <p className="text-[14px] text-neutral-600">
+              {tr(`Nothing found${query.trim() && ` for "${query.trim()}"`}`, `没有找到${query.trim() && `「${query.trim()}」`}`)}
+            </p>
             <p className="mx-auto mt-1 max-w-[300px] text-[13px] leading-5 text-neutral-400">
-              试试国家名、城市名，或者「樱花」「极光」「潜水」这样的关键词
-              {area !== '全部' && '，也可以把地区切回「全部」'}
-              {flight !== 'all' && '，或者把航班切回「全部」'}。
+              {isZh() ? (
+                <>
+                  试试国家名、城市名，或者「樱花」「极光」「潜水」这样的关键词
+                  {area !== ALL && '，也可以把地区切回「全部」'}
+                  {flight !== 'all' && '，或者把航班切回「全部」'}。
+                </>
+              ) : (
+                <>
+                  Try a country, a city, or a word like "cherry blossom", "aurora" or "diving"
+                  {area !== ALL && ', or set the area back to All'}
+                  {flight !== 'all' && ', or set flights back to All'}.
+                </>
+              )}
             </p>
           </div>
         ) : view === 'month' ? (
@@ -439,14 +479,14 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                 {([3, 2, 1, 0] as const).map((r) => (
                   <span key={r} className="flex items-center gap-1.5">
                     <span className={`h-2.5 w-2.5 rounded-sm ${RATING_TINT[r]}`} />
-                    {RATING_LABEL[r]}
+                    {ratingLabel(r)}
                     <span className="font-medium tabular-nums text-neutral-900">{byRating[r].length}</span>
                   </span>
                 ))}
               </p>
               <label className="flex items-center gap-2 text-[13px] text-neutral-600">
-                只看最佳
-                <Toggle checked={onlyBest} onChange={setOnlyBest} label="只看最佳" />
+                {tr('Best only', '只看最佳')}
+                <Toggle checked={onlyBest} onChange={setOnlyBest} label={tr('Best only', '只看最佳')} />
               </label>
             </div>
 
@@ -458,7 +498,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
               return (
                 <section key={name}>
                   <h2 className="pb-2 pt-8 text-[13px] font-medium text-neutral-400">
-                    {name} <span className="tabular-nums">{here.length}</span>
+                    {areaName(name)} <span className="tabular-nums">{here.length}</span>
                   </h2>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {here.map((d) => (
@@ -479,14 +519,20 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
             {shown.length === 0 && (
               <p className="mt-6 rounded-2xl bg-neutral-50 px-4 py-6 text-center text-[13px] text-neutral-500">
-                {month}月在这里没有{onlyBest ? '正值最佳季节' : '适合去'}的地方。
+                {tr(
+                  `Nowhere here is ${onlyBest ? 'at its best' : 'good to go'} in ${monthLabel(month)}.`,
+                  `${month}月在这里没有${onlyBest ? '正值最佳季节' : '适合去'}的地方。`,
+                )}
               </p>
             )}
 
             {byRating[1].length > 0 && (
               <details className="mt-8 border-y border-neutral-100">
                 <summary className="cursor-pointer py-3 text-[13px] font-medium text-neutral-500">
-                  一般 · {byRating[1].length} 处 <span className="font-normal text-neutral-400">能去，但不是最好的时候</span>
+                  {ratingLabel(1)} · {tr(`${byRating[1].length}`, `${byRating[1].length} 处`)}{' '}
+                  <span className="font-normal text-neutral-400">
+                    {tr('You can go, but it is not the best time', '能去，但不是最好的时候')}
+                  </span>
                 </summary>
                 <div className="divide-y divide-neutral-100 border-t border-neutral-100">
                   {byRating[1].map((d) => (
@@ -499,7 +545,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             {byRating[0].length > 0 && (
               <>
                 <h2 className="pb-1 pt-8 text-[13px] font-medium text-rose-500">
-                  {month}月不建议去 · {byRating[0].length} 处
+                  {tr(`Not advised in ${monthLabel(month)}`, `${month}月不建议去`)} ·{' '}
+                  {tr(`${byRating[0].length}`, `${byRating[0].length} 处`)}
                 </h2>
                 <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                   {byRating[0].map((d) => (
@@ -515,13 +562,32 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
         <div className="space-y-1 pt-10 text-[12px] leading-5 text-neutral-400">
           <p>
-            气温是大致范围，花期和红叶每年前后会差一两周。农历、伊斯兰历和复活节的节庆，日期按所选年份自动推算；伊斯兰节日以当地看月宣布为准，可能差一天。
+            {tr(
+              'Temperatures are rough ranges, and blossom and autumn colours come a week or two earlier or later each year. Festivals on the lunar or Islamic calendar, or tied to Easter, are worked out for the year you pick; Islamic dates follow the local moon sighting and can be a day out.',
+              '气温是大致范围，花期和红叶每年前后会差一两周。农历、伊斯兰历和复活节的节庆，日期按所选年份自动推算；伊斯兰节日以当地看月宣布为准，可能差一天。',
+            )}
           </p>
-          {!EVENT_YEARS.includes(year) && <p>{year} 年的特别活动（奥运、日食、世博之类）还没有整理进来。</p>}
-          {data && <p>签证、门票和开放时间以官方为准。资料核对于 {data.reviewed.replace('-', ' 年 ')} 月。</p>}
+          {!EVENT_YEARS.includes(year) && (
+            <p>
+              {tr(
+                `One-off events for ${year} (Olympics, eclipses, expos and the like) are not in yet.`,
+                `${year} 年的特别活动（奥运、日食、世博之类）还没有整理进来。`,
+              )}
+            </p>
+          )}
+          {data && (
+            <p>
+              {tr(
+                `Check visas, tickets and opening hours with the official sources. Last checked ${monthYear(data.reviewed)}.`,
+                `签证、门票和开放时间以官方为准。资料核对于 ${data.reviewed.replace('-', ' 年 ')} 月。`,
+              )}
+            </p>
+          )}
           <p>
-            直飞指从{FLIGHTS.from}出发不用换飞机，包括中途经停，和直飞附近城市再坐车。航线常有增减，核对于{' '}
-            {FLIGHTS.checked.replace('-', ' 年 ')} 月，订票前以航空公司为准。
+            {tr(
+              `Direct means no change of plane from ${homeName()}: that includes a stop on the way, and a direct flight to a nearby city and then overland. Routes come and go; checked ${monthYear(FLIGHTS.checked)}, so check with the airline before booking.`,
+              `直飞指从${homeName()}出发不用换飞机，包括中途经停，和直飞附近城市再坐车。航线常有增减，核对于 ${FLIGHTS.checked.replace('-', ' 年 ')} 月，订票前以航空公司为准。`,
+            )}
           </p>
         </div>
       </main>
@@ -532,7 +598,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           year={year}
           month={month}
           dates={dates}
-          onClose={() => setOpen(null)}
+          onClose={() => setOpenId(null)}
           onToast={onToast}
         />
       )}
@@ -581,7 +647,7 @@ function YearTable({
         <thead>
           <tr>
             <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-[12px] font-medium text-neutral-400">
-              目的地
+              {tr('Destination', '目的地')}
             </th>
             {Array.from({ length: 12 }, (_, i) => (
               <th key={i} className="bg-white px-0 py-2">
@@ -591,7 +657,7 @@ function YearTable({
                     i + 1 === month ? 'font-semibold text-brand-600' : 'font-normal text-neutral-400'
                   }`}
                 >
-                  {i + 1}月
+                  {monthLabel(i + 1)}
                 </button>
               </th>
             ))}
@@ -607,7 +673,7 @@ function YearTable({
                   colSpan={13}
                   className="sticky left-0 bg-neutral-50 px-3 py-1.5 text-left text-[12px] font-medium text-neutral-500"
                 >
-                  {name}
+                  {areaName(name)}
                 </th>
               </tr>,
               ...rows.map((d) => (
@@ -616,7 +682,7 @@ function YearTable({
                     {/* The row is what a finger taps; the button is what a keyboard can reach. */}
                     <button className="block w-full min-w-0 text-left">
                       <span className="block truncate text-[13px] font-medium">{nameOf(d)}</span>
-                      {d.region !== d.country && d.country !== d.area && (
+                      {d.region !== d.country && !countryIsArea(d) && (
                         <span className="block truncate text-[11px] text-neutral-400">{d.country}</span>
                       )}
                     </button>
@@ -624,7 +690,7 @@ function YearTable({
                   {d.ratings.map((r, i) => (
                     <td
                       key={i}
-                      title={`${i + 1}月 · ${RATING_LABEL[r]}：${d.notes[i]}`}
+                      title={`${monthLabel(i + 1)} · ${ratingLabel(r)}${tr(': ', '：')}${d.notes[i]}`}
                       className={`h-9 min-w-[2rem] border-b-2 border-r-2 border-white text-center text-[10px] ${RATING_TINT[r]} ${
                         i + 1 === month ? 'shadow-[inset_0_0_0_2px_#171717]' : ''
                       }`}

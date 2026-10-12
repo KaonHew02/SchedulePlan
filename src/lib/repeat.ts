@@ -11,23 +11,36 @@
  */
 
 import { addDays, addMonths, daysBetween, fromISO, shortDate, startOfWeek, todayISO } from './date'
+import { isZh, tr } from './i18n'
 import type { RepeatUnit, ScheduleItem, ScheduleRepeat } from '../types'
 
 /** The weekday of a date with Monday as 0, the way the weeks here run. */
 export const weekdayOf = (iso: string): number => (fromISO(iso).getDay() + 6) % 7
 
-export const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-export const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+/*
+ * The weekday words, Monday first, in the app's language. Functions rather
+ * than lists so they read the language when asked, not once when the app
+ * loaded. The Chinese letter is the 一 of 周一 — the part that tells the days
+ * apart, as M does in English.
+ */
+export const weekdayLetters = (): string[] =>
+  tr(['M', 'T', 'W', 'T', 'F', 'S', 'S'], ['一', '二', '三', '四', '五', '六', '日'])
+export const weekdayNames = (): string[] =>
+  tr(
+    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+  )
 
-const UNIT_NAMES: Record<RepeatUnit, [string, string]> = {
-  day: ['day', 'days'],
-  week: ['week', 'weeks'],
-  month: ['month', 'months'],
-  year: ['year', 'years'],
+const UNIT_NAMES: Record<RepeatUnit, [string, string, string]> = {
+  day: ['day', 'days', '天'],
+  week: ['week', 'weeks', '周'],
+  month: ['month', 'months', '个月'],
+  year: ['year', 'years', '年'],
 }
 
+/** 'week' or 'weeks' by the count; Chinese has the one word for both. */
 export const unitName = (unit: RepeatUnit, count: number): string =>
-  UNIT_NAMES[unit][count === 1 ? 0 : 1]
+  UNIT_NAMES[unit][isZh() ? 2 : count === 1 ? 0 : 1]
 
 /** Months from a's month to b's, ignoring the day. */
 const monthsBetween = (a: string, b: string): number =>
@@ -131,15 +144,47 @@ const ordinal = (n: number): string => {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 }
 
-/** 'Mon, Wed and Fri'. */
+/** 'Mon, Wed and Fri' · 周一、三、五, the way a timetable writes it. */
 function dayList(days: number[]): string {
-  const names = [...days].sort((a, b) => a - b).map((day) => WEEKDAY_NAMES[day])
+  const sorted = [...days].sort((a, b) => a - b)
+  if (isZh()) return `周${sorted.map((day) => weekdayLetters()[day]).join('、')}`
+  const names = sorted.map((day) => weekdayNames()[day])
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0]
 }
 
-/** '23 Sep', with the year when it is not this one. */
+/** '23 Sep', with the year when it is not this one · 9月23日, 2027年12月1日 */
 const dayLabel = (iso: string) =>
-  iso.slice(0, 4) === todayISO().slice(0, 4) ? shortDate(iso) : `${shortDate(iso)} ${iso.slice(0, 4)}`
+  iso.slice(0, 4) === todayISO().slice(0, 4)
+    ? shortDate(iso)
+    : tr(`${shortDate(iso)} ${iso.slice(0, 4)}`, `${iso.slice(0, 4)}年${shortDate(iso)}`)
+
+/**
+ * The rule in Chinese, which puts the parts in its own order: 每周二,
+ * 每 2 个月的 23 日, 每年9月23日，直到 2027年12月1日. A rule every one unit
+ * runs its day straight on (每周二); every few units takes 的 between
+ * (每 2 周的周二).
+ */
+function describeRepeatZh(rule: ScheduleRepeat, date: string, weekdays: number[]): string {
+  let said: string
+  if (rule.unit === 'week' && rule.every === 1 && weekdays.join() === '0,1,2,3,4') {
+    said = '每个工作日'
+  } else {
+    // 每月, not 每个月: the 个 is only wanted once there is a number before it.
+    const every =
+      rule.every === 1
+        ? { day: '每天', week: '每周', month: '每月', year: '每年' }[rule.unit]
+        : `每 ${rule.every} ${unitName(rule.unit, 2)}`
+    const joint = rule.every === 1 ? '' : '的'
+    const day = fromISO(date).getDate()
+    // 每周 + 周二 would say the week twice; 每周二 is how it is written.
+    if (rule.unit === 'week') said = `${rule.every === 1 ? '每' : `${every}的`}${dayList(weekdays)}`
+    else if (rule.unit === 'month') said = `${every}${joint} ${day} 日${day > 28 ? '（或月底）' : ''}`
+    else if (rule.unit === 'year') said = `${every}${joint}${shortDate(date)}`
+    else said = every
+  }
+  if (rule.until) said += `，直到 ${dayLabel(rule.until)}`
+  return said
+}
 
 /**
  * The rule as a sentence: 'Every week on Tue', 'Every 2 months on the 23rd',
@@ -148,6 +193,7 @@ const dayLabel = (iso: string) =>
  */
 export function describeRepeat(rule: ScheduleRepeat, date: string): string {
   const weekdays = rule.weekdays.length ? rule.weekdays : [weekdayOf(date)]
+  if (isZh()) return describeRepeatZh(rule, date, weekdays)
   let said: string
   if (rule.unit === 'week' && rule.every === 1 && weekdays.join() === '0,1,2,3,4') {
     said = 'Every weekday'
@@ -193,8 +239,10 @@ export function choiceOf(rule: ScheduleRepeat | null, date: string): RepeatChoic
 
 /** How the preset reads in the menu, with the part that depends on the date. */
 export function presetLabel(unit: RepeatUnit, date: string): string {
-  if (unit === 'day') return 'Every day'
-  if (unit === 'week') return `Every week on ${WEEKDAY_NAMES[weekdayOf(date)]}`
-  if (unit === 'month') return `Every month on the ${ordinal(fromISO(date).getDate())}`
-  return `Every year on ${shortDate(date)}`
+  if (unit === 'day') return tr('Every day', '每天')
+  const weekday = weekdayNames()[weekdayOf(date)]
+  const day = fromISO(date).getDate()
+  if (unit === 'week') return tr(`Every week on ${weekday}`, `每${weekday}`)
+  if (unit === 'month') return tr(`Every month on the ${ordinal(day)}`, `每月 ${day} 日`)
+  return tr(`Every year on ${shortDate(date)}`, `每年${shortDate(date)}`)
 }

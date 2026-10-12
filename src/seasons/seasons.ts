@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays } from '../lib/date'
+import { isZh, useLang, type Lang } from '../lib/i18n'
 import airportsFile from './airports.json'
+import airportsEnFile from './airports.en.json'
 import areasFile from './areas.json'
 import eventsFile from './events.json'
+import eventsEnFile from './events.en.json'
 import flightsFile from './flights.json'
 
 /**
@@ -30,6 +33,14 @@ import flightsFile from './flights.json'
  * which do not move, and `flights.json` says which of them Kuala Lumpur flies
  * to without a change of plane, which does — so it is a file of its own, read
  * through with the rest.
+ *
+ * The calendar was written in Chinese, and Chinese is still the original:
+ * the ratings, the months, the rules and the airports live in the Chinese
+ * files only. The English is a second layer of words laid over the same
+ * places — `destinations.en.json`, `events.en.json`, `airports.en.json` — and
+ * changes nothing but what is read. `npm run seasons` checks the two say the
+ * same number of things in the same order, which is what lets a highlight's
+ * English sit on the Chinese highlight's months.
  */
 
 /** 3 best, 2 good, 1 possible but not the time, 0 not advisable. */
@@ -124,13 +135,65 @@ export interface Seasons {
 }
 
 /**
+ * One destination's words in English: everything a reader reads, nothing a
+ * program works out. Highlights are the texts only, in the Chinese order —
+ * each takes its months and its rule from the Chinese one in its place.
+ */
+interface English {
+  country: string
+  region: string
+  part?: string
+  cities: string[]
+  places: string
+  summary: string
+  climate: string
+  notes: string[]
+  highlights: string[]
+  via?: string
+  avoid: string
+  tips: string
+}
+
+/**
  * The parts of the world, in the order the screen shows them. Kept in a file
  * of their own so scripts/seasons.mjs checks against the same list: an area
  * known to one and not the other would quietly drop its destinations.
  */
 export const AREAS: readonly string[] = areasFile
 
-export const RATING_LABEL = ['不建议', '一般', '适合', '最佳'] as const
+/**
+ * The areas in English. The Chinese names stay the keys — they are what
+ * every destination is filed under and what a filter remembers — and this
+ * is only what is printed.
+ */
+const AREA_EN: Record<string, string> = {
+  中国: 'China',
+  东亚: 'East Asia',
+  东南亚: 'Southeast Asia',
+  南亚: 'South Asia',
+  '中亚·高加索': 'Central Asia & Caucasus',
+  中东: 'Middle East',
+  欧洲: 'Europe',
+  非洲: 'Africa',
+  北美: 'North America',
+  中南美: 'Latin America',
+  大洋洲: 'Oceania',
+  极地: 'Polar Regions',
+}
+
+/** An area as it is printed, in the app's language. */
+export const areaName = (area: string): string => (isZh() ? area : (AREA_EN[area] ?? area))
+
+const RATING_ZH = ['不建议', '一般', '适合', '最佳'] as const
+const RATING_EN = ['Avoid', 'Fair', 'Good', 'Best'] as const
+
+/** 最佳 or Best — what a rating is called on a badge and in the legend. */
+export const ratingLabel = (rating: Rating): string => (isZh() ? RATING_ZH : RATING_EN)[rating]
+
+const MONTH_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** 3月 or Mar. */
+export const monthLabel = (month: number): string => (isZh() ? `${month}月` : MONTH_EN[month - 1])
 
 /** Background and text for a rating, the one place the four colours are chosen. */
 export const RATING_TINT = [
@@ -142,11 +205,22 @@ export const RATING_TINT = [
 
 const EVENTS = eventsFile as Record<string, YearEvent[]>
 
+/** Each year's events in English, in the same order as the Chinese — the text only. */
+const EVENTS_EN = eventsEnFile as Record<string, string[]>
+
+/** The English events, made once each, so a memo keyed on a year's list holds. */
+const EVENTS_IN_ENGLISH: Record<string, YearEvent[]> = Object.fromEntries(
+  Object.entries(EVENTS).map(([year, list]) => [
+    year,
+    list.map((event, i) => ({ ...event, t: EVENTS_EN[year]?.[i] ?? event.t })),
+  ]),
+)
+
 /** One empty list for every year with no events, so a memo keyed on it holds. */
 const NONE: YearEvent[] = []
 
 export function eventsIn(year: number): YearEvent[] {
-  return EVENTS[String(year)] ?? NONE
+  return (isZh() ? EVENTS : EVENTS_IN_ENGLISH)[String(year)] ?? NONE
 }
 
 /** The years events.json has anything for, for saying how far ahead it reaches. */
@@ -159,36 +233,91 @@ export const EVENT_YEARS = Object.keys(EVENTS).map(Number)
  * app opens with. They arrive the first time this screen is opened — from the
  * offline copy like everything else, so a plane is no obstacle — and stay for
  * as long as the app is open.
+ *
+ * The English is as big again and is fetched only by someone reading in
+ * English, then laid over the Chinese: each place keeps its own ratings,
+ * months, rules and airports, and takes its words from the English file.
  */
-let loaded: Seasons | null = null
-let loading: Promise<Seasons> | null = null
+const loaded: Record<Lang, Seasons | null> = { zh: null, en: null }
+const loading: Record<Lang, Promise<Seasons> | null> = { zh: null, en: null }
 
-function load(): Promise<Seasons> {
-  loading ??= import('./destinations.json').then((module) => {
-    loaded = module.default as Seasons
-    return loaded
+/** The Chinese destinations by id, once they are in — for finding a wish saved under the other language's name. */
+const chineseById = new Map<string, Destination>()
+
+function loadChinese(): Promise<Seasons> {
+  loading.zh ??= import('./destinations.json').then((module) => {
+    const data = module.default as Seasons
+    for (const d of data.destinations) chineseById.set(d.id, d)
+    return (loaded.zh = data)
   })
-  return loading
+  return loading.zh
 }
 
+function inEnglish(d: Destination, en: English | undefined): Destination {
+  // A place with no English yet is shown in Chinese rather than left out.
+  // The check before every build keeps this from happening on the live site.
+  if (!en) return d
+  return {
+    ...d,
+    country: en.country,
+    region: en.region,
+    ...(d.part !== undefined ? { part: en.part ?? d.part } : {}),
+    cities: en.cities,
+    places: en.places,
+    summary: en.summary,
+    climate: en.climate,
+    notes: en.notes,
+    highlights: d.highlights.map((h, i) => ({ ...h, t: en.highlights[i] ?? h.t })),
+    ...(d.via ? { via: { ...d.via, t: en.via ?? d.via.t } } : {}),
+    avoid: en.avoid,
+    tips: en.tips,
+  }
+}
+
+function load(lang: Lang): Promise<Seasons> {
+  if (lang === 'zh') return loadChinese()
+  loading.en ??= Promise.all([loadChinese(), import('./destinations.en.json')]).then(([zh, module]) => {
+    const words = module.default as Record<string, English>
+    return (loaded.en = { ...zh, destinations: zh.destinations.map((d) => inEnglish(d, words[d.id])) })
+  })
+  return loading.en
+}
+
+/** The destinations in the app's language. Null while they are on their way. */
 export function useSeasons(): { data: Seasons | null; failed: boolean } {
-  const [data, setData] = useState(loaded)
+  const lang = useLang()
+  const [, setArrived] = useState(0)
   const [failed, setFailed] = useState(false)
+  const data = loaded[lang]
   useEffect(() => {
     if (data) return
     let live = true
-    load()
-      .then((value) => live && setData(value))
+    setFailed(false)
+    load(lang)
+      .then(() => live && setArrived((n) => n + 1))
       .catch(() => {
         // Let the next visit try again rather than remembering the failure.
-        loading = null
+        loading[lang] = null
+        if (!loaded.zh) loading.zh = null
         if (live) setFailed(true)
       })
     return () => {
       live = false
     }
-  }, [data])
+  }, [data, lang])
   return { data, failed }
+}
+
+/**
+ * Every name a destination goes by, in both languages: 九寨沟黄龙 and
+ * "Jiuzhaigou & Huanglong". A wish saved from this screen keeps the name it
+ * was saved under, and switching language should not offer to save it twice.
+ */
+export function namesOf(d: Destination): string[] {
+  const zh = chineseById.get(d.id)
+  const names = [nameOf(d), d.part ?? '']
+  if (zh) names.push(zh.part ?? '', zh.region === zh.country ? zh.country : zh.part ? `${zh.region}·${zh.part}` : zh.region)
+  return [...new Set(names.filter(Boolean))]
 }
 
 // -------------------------------------------------------------- rule dates
@@ -357,10 +486,23 @@ const SIGHTED = /Ramadan|Shawwal|Dhu al-Hijjah|Muharram|Rajab|Rabi/
 /**
  * 2月6日, 2月6–20日, 1月26日–2月9日 — and 12月26日–2031年1月24日 for one that
  * runs into the next year, which would otherwise read as going backwards.
+ * In English: 6 Feb, 6–20 Feb, 26 Jan – 9 Feb, 26 Dec – 24 Jan 2031.
  */
 export function spanLabel(span: Span, rule?: string): string {
   const [y1, m1, d1] = span.start.split('-').map(Number)
   const [y2, m2, d2] = span.end.split('-').map(Number)
+  const sighted = Boolean(rule && SIGHTED.test(rule))
+  if (!isZh()) {
+    const text =
+      span.start === span.end
+        ? `${d1} ${MONTH_EN[m1 - 1]}`
+        : y1 !== y2
+          ? `${d1} ${MONTH_EN[m1 - 1]} – ${d2} ${MONTH_EN[m2 - 1]} ${y2}`
+          : m1 === m2
+            ? `${d1}–${d2} ${MONTH_EN[m1 - 1]}`
+            : `${d1} ${MONTH_EN[m1 - 1]} – ${d2} ${MONTH_EN[m2 - 1]}`
+    return sighted ? `about ${text}` : text
+  }
   const text =
     span.start === span.end
       ? `${m1}月${d1}日`
@@ -369,7 +511,23 @@ export function spanLabel(span: Span, rule?: string): string {
         : m1 === m2
           ? `${m1}月${d1}–${d2}日`
           : `${m1}月${d1}日–${m2}月${d2}日`
-  return rule && SIGHTED.test(rule) ? `约${text}` : text
+  return sighted ? `约${text}` : text
+}
+
+/**
+ * The same with its year, for the sheet, where a festival can come round
+ * twice and each time says which year it is: 2027年2月6日 · 6 Feb 2027,
+ * and 26 Dec 2030 – 24 Jan 2031 for one that crosses New Year.
+ */
+export function datedSpanLabel(span: Span, rule?: string): string {
+  const year = span.start.slice(0, 4)
+  if (isZh()) return `${year}年${spanLabel(span, rule)}`
+  if (year !== span.end.slice(0, 4)) {
+    const [, m1, d1] = span.start.split('-').map(Number)
+    const sighted = Boolean(rule && SIGHTED.test(rule))
+    return `${sighted ? 'about ' : ''}${d1} ${MONTH_EN[m1 - 1]} ${year} – ${spanLabel(span).split(' – ')[1]}`
+  }
+  return `${spanLabel(span, rule)} ${year}`
 }
 
 // ----------------------------------------------------------------- flights
@@ -402,6 +560,26 @@ interface Flights {
 export const FLIGHTS = flightsFile as Flights
 
 const AIRPORT_NAMES = airportsFile as Record<string, string>
+const AIRPORT_NAMES_EN = airportsEnFile as Record<string, string>
+
+/** An airport's name in the app's language, 东京·成田 or Tokyo·Narita. A code with no name is itself. */
+const named = (code: string): string => (isZh() ? AIRPORT_NAMES[code] : AIRPORT_NAMES_EN[code]) ?? code
+
+/** The city home is, in the app's language: 吉隆坡, or Kuala Lumpur — the city of its first airport. */
+export const homeName = (): string => (isZh() ? FLIGHTS.from : citiesOf(FLIGHTS.home.slice(0, 1)))
+
+/**
+ * The city a stopping flight lands in on the way, in the app's language.
+ * flights.json names it in Chinese; the English is that city's airport's
+ * English name, which is why the check insists every stop is a city some
+ * airport in airports.json is in.
+ */
+export function stopName(code: string): string {
+  const city = FLIGHTS.stop[code]
+  if (isZh() || !city) return city ?? ''
+  const airport = Object.keys(AIRPORT_NAMES).find((at) => AIRPORT_NAMES[at].split('·')[0] === city)
+  return airport && AIRPORT_NAMES_EN[airport] ? AIRPORT_NAMES_EN[airport].split('·')[0] : city
+}
 
 const KIND_OF = new Map<string, FlightKind>()
 for (const kind of KINDS) {
@@ -451,19 +629,32 @@ export function reachOf(d: Destination): Reach {
 /** Got to without changing planes: a flight of any kind, or no flight at all. */
 export const noChange = (d: Destination) => reachOf(d).kind !== 'connect'
 
-/** 东京·成田 is 东京成田 written out. An airport with no name keeps its code. */
-export const airportName = (code: string) => (AIRPORT_NAMES[code] ?? code).replace('·', '')
+/** 东京·成田 is 东京成田 written out, Tokyo·Narita is Tokyo Narita. An airport with no name keeps its code. */
+export const airportName = (code: string) => named(code).replace('·', isZh() ? '' : ' ')
 
 /** The cities some airports are in, each once: 成田 and 羽田 are both 东京. */
 export function citiesOf(codes: string[]): string {
-  const cities = codes.map((code) => (AIRPORT_NAMES[code] ?? code).split('·')[0])
-  return cities.filter((city, i) => cities.indexOf(city) === i).join('、')
+  const cities = codes.map((code) => named(code).split('·')[0])
+  return cities.filter((city, i) => cities.indexOf(city) === i).join(isZh() ? '、' : ', ')
 }
 
-/** The line on a card: 直飞东京, 直飞杭州，再坐车, 要转机. */
+/** The line on a card: 直飞东京, 直飞杭州，再坐车, 要转机 — Direct to Tokyo, Direct to Hangzhou, then overland, Connecting flight. */
 export function reachLabel(reach: Reach): string {
+  const from = homeName()
+  if (!isZh()) {
+    if (reach.kind === 'connect') return 'Connecting flight'
+    if (reach.kind === 'home') return reach.overland ? `A drive from ${from}` : `Right here in ${from}`
+    const cities = citiesOf(reach.codes)
+    const flight = {
+      direct: `Direct to ${cities}`,
+      stop: `One stop to ${cities}`,
+      seasonal: `Seasonal direct to ${cities}`,
+      charter: `Charter flight to ${cities}`,
+    }[reach.kind]
+    return reach.overland ? `${flight}, then overland` : flight
+  }
   if (reach.kind === 'connect') return '要转机'
-  if (reach.kind === 'home') return reach.overland ? `${FLIGHTS.from}开车可到` : `就在${FLIGHTS.from}`
+  if (reach.kind === 'home') return reach.overland ? `${from}开车可到` : `就在${from}`
   const cities = citiesOf(reach.codes)
   const flight = {
     direct: `直飞${cities}`,
@@ -476,11 +667,11 @@ export function reachLabel(reach: Reach): string {
 
 // ----------------------------------------------------------------- reading
 
-/** 3–5月、9–11月 — a list of months as a reader would say it. */
+/** 3–5月、9–11月 — a list of months as a reader would say it. Mar–May, Sep–Nov in English. */
 export function monthsLabel(months: number[]): string {
   const unique = months.filter((m, i) => months.indexOf(m) === i)
   if (unique.length === 0) return ''
-  if (unique.length >= 12) return '全年'
+  if (unique.length >= 12) return isZh() ? '全年' : 'All year'
   const runs: number[][] = []
   let run = [unique[0]]
   for (const m of unique.slice(1)) {
@@ -496,6 +687,11 @@ export function monthsLabel(months: number[]): string {
   if (runs.length > 1 && runs[0][0] === 1 && runs[runs.length - 1].at(-1) === 12) {
     runs[0] = [...runs.pop()!, ...runs[0]]
   }
+  if (!isZh()) {
+    return runs
+      .map((r) => (r.length === 1 ? MONTH_EN[r[0] - 1] : `${MONTH_EN[r[0] - 1]}–${MONTH_EN[r[r.length - 1] - 1]}`))
+      .join(', ')
+  }
   return runs
     .map((r) => (r.length === 1 ? `${r[0]}月` : `${r[0]}–${r[r.length - 1]}月`))
     .join('、')
@@ -505,15 +701,32 @@ export function monthsLabel(months: number[]): string {
 export function seasonsOf(month: number): string {
   const north = month >= 3 && month <= 5 ? '春' : month <= 8 && month >= 6 ? '夏' : month >= 9 && month <= 11 ? '秋' : '冬'
   const south = { 春: '秋', 夏: '冬', 秋: '春', 冬: '夏' }[north]
+  if (!isZh()) {
+    const en: Record<string, string> = { 春: 'Spring', 夏: 'Summer', 秋: 'Autumn', 冬: 'Winter' }
+    return `${en[north]} in the north · ${en[south].toLowerCase()} in the south`
+  }
   return `北半球${north}季 · 南半球${south}季`
 }
 
 /**
  * What a destination is called on its own: 海南, 四川·九寨沟黄龙 — or the
- * country, when it is one place.
+ * country, when it is one place. Sichuan · Jiuzhaigou & Huanglong in English.
  */
 export const nameOf = (d: Destination) =>
-  d.region === d.country ? d.country : d.part ? `${d.region}·${d.part}` : d.region
+  d.region === d.country ? d.country : d.part ? `${d.region}${isZh() ? '·' : ' · '}${d.part}` : d.region
+
+/**
+ * Whether the country is already said by the area heading it sits under —
+ * 中国 under 中国 — so it need not be said again under the name.
+ */
+export const countryIsArea = (d: Destination) => d.country === areaName(d.area)
+
+/** The first few of a list written in the app's way: 、 in Chinese, a comma in English. */
+export const firstOf = (list: string, count: number): string[] =>
+  list.split(isZh() ? '、' : ', ').slice(0, count)
+
+/** Joins a list the way the app's language does. */
+export const joinList = (items: string[]): string => items.join(isZh() ? '、' : ', ')
 
 /** Its 地区 for Travel — 海南, 四川 — or null for a country that is one place. */
 export const regionOf = (d: Destination): string | null => (d.region === d.country ? null : d.region)
@@ -531,6 +744,7 @@ export function matches(d: Destination, query: string): boolean {
   if (hay === undefined) {
     hay = [
       d.area,
+      areaName(d.area),
       d.country,
       d.region,
       d.part ?? '',

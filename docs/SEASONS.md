@@ -126,6 +126,53 @@ Cameron by road). The best one is what the card says: nonstop before a stop,
 before seasonal, before a charter, and the place itself before somewhere a
 train ride away. Everything else is **要转机**.
 
+## In English
+
+The app has an **English / 中文** switch beside Auto in the top bar (in More
+on a phone), and Seasons follows it like every other screen. The calendar is
+still written in Chinese first. The English is a second layer of words, kept
+in three files beside the Chinese ones:
+
+| Chinese | English | What the English holds |
+| --- | --- | --- |
+| `destinations.json` | `destinations.en.json` | The words of each place, under its id |
+| `events.json` | `events.en.json` | Each year's events, the text only, in the same order |
+| `airports.json` | `airports.en.json` | Every airport's name, `Tokyo·Narita` for `东京·成田` |
+
+```json
+"cn-tianjin": {
+  "country": "China",
+  "region": "Tianjin",
+  "cities": ["Tianjin", "Jizhou"],
+  "places": "Five Great Avenues, Italian Style Town, Tianjin Eye, …",
+  "summary": "Best: Apr–May and Sep–Oct, mild weather for walking around",
+  "climate": "…",
+  "notes": ["…January…", "…", "…December…"],
+  "highlights": ["…the first highlight…", "…"],
+  "via": "High-speed train from Beijing to Tianjin, about 30 minutes",
+  "avoid": "…",
+  "tips": "…"
+}
+```
+
+Only words. The ratings, the months, the rules, the airports and the area
+are the Chinese file's: the English highlights are just the texts, in the
+Chinese order, and each one takes its months and its rule from the Chinese
+highlight in the same place. So a highlight added, removed or moved in
+`destinations.json` has to be added, removed or moved in
+`destinations.en.json` too — the check stops the build until it is.
+
+The areas (中国, 东亚 …) stay the keys in Chinese; their English is in
+`src/seasons/seasons.ts`. Kuala Lumpur's English name comes from its airport,
+and a stopping flight's city from that city's airport, which is why every
+`stop` in `flights.json` has to be a city some airport in `airports.json` is
+in.
+
+Write the English plainly and short, like the Chinese: *About 9 to 21°C*,
+*Apr–May*, *early/mid/late Oct*, *(lunar calendar, the date changes every
+year)*. No year in it either — and a height or a count of a thousand or more
+is written with a comma, *2,050 m*, so it is never taken for one.
+
 ## The yearly read-through
 
 Some time in the autumn, for the year about to start:
@@ -141,11 +188,18 @@ Some time in the autumn, for the year about to start:
      { "ids": ["us-california"], "m": [7, 8], "t": "洛杉矶夏季奥运会（7月14日–30日）" }
    ]
    ```
-   Until a year has any, the screen says so under the list.
+   Until a year has any, the screen says so under the list. Add each one's
+   English to `src/seasons/events.en.json`, in the same order:
+   ```json
+   "2028": [
+     "Los Angeles Summer Olympics (14–30 Jul)"
+   ]
+   ```
 3. **Read the sentences that go out of date.** `npm run seasons -- --review`
    lists every sentence that mentions a visa, a fee, a permit, a booking, an
    opening or a closure: about 320, most of which will still be true. Change
-   the ones that are not.
+   the ones that are not — in `destinations.en.json` as well, because the
+   English does not follow by itself.
 4. **Set `"reviewed"`** at the top of `destinations.json` to the month you
    did it. The screen shows it as *资料核对于…*.
 5. **Read the flights through.** The *Airlines and destinations* table on
@@ -218,5 +272,12 @@ twice, an airport that is not a
 three-letter code or has no name, a route listed under two kinds, and a year
 written into the evergreen file — 2027年, with or without a space. A year before 2020 is
 history and is left alone: 1987年列入世界遗产 stays true.
+
+It checks the English the same way: every destination, event and airport has
+its English; the same number of towns, notes and highlights, in the same
+order; a `part` and a `via` exactly where the Chinese has one; a place that is
+one country (新加坡 in 新加坡) named the same way round (Singapore in
+Singapore); no Chinese left in it, and no year — 2027 on its own is refused,
+2,050 m is not.
 
 `--format` runs the check first and writes nothing if it fails.

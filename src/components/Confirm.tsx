@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { tr } from '../lib/i18n'
 
 /**
  * A yes/no dialog, floating over the page.
@@ -17,7 +18,7 @@ export default function Confirm({
   title,
   detail,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel = tr('Cancel', '取消'),
   tone = 'brand',
   busy = false,
   onConfirm,

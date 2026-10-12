@@ -7,6 +7,7 @@ import { todayISO } from '../lib/date'
 import { readFile, saveBlob, scanFilter } from '../lib/files'
 import { parseItinerary, readText, type ItineraryDraft, type OcrProgress } from '../lib/ocr'
 import { store } from '../lib/store'
+import { tr } from '../lib/i18n'
 import type { Attachment } from '../types'
 
 /**
@@ -55,7 +56,7 @@ export default function ScanScreen({
     setText('')
     setAttachment(null)
     setFromPaste(false)
-    setProgress({ status: 'Flattening the page', progress: 0 })
+    setProgress({ status: tr('Flattening the page', '正在处理页面'), progress: 0 })
 
     let saved: Attachment
     try {
@@ -64,7 +65,9 @@ export default function ScanScreen({
       setAttachment(saved)
     } catch (err) {
       setProgress(null)
-      setError(err instanceof Error ? err.message : "That page couldn't be prepared.")
+      setError(
+        err instanceof Error ? err.message : tr("That page couldn't be prepared.", '这一页没能处理好。'),
+      )
       return
     }
 
@@ -75,15 +78,20 @@ export default function ScanScreen({
       setAttachment({ ...saved, text: found.trim() || null })
       const drafts = parseItinerary(found, todayISO())
       setRows(drafts.map((draft, index) => ({ ...draft, key: index, keep: true })))
-      if (!found.trim()) setError('No text could be made out on that page.')
+      if (!found.trim()) setError(tr('No text could be made out on that page.', '这一页上认不出文字。'))
       else if (drafts.length === 0) {
         setError(
-          "Text was read, but nothing in it looked like a dated appointment. If the page is handwritten, this reader can't read it: tap Paste text instead, and let your iPhone's Scan Text read it.",
+          tr(
+            "Text was read, but nothing in it looked like a dated appointment. If the page is handwritten, this reader can't read it: tap Paste text instead, and let your iPhone's Scan Text read it.",
+            '读出了文字，但里面没有像带日期的安排。如果是手写的，这个识别器认不出来：请点「改为粘贴文字」，让 iPhone 的「扫描文本」来读。',
+          ),
         )
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "That page couldn't be read. The scan is kept.",
+        err instanceof Error
+          ? err.message
+          : tr("That page couldn't be read. The scan is kept.", '这一页没能读出来，扫描件已保留。'),
       )
     } finally {
       setProgress(null)
@@ -102,7 +110,10 @@ export default function ScanScreen({
     setRows(drafts.map((draft, index) => ({ ...draft, key: index, keep: true })))
     setError(
       drafts.length === 0
-        ? 'Nothing in that has a date or a time to go by. Add a line with the date, like 2/10/2026, and try again.'
+        ? tr(
+            'Nothing in that has a date or a time to go by. Add a line with the date, like 2/10/2026, and try again.',
+            '里面没有可以参照的日期或时间。加一行日期，比如 2/10/2026，再试一次。',
+          )
         : null,
     )
   }
@@ -127,7 +138,7 @@ export default function ScanScreen({
     // list would leave the ones above it saved, and a second try would add
     // them twice.
     if (chosen.some((row) => !row.title.trim())) {
-      setError('Every ticked row needs a title.')
+      setError(tr('Every ticked row needs a title.', '每一条勾选的都要有标题。'))
       return
     }
     setSaving(true)
@@ -153,10 +164,10 @@ export default function ScanScreen({
           attachments: index === 0 && attachment ? [attachment] : [],
         })
       }
-      onToast(`Added ${chosen.length} to the schedule`)
+      onToast(tr(`Added ${chosen.length} to the schedule`, `已把 ${chosen.length} 项加入日程`))
       onBack()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add those.')
+      setError(err instanceof Error ? err.message : tr('Could not add those.', '没能添加。'))
       setSaving(false)
     }
   }
@@ -175,10 +186,16 @@ export default function ScanScreen({
     <>
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
-          <button onClick={onBack} aria-label="Back to More" className="p-1.5 text-neutral-400">
+          <button
+            onClick={onBack}
+            aria-label={tr('Back to More', '返回「更多」')}
+            className="p-1.5 text-neutral-400"
+          >
             <ChevronLeft />
           </button>
-          <h1 className="text-[19px] font-semibold tracking-tight">Document scanner</h1>
+          <h1 className="text-[19px] font-semibold tracking-tight">
+            {tr('Document scanner', '文档扫描')}
+          </h1>
         </div>
       </header>
 
@@ -186,43 +203,53 @@ export default function ScanScreen({
         {!attachment && !fromPaste && !progress && (
           <>
             <p className="pb-4 pt-1 text-[14px] leading-6 text-neutral-500">
-              Photograph a booking, an itinerary or any printed page. It is straightened and read
-              on this device — nothing is uploaded, and no account is involved.
+              {tr(
+                'Photograph a booking, an itinerary or any printed page. It is straightened and read on this device — nothing is uploaded, and no account is involved.',
+                '拍下预订单、行程单或任何印刷的页面。整理和识别都在这台设备上完成——不上传任何内容，也不用登录账号。',
+              )}
             </p>
             <button
               onClick={() => input.current?.click()}
               className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-neutral-200 py-12 text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-500"
             >
               <CameraIcon className="h-8 w-8" />
-              <span className="text-[14px] font-medium">Take or choose a photo</span>
+              <span className="text-[14px] font-medium">
+                {tr('Take or choose a photo', '拍照或选择照片')}
+              </span>
             </button>
             <p className="pt-3 text-[12px] leading-5 text-neutral-400">
-              It reads printed English and Chinese. The reader is a ~14 MB download the first
-              time, then it stays for the session.
+              {tr(
+                'It reads printed English and Chinese. The reader is a ~14 MB download the first time, then it stays for the session.',
+                '能识别印刷的英文和中文。第一次要下载约 14 MB 的识别器，之后这次打开期间都不用再下载。',
+              )}
             </p>
 
             <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400">
-              Handwritten? Scan or paste the text
+              {tr('Handwritten? Scan or paste the text', '手写的？扫描或粘贴文字')}
             </h2>
             <textarea
               value={pasted}
               onChange={(event) => setPasted(event.target.value)}
               rows={5}
-              placeholder={'2 Oct 2026\n10:00 Check in at Marina Bay Cruise Centre\n13:00 Muster drill'}
-              aria-label="Text to look for appointments in"
+              placeholder={tr(
+                '2 Oct 2026\n10:00 Check in at Marina Bay Cruise Centre\n13:00 Muster drill',
+                '2026年10月2日\n10:00 在滨海湾邮轮中心办理登船\n13:00 救生演习',
+              )}
+              aria-label={tr('Text to look for appointments in', '要从中找出安排的文字')}
               className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
             />
             <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
-              Tap the box, choose Scan Text (on newer iPhones it is under AutoFill), point the
-              camera at the page and tap Insert. Your iPhone reads it itself, handwriting included,
-              so nothing is uploaded. Steps without a time go into the notes of their day.
+              {tr(
+                'Tap the box, choose Scan Text (on newer iPhones it is under AutoFill), point the camera at the page and tap Insert. Your iPhone reads it itself, handwriting included, so nothing is uploaded. Steps without a time go into the notes of their day.',
+                '点一下输入框，选「扫描文本」（较新的 iPhone 在「自动填充」里），把相机对准页面，再点「插入」。iPhone 自己就能识别，手写的也行，所以什么都不会上传。没有时间的步骤会放进当天的备注。',
+              )}
             </p>
             <button
               onClick={readPasted}
               disabled={!pasted.trim()}
               className="mt-3 w-full rounded-full border border-neutral-200 py-2.5 text-[15px] font-medium disabled:opacity-40"
             >
-              Find appointments
+              {tr('Find appointments', '找出安排')}
             </button>
           </>
         )}
@@ -247,7 +274,7 @@ export default function ScanScreen({
                 {preview && (
                   <img
                     src={preview}
-                    alt="The scanned page"
+                    alt={tr('The scanned page', '扫描的页面')}
                     className="h-32 w-24 shrink-0 rounded-xl border border-neutral-200 object-cover"
                   />
                 )}
@@ -256,33 +283,33 @@ export default function ScanScreen({
                     onClick={download}
                     className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600"
                   >
-                    Save the scan
+                    {tr('Save the scan', '保存扫描件')}
                   </button>
                   <button
                     onClick={() => input.current?.click()}
                     className="flex items-center justify-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
                   >
                     <ScanIcon className="h-3.5 w-3.5" />
-                    Scan another
+                    {tr('Scan another', '再扫一页')}
                   </button>
                   <button
                     onClick={startOver}
                     className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
                   >
-                    Paste text instead
+                    {tr('Paste text instead', '改为粘贴文字')}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">
                 <p className="min-w-0 flex-1 text-[14px] text-neutral-500">
-                  From the text you pasted
+                  {tr('From the text you pasted', '来自你粘贴的文字')}
                 </p>
                 <button
                   onClick={startOver}
                   className="rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600"
                 >
-                  Edit the text
+                  {tr('Edit the text', '修改文字')}
                 </button>
               </div>
             )}
@@ -297,7 +324,12 @@ export default function ScanScreen({
               <>
                 <div className="flex items-baseline justify-between pb-1 pt-6">
                   <h2 className="text-[13px] font-medium text-neutral-400">
-                    Found {rows.length} {rows.length === 1 ? 'thing' : 'things'}
+                    {tr(
+                      <>
+                        Found {rows.length} {rows.length === 1 ? 'thing' : 'things'}
+                      </>,
+                      <>找到 {rows.length} 项</>,
+                    )}
                   </h2>
                   <button
                     onClick={() =>
@@ -308,7 +340,9 @@ export default function ScanScreen({
                     }
                     className="text-[13px] font-medium text-brand-500"
                   >
-                    {rows.every((row) => row.keep) ? 'Untick all' : 'Tick all'}
+                    {rows.every((row) => row.keep)
+                      ? tr('Untick all', '全部取消')
+                      : tr('Tick all', '全选')}
                   </button>
                 </div>
 
@@ -317,7 +351,9 @@ export default function ScanScreen({
                     <div key={row.key} className="flex gap-3 py-3">
                       <button
                         onClick={() => edit(row.key, { keep: !row.keep })}
-                        aria-label={row.keep ? 'Do not add this' : 'Add this'}
+                        aria-label={
+                          row.keep ? tr('Do not add this', '不添加这一项') : tr('Add this', '添加这一项')
+                        }
                         aria-pressed={row.keep}
                         className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                           row.keep ? 'border-brand-500 bg-brand-500 text-white' : 'border-neutral-300'
@@ -330,20 +366,20 @@ export default function ScanScreen({
                         <input
                           value={row.title}
                           onChange={(event) => edit(row.key, { title: event.target.value })}
-                          aria-label="What it is"
+                          aria-label={tr('What it is', '事项')}
                           className="w-full bg-transparent text-[15px] outline-hidden"
                         />
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           <DateField
                             value={row.date}
                             onChange={(date) => edit(row.key, { date })}
-                            label="Date"
+                            label={tr('Date', '日期')}
                           />
                           <TimeField
-                            label="Start"
+                            label={tr('Start', '开始')}
                             value={row.start_time ?? ''}
                             onChange={(time) => edit(row.key, { start_time: time || null })}
-                            placeholder="All day"
+                            placeholder={tr('All day', '全天')}
                             clearable
                           />
                         </div>
@@ -357,7 +393,7 @@ export default function ScanScreen({
                             value={row.notes}
                             onChange={(event) => edit(row.key, { notes: event.target.value })}
                             rows={Math.min(8, row.notes.split('\n').length)}
-                            aria-label="Notes"
+                            aria-label={tr('Notes', '备注')}
                             className="mt-1.5 w-full resize-y rounded-lg bg-neutral-50 px-2.5 py-1.5 text-[13px] leading-5 text-neutral-600 outline-hidden"
                           />
                         )}
@@ -372,15 +408,21 @@ export default function ScanScreen({
                   className="mt-5 w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
                 >
                   {saving
-                    ? 'Adding...'
+                    ? tr('Adding...', '正在添加…')
                     : chosenCount === 0
-                      ? 'Nothing ticked'
-                      : `Add ${chosenCount} to the schedule`}
+                      ? tr('Nothing ticked', '没有勾选')
+                      : tr(`Add ${chosenCount} to the schedule`, `把 ${chosenCount} 项加入日程`)}
                 </button>
                 <p className="pt-2 text-[12px] leading-5 text-neutral-400">
                   {fromPaste
-                    ? 'Check each date and time first — a line with no date above it goes on today.'
-                    : 'Check each date and time first — a reader working off a photo gets them wrong often enough to matter. The scan itself is kept with the first one.'}
+                    ? tr(
+                        'Check each date and time first — a line with no date above it goes on today.',
+                        '先检查每个日期和时间——上面没有日期的行会放在今天。',
+                      )
+                    : tr(
+                        'Check each date and time first — a reader working off a photo gets them wrong often enough to matter. The scan itself is kept with the first one.',
+                        '先检查每个日期和时间——从照片识别，认错的时候不少。扫描件会跟第一项存在一起。',
+                      )}
                 </p>
               </>
             )}
@@ -388,18 +430,20 @@ export default function ScanScreen({
             {text && !fromPaste && (
               <details className="mt-6">
                 <summary className="cursor-pointer text-[13px] text-neutral-400">
-                  All the text it read
+                  {tr('All the text it read', '识别出的全部文字')}
                 </summary>
                 <p className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-[12px] leading-5 text-neutral-600">
                   {text}
                 </p>
                 <button
                   onClick={() => {
-                    void navigator.clipboard?.writeText(text).then(() => onToast('Text copied'))
+                    void navigator.clipboard
+                      ?.writeText(text)
+                      .then(() => onToast(tr('Text copied', '已复制文字')))
                   }}
                   className="mt-2 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] text-neutral-600"
                 >
-                  Copy the text
+                  {tr('Copy the text', '复制文字')}
                 </button>
               </details>
             )}

@@ -6,9 +6,11 @@ import LinkEditor from '../components/LinkEditor'
 import Sheet from '../components/Sheet'
 import TagEditor from '../components/TagEditor'
 import { daysBetween, nextHalfHour, shortDate } from '../lib/date'
+import { tr } from '../lib/i18n'
 import { describeRepeat } from '../lib/repeat'
 import { typedBefore } from '../lib/places'
 import { createTag, isTrip, placesOf, useSchedule, useTags, useWishlist } from '../lib/store'
+import { tagName } from '../lib/tags'
 import type {
   Attachment,
   Place,
@@ -152,11 +154,11 @@ export default function ScheduleForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim()) return setError('Please give this a title.')
-    if (!date) return setError('Please pick a date.')
-    if (!allDay && !start) return setError('Please pick a start time.')
+    if (!title.trim()) return setError(tr('Please give this a title.', '请填写标题。'))
+    if (!date) return setError(tr('Please pick a date.', '请选择日期。'))
+    if (!allDay && !start) return setError(tr('Please pick a start time.', '请选择开始时间。'))
     if (!allDay && end && !spans && end <= start) {
-      return setError('End time must be after the start time.')
+      return setError(tr('End time must be after the start time.', '结束时间必须晚于开始时间。'))
     }
 
     setError(null)
@@ -180,7 +182,9 @@ export default function ScheduleForm({
       })
       // On success the parent closes this sheet.
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save. Please try again.')
+      setError(
+        err instanceof Error ? err.message : tr('Could not save. Please try again.', '保存失败，请重试。'),
+      )
       setSaving(false)
     }
   }
@@ -188,7 +192,7 @@ export default function ScheduleForm({
   return (
     <Sheet
       onClose={onClose}
-      title={item ? 'Edit' : 'Add to schedule'}
+      title={item ? tr('Edit', '编辑') : tr('Add to schedule', '添加日程')}
       footer={
         <>
           {error && <p className="mb-2.5 text-[13px] text-red-600">{error}</p>}
@@ -198,7 +202,7 @@ export default function ScheduleForm({
             disabled={saving}
             className="w-full rounded-full bg-brand-500 py-3 text-[15px] font-medium text-white disabled:opacity-40"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? tr('Saving...', '正在保存…') : tr('Save', '保存')}
           </button>
         </>
       }
@@ -208,25 +212,28 @@ export default function ScheduleForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           autoFocus={!item}
-          placeholder="What are you doing?"
+          placeholder={tr('What are you doing?', '要做什么？')}
           className="w-full bg-transparent py-1 text-[17px] outline-hidden placeholder:text-neutral-300"
         />
 
         <div className="mt-2 divide-y divide-neutral-100 border-y border-neutral-100">
-          <Field label="All day">
-            <Toggle checked={allDay} onChange={setAllDay} label="All day" />
+          <Field label={tr('All day', '全天')}>
+            <Toggle checked={allDay} onChange={setAllDay} label={tr('All day', '全天')} />
           </Field>
 
-          <Field label="Date">
+          <Field label={tr('Date', '日期')}>
             <DateField value={date} onChange={moveStart} />
           </Field>
 
-          <Field label="Ends" hint={spans ? `${nights} days` : undefined}>
+          <Field
+            label={tr('Ends', '结束日期')}
+            hint={spans ? tr(`${nights} days`, `${nights} 天`) : undefined}
+          >
             <DateField
-              label="End date"
+              label={tr('End date', '结束日期')}
               value={endDate}
               onChange={setEndDate}
-              placeholder="Same day"
+              placeholder={tr('Same day', '当天')}
               clearable
               rangeStart={date}
               min={date}
@@ -237,15 +244,15 @@ export default function ScheduleForm({
               than sitting there greyed out asking to be filled in. */}
           {!allDay && (
             <>
-              <Field label="Start" hint={spans ? shortDate(date) : undefined}>
-                <TimeField label="Start" value={start} onChange={setStart} />
+              <Field label={tr('Start', '开始')} hint={spans ? shortDate(date) : undefined}>
+                <TimeField label={tr('Start', '开始时间')} value={start} onChange={setStart} />
               </Field>
-              <Field label="End" hint={spans ? shortDate(endDate) : undefined}>
+              <Field label={tr('End', '结束')} hint={spans ? shortDate(endDate) : undefined}>
                 <TimeField
-                  label="End"
+                  label={tr('End', '结束时间')}
                   value={end}
                   onChange={setEnd}
-                  placeholder="Optional"
+                  placeholder={tr('Optional', '可不填')}
                   clearable
                   relativeTo={spans ? null : start}
                 />
@@ -265,19 +272,19 @@ export default function ScheduleForm({
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {tags.map(({ id, label, emoji }) => (
+          {tags.map((one) => (
             <button
-              key={id}
+              key={one.id}
               type="button"
-              onClick={() => setTag(tag === id ? null : id)}
+              onClick={() => setTag(tag === one.id ? null : one.id)}
               className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
-                tag === id
+                tag === one.id
                   ? 'border-neutral-900 bg-neutral-900 text-white'
                   : 'border-neutral-200 text-neutral-600'
               }`}
             >
-              <span className="mr-1">{emoji}</span>
-              {label}
+              <span className="mr-1">{one.emoji}</span>
+              {tagName(one)}
             </button>
           ))}
           {!newTag && (
@@ -286,7 +293,7 @@ export default function ScheduleForm({
               onClick={() => setNewTag(true)}
               className="rounded-full border border-dashed border-neutral-300 px-3 py-1.5 text-[13px] text-neutral-400"
             >
-              + New
+              {tr('+ New', '+ 新建')}
             </button>
           )}
         </div>
@@ -294,7 +301,7 @@ export default function ScheduleForm({
         {newTag && (
           <div className="mt-2">
             <TagEditor
-              submitLabel="Add"
+              submitLabel={tr('Add', '添加')}
               onCancel={() => setNewTag(false)}
               onSubmit={(label, emoji) => {
                 const created = createTag(label, emoji)
@@ -308,41 +315,47 @@ export default function ScheduleForm({
         {showDetails ? (
           <>
             <div className="mt-4 divide-y divide-neutral-100 border-y border-neutral-100">
-              <Field label="Location">
-                <TextField label="Location" value={location} onChange={setLocation} />
+              <Field label={tr('Location', '地点')}>
+                <TextField label={tr('Location', '地点')} value={location} onChange={setLocation} />
               </Field>
               {/* Country is what Travel counts; region and city are labels, and
                   the city is what makes a place. */}
-              <Field label="Country" hint="For Travel">
+              <Field label={tr('Country', '国家')} hint={tr('For Travel', '用于旅行')}>
                 <CountrySelect
                   value={country}
                   onChange={pickCountry}
                   recent={recentCountries}
-                  placeholder="Not set"
+                  placeholder={tr('Not set', '未设置')}
                   clearable
                 />
               </Field>
               {country && (
                 <>
-                  <Field label="Region" hint="地区, like 海南 or Sabah">
-                    <TextField label="Region" value={region} onChange={setRegion} suggestions={typed.regions} />
+                  <Field
+                    label={tr('Region', '地区')}
+                    hint={tr('地区, like 海南 or Sabah', '如海南、沙巴')}
+                  >
+                    <TextField label={tr('Region', '地区')} value={region} onChange={setRegion} suggestions={typed.regions} />
                   </Field>
-                  <Field label="City">
-                    <TextField label="City" value={city} onChange={setCity} suggestions={typed.cities} />
+                  <Field label={tr('City', '城市')}>
+                    <TextField label={tr('City', '城市')} value={city} onChange={setCity} suggestions={typed.cities} />
                   </Field>
                 </>
               )}
               {joinable.length > 0 && (
-                <Field label="Part of trip" hint="Groups it under one trip in Travel">
+                <Field
+                  label={tr('Part of trip', '所属行程')}
+                  hint={tr('Groups it under one trip in Travel', '在旅行里归入同一个行程')}
+                >
                   <select
                     value={tripId ?? ''}
                     onChange={(event) =>
                       setTripId(event.target.value ? Number(event.target.value) : null)
                     }
-                    aria-label="The trip this is part of"
+                    aria-label={tr('The trip this is part of', '所属的行程')}
                     className="max-w-[190px] truncate rounded-xl bg-neutral-100 px-3 py-1.5 text-[15px] font-medium outline-hidden transition-colors hover:bg-neutral-200/70 focus:ring-2 focus:ring-brand-500/40"
                   >
-                    <option value="">Its own trip</option>
+                    <option value="">{tr('Its own trip', '独立行程')}</option>
                     {joinable.map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.title} · {shortDate(row.date)}
@@ -367,7 +380,7 @@ export default function ScheduleForm({
             </div>
 
             <div className="mt-4">
-              <p className="pb-2 text-[13px] text-neutral-400">Attachments</p>
+              <p className="pb-2 text-[13px] text-neutral-400">{tr('Attachments', '附件')}</p>
               <AttachmentStrip files={files} onChange={setFiles} onError={setError} />
             </div>
           </>
@@ -377,7 +390,7 @@ export default function ScheduleForm({
             onClick={() => setShowDetails(true)}
             className="mt-4 text-[14px] text-neutral-400"
           >
-            + Add location, links, notes or files
+            {tr('+ Add location, links, notes or files', '+ 添加地点、链接、备注或文件')}
           </button>
         )}
       </form>
