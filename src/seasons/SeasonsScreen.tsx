@@ -3,7 +3,7 @@ import { Segmented, Toggle } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, GlobeIcon, PinIcon, PlaneIcon } from '../components/Icons'
 import { isZh, tr } from '../lib/i18n'
 import DestinationSheet from './DestinationSheet'
-import type { MapPin } from './LeafletMap'
+import type { MapPin } from './MapCanvas'
 import PlaceSheet from './PlaceSheet'
 import { cardOf, loadPoints, pinOf, searchMap, usePoints, type MapPlace, type OnCard } from './where'
 import {
@@ -80,7 +80,7 @@ const views = (): { value: View; label: string }[] => [
   { value: 'map', label: tr('Map', '地图') },
 ]
 
-const LeafletMap = lazy(() => import('./LeafletMap'))
+const MapCanvas = lazy(() => import('./MapCanvas'))
 
 /** An OpenStreetMap search, and what came back. */
 type MapSearch = { query: string; status: 'looking' | 'done' | 'failed'; places: MapPlace[] }
@@ -705,8 +705,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           </p>
           <p>
             {tr(
-              'Towns and districts to search by: GeoNames (CC BY 4.0), Wikidata and the National Bureau of Statistics of China. The map, and places found on it: © OpenStreetMap contributors.',
-              '搜索用的城市和区县：GeoNames（CC BY 4.0）、Wikidata、国家统计局。地图和地图上找到的地方：© OpenStreetMap 贡献者。',
+              'Towns and districts to search by: GeoNames (CC BY 4.0), Wikidata and the National Bureau of Statistics of China. The map: OpenFreeMap, © OpenMapTiles, © OpenStreetMap contributors, whose places the map search finds.',
+              '搜索用的城市和区县：GeoNames（CC BY 4.0）、Wikidata、国家统计局。地图：OpenFreeMap，© OpenMapTiles、© OpenStreetMap 贡献者；地图搜索找到的地方也来自 OpenStreetMap。',
             )}
           </p>
         </div>
@@ -867,7 +867,7 @@ function MapView({ list, month, onOpen }: { list: Destination[]; month: number; 
         <span className="text-neutral-400">{tr(`in ${monthLabel(month)} · tap a dot to open it`, `${month}月 · 点圆点打开卡片`)}</span>
       </p>
       <Suspense fallback={<div className="mt-3 h-[65vh] rounded-2xl bg-neutral-100" />}>
-        <LeafletMap className="mt-3 h-[65vh]" pins={pins} bounds={bounds} center={center} zoom={pins.length === 1 ? 7 : 3} />
+        <MapCanvas className="mt-3 h-[65vh]" pins={pins} bounds={bounds} center={center} zoom={pins.length === 1 ? 7 : 3} />
       </Suspense>
     </>
   )

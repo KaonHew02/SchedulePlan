@@ -5,7 +5,7 @@ import { tr } from '../lib/i18n'
 import { RATING_TINT, monthLabel, monthsLabel, nameOf, ratingLabel, type Destination } from './seasons'
 import { googleMapsUrl, type MapPlace, type OnCard } from './where'
 
-const LeafletMap = lazy(() => import('./LeafletMap'))
+const MapCanvas = lazy(() => import('./MapCanvas'))
 
 /**
  * A place found on OpenStreetMap, the way Google Maps shows one: what it is,
@@ -53,7 +53,7 @@ export default function PlaceSheet({
       </p>
 
       <Suspense fallback={<div className="mt-3 h-64 rounded-2xl bg-neutral-100" />}>
-        <LeafletMap
+        <MapCanvas
           className="mt-3 h-64"
           spot={[place.lat, place.lon]}
           bounds={
@@ -81,7 +81,7 @@ export default function PlaceSheet({
       </section>
 
       <p className="pt-5 text-[11px] leading-4 text-neutral-400">
-        {tr('Place and map: © OpenStreetMap contributors.', '地点和地图：© OpenStreetMap 贡献者。')}
+        {tr('Place: © OpenStreetMap contributors. Map: OpenFreeMap, © OpenMapTiles, OpenStreetMap.', '地点：© OpenStreetMap 贡献者。地图：OpenFreeMap，© OpenMapTiles、OpenStreetMap。')}
       </p>
     </Sheet>
   )

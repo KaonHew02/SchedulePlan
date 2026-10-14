@@ -185,8 +185,9 @@ finds 北京; Chicago finds New York and the Northeast and says it is only the
 nearest card, as the Midwest has none of its own.
 
 And there is a map, like Google's. 地图 shows every card as a pin in the
-colour of the month, on OpenStreetMap down to the village; each card's sheet
-has a map of where it is. 在地图上找「…」 asks OpenStreetMap for anything at
+colour of the month, on OpenStreetMap down to the village, every name on it
+in the app's language — 曼谷, 札幌, 九份 in Chinese, Bangkok and Sapporo in
+English; each card's sheet has a map of where it is. 在地图上找「…」 asks OpenStreetMap for anything at
 all — 金鸡峰丛, 九份, 尖沙咀, a temple in Kyoto — and shows each with its
 address, a map with the spot on it, and the card it falls on, with a button
 to open it in Google Maps.

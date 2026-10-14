@@ -26,8 +26,10 @@ import react from '@vitejs/plugin-react'
  *   translate.googleapis.com,
  *   api.mymemory.translated.net the two translators
  *   nominatim.openstreetmap.org Seasons' search on the map, when asked
- *   tile.openstreetmap.org      the map itself, in img-src (Leaflet draws
- *                               it with <img> tiles)
+ *   tiles.openfreemap.org       the map itself: its style, tiles, fonts and
+ *                               icons, fetched by MapLibre (and in img-src
+ *                               for the icons). Its worker is a file of
+ *                               this site's, so 'self' in worker-src
  *   'self' in worker-src        the offline worker, sw.js (src/sw.ts). The
  *                               manifest and icons are 'self' by default-src
  *   blob: in worker-src         the OCR worker is started from a blob
@@ -51,9 +53,9 @@ const CSP = [
     'https://cdn.jsdelivr.net',
     'https://open.er-api.com https://api.frankfurter.dev',
     'https://translate.googleapis.com https://api.mymemory.translated.net',
-    'https://nominatim.openstreetmap.org',
+    'https://nominatim.openstreetmap.org https://tiles.openfreemap.org',
   ].join(' '),
-  "img-src 'self' data: blob: https://tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://tiles.openfreemap.org",
   "style-src 'self' https://accounts.google.com/gsi/style",
   "font-src 'self'",
   'frame-src blob: https://accounts.google.com/gsi/',

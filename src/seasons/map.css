@@ -1,9 +1,14 @@
 /*
  * The pins on a Seasons map: a dot in the colour of the month's rating, and
  * the card's name beside it, white-edged so it reads over roads and rivers.
+ * MapLibre places each pin with position: absolute and centres it by its
+ * size, so the pin is the dot's size and the name hangs off to the right.
  */
-/* No position here: Leaflet places each marker with position: absolute, and
-   the dot and the name are laid out against that. */
+.seasons-marker {
+  width: 14px;
+  height: 14px;
+}
+
 .seasons-dot {
   position: absolute;
   inset: 0;
@@ -35,14 +40,20 @@
 
 /* The one place a map is about, the way Google marks it. */
 .seasons-spot {
-  position: absolute;
-  inset: 0;
+  width: 18px;
+  height: 18px;
   border-radius: 9999px;
   background: #e11d48;
   border: 3px solid #fff;
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
 }
 
-.leaflet-container {
+.maplibregl-map {
   font: inherit;
+}
+
+/* The credit, small: it shares a 220px map in a sheet. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  line-height: 14px;
 }

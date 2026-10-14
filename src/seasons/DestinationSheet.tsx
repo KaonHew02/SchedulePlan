@@ -31,7 +31,7 @@ import {
 } from './seasons'
 import { googleMapsUrl, pinOf, usePoints } from './where'
 
-const LeafletMap = lazy(() => import('./LeafletMap'))
+const MapCanvas = lazy(() => import('./MapCanvas'))
 
 /**
  * One destination, the whole year of it.
@@ -287,7 +287,7 @@ export default function DestinationSheet({
       {pin && (
         <Section title={tr('On the map', '地图')}>
           <Suspense fallback={<div className="h-56 rounded-2xl bg-neutral-100" />}>
-            <LeafletMap
+            <MapCanvas
               className="h-56"
               center={pin}
               zoom={7}

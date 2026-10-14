@@ -309,12 +309,24 @@ check below makes sure every card it names still exists.
 
 Seasons has a third view beside 这个月去哪 and 全年日历: **地图**. Every card is a
 pin in the colour of the month's rating, with its name beside it once
-zoomed in far enough to read, on OpenStreetMap's map — drawn by Leaflet, and
-as detailed as Google's: zoom in on 罗平 and the villages, roads and hills
-are there. The search, the areas and the flights decide which pins show, so
-樱花 in April is a map of where the blossom is. A pin opens its card, and
-every card's sheet has a map of its own, opened at a region's zoom, with a
-link to the same spot on Google Maps.
+zoomed in far enough to read, on a map as detailed as Google's: zoom in on
+罗平 and the villages, roads and hills are there. The search, the areas and
+the flights decide which pins show, so 樱花 in April is a map of where the
+blossom is. A pin opens its card, and every card's sheet has a map of its
+own, opened at a region's zoom, with a link to the same spot on Google Maps.
+
+**The map speaks the app's language.** It is OpenStreetMap's data, cut into
+tiles by OpenFreeMap (tiles.openfreemap.org — free, no key, no account) and
+drawn on the phone by MapLibre, which is what lets the names be chosen: a
+map that arrives as pictures has the local names painted in, Thai in
+Thailand and Hangul in Korea. In Chinese a label is the place's 简体 name,
+then any Chinese name it has (繁體 for most of Taiwan's small places), then
+its English name — never Thai or Korean script, which helps nobody reading
+Chinese. In English it is the English name, then the Latin-letter name the
+tiles carry for every place. Switching the app's language relabels a map
+that is open. The pins' own names are the cards', already in both
+languages. Chinese is drawn with the phone's own fonts (`localIdeographFontFamily`),
+as the map's fonts have only Latin letters.
 
 The search goes one step further when asked. Under the chips is **在地图上找
 「…」** (and the keyboard's search key does the same): it asks OpenStreetMap
@@ -341,9 +353,12 @@ typing, and a credit; the app asks only when the button or the search key
 is pressed, waits a second between questions, keeps the answers for the
 session, and credits OpenStreetMap under the results, on every map and at
 the foot of the screen. What is typed goes to OpenStreetMap and nowhere else.
-The map's tiles come from tile.openstreetmap.org each time; the offline copy
-does not keep them. Both servers are in the page's security policy in
-`vite.config.ts`.
+The map's style, tiles and fonts come from tiles.openfreemap.org each time;
+the offline copy does not keep them, only MapLibre's own code. Both servers
+are in the page's security policy in `vite.config.ts`, and MapLibre's
+worker is bundled as a file of this site (`?worker&url` in `MapCanvas.tsx`)
+so `worker-src 'self'` covers it. MapLibre is loaded only when a map is
+first shown: about 290 KB gzipped, and the worker beside it.
 
 `points.json` comes out of `npm run places -- build` with `places.json`. A
 card's pin is the first of its own towns that is one of the towns on it (广州
