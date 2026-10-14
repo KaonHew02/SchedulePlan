@@ -101,7 +101,7 @@ This is a permanent rule, not a starting constraint to relax later, and it is th
 - A diary where a trip with three stops is **one journey with three legs**, not three unrelated rows.
 - An answer to "how many countries, how many places, how many continents" that is **always true**, because it is counted from the diary, not typed in beside it.
 - A converter that reads the same way as the **board at the counter**, which still works on a plane.
-- A **phrasebook that fills itself**: everything ever translated is kept for the next time there is no signal.
+- A **phrasebook that fills itself**: the last five things translated are kept for the next time there is no signal.
 - Things that **come back** (badminton every Friday, a birthday every September) as one row with a rule on it.
 - **One file** that is the whole notebook, attachments included, which can be restored on any device.
 
@@ -249,7 +249,7 @@ Result: Travel lists **one trip** spanning 14–18 September with three stops, a
 | --- | --- | --- |
 | TL-1 | 48 languages, any two of them. The nine a trip from here uses are at the top: Chinese, Vietnamese, English, Malay, Thai, Indonesian, Japanese, Korean and Tamil | Same arrangement as the currency picker. Everything else is a word of typing away |
 | TL-2 | Two keyless translators are tried in order, Google's web endpoint and then MyMemory, and the screen says **which one answered** | There is nowhere on a static site to keep a key |
-| TL-3 | **Everything translated is saved.** Starred phrases stay on top and the rest are ordered by recency | The second time a phrase is needed there should be no request at all |
+| TL-3 | **The last five translations are saved**, newest first; older ones drop off | The second time a phrase is needed there should be no request at all, and a short list is quicker to read than a history |
 | TL-4 | A dozen **starter phrases** (hello, thank you, how much, no coriander, the bill, help) are in the book from the first open | The first trip starts with a phrasebook |
 | TL-5 | **Say** is offered only if the device has a voice for that language. Otherwise the screen says so and offers **Show** | An English voice reading Vietnamese sounds like it worked, and it did not |
 | TL-6 | Arabic, Hebrew, Persian and Urdu are laid out **right to left** | Otherwise the answer reads backwards |
@@ -407,7 +407,7 @@ The module that justifies the architecture. Nothing on it is stored except the w
 ### Translate
 
 - 48 languages with the nine common ones first, searchable, and laid out right to left where needed.
-- **Say** it with the device's own voice, **Show** it large, or **Keep** it (everything is kept in any case), with a star to hold a phrase at the top.
+- **Say** it with the device's own voice or **Show** it large. The last five translations are kept below.
 - Twelve starter phrases from the first open.
 
 ### More — the tools
@@ -557,7 +557,7 @@ The notebook is one JSON document in the browser's IndexedDB, and the same shape
 | Repeat rule | `unit`, `every`, `weekdays`, `until`, `skip` | Stored on the item. Unrolled copies carry a `series` marker and are never stored |
 | Reminder | `date`, `time`, `end_date`, `end_time`, `repeat`, `done` | `repeat` is `none`, `daily` or `weekly` |
 | Wish | `name`, `country`, `note`, `photo`, `attachments`, `links` | The only record Travel owns |
-| Phrase | `from`, `to`, `source`, `result`, `starred`, `savedAt` | Both sides are kept: half the use of a saved phrase is finding it again |
+| Phrase | `from`, `to`, `source`, `result`, `savedAt` | Only the last five translations. Both sides are kept: half the use of a saved phrase is finding it again |
 | Tag / category | `id`, `label`, `emoji` | Ids are readable words, so backups stay legible and old items still match |
 | Expense | `amount`, `currency`, `original_amount`, `original_currency`, `exchange_rate`, `schedule_id` | The last four are frozen at save *(parked)* |
 | Bill split | `people`, `lines`, `paidBy`, `expense_id` | Lines sit under a person, or under Shared *(parked)* |
@@ -853,7 +853,7 @@ The architecture trades a server for privacy, cost and offline use, and most of 
 | R3 | **No automated tests** | Certain today | High | Type checking in CI; Phase 9 | Low after MS-1 |
 | R4 | A counting rule regresses silently, and a wrong number gets believed | Medium | High | Every rule written down in code comments and in this document; Phase 9 tests | Low after MS-1 |
 | R5 | Rate feeds disappear or change | Medium | Low | Two feeds in order; daily cache; the stale table stands; rates typed by hand | Low |
-| R6 | Translators withdraw; the first one is an unofficial endpoint | Medium | Medium | MyMemory as fallback; the screen says which one answered; everything translated is saved | Low |
+| R6 | Translators withdraw; the first one is an unofficial endpoint | Medium | Medium | MyMemory as fallback; the screen says which one answered; the last five translations are saved | Low |
 | R7 | OCR misreads a booking | High | Low | Output is a draft, checked before anything is saved | Low |
 | R8 | A reminder is missed because no tab was open | High | Medium | The screen says so; Phase 10 opens the door to more | Medium: accepted |
 | R9 | **A crafted file** stores a `javascript:` link, a disguised page or a value that breaks the app | Low (was High until 23 Sep) | High | `sanitize.ts` on every way in; `safeUrl`; PDFs relabelled; bytes never overwritten | Low |

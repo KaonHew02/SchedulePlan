@@ -264,7 +264,6 @@ export function phrases(value: unknown): Phrase[] {
       to,
       source,
       result,
-      starred: raw.starred === true,
       savedAt: text(raw.savedAt),
     })
   }

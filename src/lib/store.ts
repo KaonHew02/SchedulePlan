@@ -379,7 +379,9 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
     wishlist: rows(parsed?.wishlist, fillWish),
     // Absent from every backup written before the translator existed, which
     // is the whole reason this reads defensively rather than trusting it.
-    phrases: safe.phrases(parsed?.phrases),
+    // Trimmed here too, so a notebook from when every translation was kept
+    // comes back with only its newest few.
+    phrases: recentPhrases(safe.phrases(parsed?.phrases)),
     settings: fillSettings(parsed?.settings),
   }
 }
@@ -1392,10 +1394,12 @@ export async function mergeIn(candidate: unknown): Promise<{ added: number; skip
       incoming.wishlist,
       (row) => `${row.country}|${row.name.trim().toLowerCase()}`,
     ),
-    phrases: absorb(
-      db.phrases,
-      incoming.phrases,
-      (row) => `${row.from}|${row.to}|${row.source.trim().toLowerCase()}`,
+    phrases: recentPhrases(
+      absorb(
+        db.phrases,
+        incoming.phrases,
+        (row) => `${row.from}|${row.to}|${row.source.trim().toLowerCase()}`,
+      ),
     ),
     // Labels are added, never replaced: a file's tag list should not take
     // yours away, and an item pointing at a tag id nobody has is a blank chip.
@@ -1413,6 +1417,16 @@ export async function mergeIn(candidate: unknown): Promise<{ added: number; skip
 
 // ------------------------------------------------------------------ phrases
 
+/** How many translations are kept. Enough to find the last few again. */
+const RECENT_PHRASES = 5
+
+/** Newest first, and only as many as are kept. */
+function recentPhrases(phrases: Phrase[]): Phrase[] {
+  return [...phrases]
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt) || b.id - a.id)
+    .slice(0, RECENT_PHRASES)
+}
+
 export function usePhrases(): Phrase[] {
   return useSyncExternalStore(subscribe, () => readDb().phrases)
 }
@@ -1422,11 +1436,9 @@ export function usePhrases(): Phrase[] {
  *
  * Translating the same thing twice is what happens when you forget you already
  * have it, and it should leave one row rather than two — so a repeat is dated
- * forward instead of added, and keeps whatever star it already had.
+ * forward instead of added. The oldest falls off once there are more than five.
  */
-export async function savePhrase(
-  phrase: Omit<Phrase, 'id' | 'savedAt' | 'starred'> & { starred?: boolean },
-): Promise<Phrase> {
+export async function savePhrase(phrase: Omit<Phrase, 'id' | 'savedAt'>): Promise<Phrase> {
   const db = readDb()
   const source = phrase.source.trim()
   const result = phrase.result.trim()
@@ -1441,26 +1453,17 @@ export async function savePhrase(
     to: phrase.to,
     source,
     result,
-    starred: phrase.starred ?? same?.starred ?? false,
     savedAt: new Date().toISOString(),
   }
   await writeDb({
     ...db,
-    phrases: same
-      ? db.phrases.map((row) => (row.id === saved.id ? saved : row))
-      : [...db.phrases, saved],
-  })
-  return saved
-}
-
-export async function togglePhraseStar(id: number): Promise<void> {
-  const db = readDb()
-  await writeDb({
-    ...db,
-    phrases: db.phrases.map((row) =>
-      row.id === id ? { ...row, starred: !row.starred } : row,
+    phrases: recentPhrases(
+      same
+        ? db.phrases.map((row) => (row.id === saved.id ? saved : row))
+        : [...db.phrases, saved],
     ),
   })
+  return saved
 }
 
 export async function deletePhrase(id: number): Promise<void> {

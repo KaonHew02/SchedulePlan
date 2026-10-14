@@ -66,11 +66,12 @@ export interface Place {
 }
 
 /**
- * A phrase that has been translated once and kept.
+ * One of the last few things translated.
  *
  * Kept because the translator needs a signal and a border desk does not have
  * one. Both sides are stored rather than just the answer: half the use of a
- * phrase you already have is pointing at the Chinese to find it again.
+ * phrase you already have is pointing at the Chinese to find it again. Only the
+ * newest five are kept — this is a recent list, not a history.
  */
 export interface Phrase {
   id: number
@@ -78,8 +79,6 @@ export interface Phrase {
   to: string
   source: string
   result: string
-  /** Held at the top of the list, above everything by recency. */
-  starred: boolean
   savedAt: string
 }
 

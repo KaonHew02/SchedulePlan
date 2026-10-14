@@ -5,7 +5,6 @@ import {
   SpeakerIcon,
   SpeakerOffIcon,
   Spinner,
-  StarIcon,
   SwapIcon,
   TrashIcon,
   ZoomIcon,
@@ -24,7 +23,7 @@ import {
   voiceFor,
   type Language,
 } from '../lib/translate'
-import { deletePhrase, savePhrase, togglePhraseStar, usePhrases } from '../lib/store'
+import { deletePhrase, savePhrase, usePhrases } from '../lib/store'
 import { tr, useLang } from '../lib/i18n'
 import type { Phrase } from '../types'
 
@@ -40,8 +39,8 @@ import type { Phrase } from '../types'
  *
  * Keeping matters more than it looks. Every translation on this screen needs a
  * connection and the places you need it least have the worst of it — a border
- * queue, a market, a bus. Anything translated is written into the notebook, so
- * the second time you need it there is no request at all.
+ * queue, a market, a bus. The last five things translated are written into the
+ * notebook, so the second time you need one there is no request at all.
  */
 
 function LanguagePicker({
@@ -249,14 +248,6 @@ function PhraseRow({
         <span className="block text-[13px] leading-5 text-neutral-400">{phrase.source}</span>
       </button>
 
-      <button
-        onClick={() => void togglePhraseStar(phrase.id)}
-        aria-label={phrase.starred ? tr('Unstar', '取消收藏') : tr('Star', '收藏')}
-        className={`shrink-0 p-1.5 ${phrase.starred ? 'text-amber-500' : 'text-neutral-300'}`}
-      >
-        <StarIcon className="h-[17px] w-[17px]" filled={phrase.starred} />
-      </button>
-
       {speakable && (
         <button
           onClick={() => speak(phrase.result, target!.speech, voices)}
@@ -269,9 +260,7 @@ function PhraseRow({
 
       <button
         onClick={() =>
-          void deletePhrase(phrase.id).then(() =>
-            onToast(tr('Removed from the book', '已从短语本移除')),
-          )
+          void deletePhrase(phrase.id).then(() => onToast(tr('Removed', '已移除')))
         }
         aria-label={tr('Remove', '移除')}
         className="shrink-0 p-1.5 text-neutral-300"
@@ -315,7 +304,7 @@ export default function TranslateScreen({
   const targetVoice = target ? voiceFor(target.speech, voices) : null
 
   /*
-   * Yours, newest first, starred above everything.
+   * Your last five, newest first. The store keeps no more than that.
    *
    * The basics below are a separate list rather than seed rows in this one.
    * They were mixed in at first, shown only while the book was empty, which
@@ -325,12 +314,7 @@ export default function TranslateScreen({
    */
   const book = useMemo(
     () =>
-      [...phrases].sort(
-        (a, b) =>
-          Number(b.starred) - Number(a.starred) ||
-          b.savedAt.localeCompare(a.savedAt) ||
-          b.id - a.id,
-      ),
+      [...phrases].sort((a, b) => b.savedAt.localeCompare(a.savedAt) || b.id - a.id),
     [phrases],
   )
 
@@ -339,7 +323,6 @@ export default function TranslateScreen({
       STARTER.map((row, index) => ({
         ...row,
         id: -(index + 1),
-        starred: false,
         savedAt: '',
       })) as Phrase[],
     [],
@@ -528,7 +511,7 @@ export default function TranslateScreen({
           {book.length > 0 && (
             <>
               <h2 className="pb-1 pt-8 text-[13px] font-medium text-neutral-400 lg:pt-0">
-                {tr('Your phrases', '我的短语')}
+                {tr('Recent', '最近翻译')}
               </h2>
               <div className="border-t border-neutral-100">
                 {book.map((phrase) => (
@@ -543,8 +526,8 @@ export default function TranslateScreen({
               </div>
               <p className="pt-3 text-[12px] leading-5 text-neutral-400">
                 {tr(
-                  'Everything you translate is kept here, so it still works with no signal. Starred phrases stay at the top.',
-                  '翻译过的内容都存在这里，没有信号也能用。收藏的短语排在最前面。',
+                  'Your last 5 translations, kept so they still work with no signal.',
+                  '最近翻译的 5 条，没有信号也能用。',
                 )}
               </p>
             </>
