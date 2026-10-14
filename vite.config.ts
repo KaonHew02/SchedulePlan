@@ -18,7 +18,9 @@ import react from '@vitejs/plugin-react'
  *   accounts.google.com/gsi     Drive sign-in (Google's documented CSP set)
  *   www.googleapis.com          Drive read and write
  *   cdn.jsdelivr.net            the OCR engine, its WebAssembly core and the
- *                               English and Chinese data — fetched on first scan
+ *                               English and Chinese data — fetched on first scan;
+ *                               and the font tables a PDF that names Chinese
+ *                               fonts needs to be drawn (lib/pdf.ts)
  *   'wasm-unsafe-eval'          compiling that WebAssembly; it allows wasm
  *                               only, not eval() of JavaScript
  *   open.er-api.com,
@@ -30,11 +32,15 @@ import react from '@vitejs/plugin-react'
  *                               icons, fetched by MapLibre (and in img-src
  *                               for the icons). Its worker is a file of
  *                               this site's, so 'self' in worker-src
- *   'self' in worker-src        the offline worker, sw.js (src/sw.ts). The
- *                               manifest and icons are 'self' by default-src
+ *   'self' in worker-src        the offline worker, sw.js (src/sw.ts), and the
+ *                               PDF reader's. The manifest and icons are
+ *                               'self' by default-src
  *   blob: in worker-src         the OCR worker is started from a blob
- *   blob: in frame-src          the PDF viewer
  *   data:/blob: in connect-src  Import decodes attachments with fetch()
+ *
+ * No blob: in frame-src. PDFs used to be shown in a frame; they are drawn by
+ * the app now (lib/pdf.ts), and a stored file that can never be framed is one
+ * that can never run as this site.
  *
  * Adding a feature that talks to a new server means adding it here, and the
  * console will say so the first time it is refused.
@@ -58,7 +64,7 @@ const CSP = [
   "img-src 'self' data: blob: https://tiles.openfreemap.org",
   "style-src 'self' https://accounts.google.com/gsi/style",
   "font-src 'self'",
-  'frame-src blob: https://accounts.google.com/gsi/',
+  'frame-src https://accounts.google.com/gsi/',
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",

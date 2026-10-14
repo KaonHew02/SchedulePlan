@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { CameraIcon, FileIcon, PaperclipIcon, ScanIcon, Spinner, TrashIcon } from './Icons'
+import FullView, { usePageImage, usePdf } from './FullView'
+import { CameraIcon, FileIcon, PaperclipIcon, ScanIcon, Spinner, TrashIcon, ZoomIcon } from './Icons'
 import Sheet from './Sheet'
 import { isImage, prettySize, readFile, saveFile } from '../lib/files'
 import { tr } from '../lib/i18n'
@@ -313,13 +314,19 @@ export function FileViewer({
   /** Absent when the viewer is read-only. */
   onText?: (text: string) => void
 }) {
-  // A PDF is the one thing drawn in a frame, so it is the one thing that has
-  // to be relabelled — see `useStoredFile`. Everything else goes in an <img>,
-  // is read as text, or is only ever downloaded.
+  // A PDF's own URL is only ever saved, never opened — its pages are drawn
+  // from the bytes (lib/pdf.ts). Relabelled all the same, so what is saved as
+  // a PDF is one; see `useStoredFile`. Everything else goes in an <img>, is
+  // read as text, or is only ever downloaded.
   const url = useFileUrl(file.id, isPdf(file.type) ? 'application/pdf' : undefined)
+  const { pdf, failed } = usePdf(isPdf(file.type) ? file.id : null)
+  // Page one, about as wide as the sheet, to say which document this is.
+  const cover = usePageImage(pdf, 0, 480 * (window.devicePixelRatio || 1), true)
+  const [full, setFull] = useState(false)
   const [reading, setReading] = useState<OcrProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const canEnlarge = isImage(file.type) ? Boolean(url) : Boolean(pdf)
 
   // A text file is worth showing as text. Capped: a 20MB CSV pasted whole
   // into a sheet would take the sheet with it.
@@ -365,26 +372,55 @@ export function FileViewer({
     link.click()
   }
 
+  // The badge that says the picture opens: on a phone there is no pointer
+  // to change shape over it, and nothing else would say so.
+  const enlarge = (
+    <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-neutral-900/75 px-2.5 py-1 text-[12px] font-medium text-white">
+      <ZoomIcon className="h-3.5 w-3.5" />
+      {tr('Tap to enlarge', '点开看大图')}
+    </span>
+  )
+
   return (
     <Sheet onClose={onClose} title={file.name}>
       {/* Show the thing, not a description of it, wherever the browser can
           render it. Only formats nothing can display fall back to the chip. */}
-      {!url ? (
+      {isPdf(file.type) && failed ? (
+        <div className="flex items-center gap-3 rounded-xl bg-neutral-50 px-4 py-5">
+          <FileIcon className="h-7 w-7 text-neutral-400" />
+          <p className="text-[14px] text-neutral-500">
+            {tr(
+              "This PDF can't be shown here. Save a copy to open it.",
+              '这里显示不了这个 PDF，保存副本后再打开。',
+            )}
+          </p>
+        </div>
+      ) : !url || (isPdf(file.type) && !cover) ? (
         <div className="flex h-40 items-center justify-center rounded-xl bg-neutral-50">
           <Spinner className="h-5 w-5 text-neutral-300" />
         </div>
       ) : isImage(file.type) ? (
-        <img
-          src={url}
-          alt={file.name}
-          className="max-h-[46vh] w-full rounded-xl border border-neutral-100 object-contain"
-        />
-      ) : isPdf(file.type) ? (
-        <iframe
-          src={url}
-          title={file.name}
-          className="h-[46vh] w-full rounded-xl border border-neutral-100 bg-white"
-        />
+        <button type="button" onClick={() => setFull(true)} className="relative block w-full">
+          <img
+            src={url}
+            alt={file.name}
+            className="max-h-[46vh] w-full rounded-xl border border-neutral-100 object-contain"
+          />
+          {enlarge}
+        </button>
+      ) : isPdf(file.type) && cover ? (
+        <button
+          type="button"
+          onClick={() => setFull(true)}
+          className="relative block w-full rounded-xl border border-neutral-100 bg-neutral-50 p-3"
+        >
+          <img
+            src={cover}
+            alt={file.name}
+            className="mx-auto max-h-[42vh] bg-white object-contain shadow-sm ring-1 ring-black/5"
+          />
+          {enlarge}
+        </button>
       ) : isText(file.type) ? (
         <pre className="max-h-[46vh] overflow-auto whitespace-pre-wrap rounded-xl bg-neutral-50 p-3 text-[12px] leading-5 text-neutral-700">
           {preview ?? ' '}
@@ -401,6 +437,7 @@ export function FileViewer({
 
       <p className="mt-2 text-[12px] text-neutral-400">
         {prettySize(file.size)}
+        {pdf && pdf.pages > 1 && tr(` · ${pdf.pages} pages`, ` · ${pdf.pages} 页`)}
         {file.kind === 'scan' && tr(' · scanned', ' · 已扫描')}
       </p>
 
@@ -426,6 +463,16 @@ export function FileViewer({
       {error && <p className="mt-3 text-[13px] text-red-600">{error}</p>}
 
       <div className="mt-5 flex flex-wrap gap-2 pb-2">
+        {canEnlarge && (
+          <button
+            type="button"
+            onClick={() => setFull(true)}
+            className="flex items-center gap-1.5 rounded-full bg-neutral-900 px-4 py-2.5 text-[14px] font-medium text-white"
+          >
+            <ZoomIcon className="h-4 w-4" />
+            {tr('Full screen', '全屏查看')}
+          </button>
+        )}
         {onText && isImage(file.type) && (
           <button
             type="button"
@@ -456,6 +503,17 @@ export function FileViewer({
           </button>
         )}
       </div>
+
+      {/* Drawn on the body through a portal, so being written in here
+          does not put it inside the sheet. */}
+      {full && canEnlarge && (
+        <FullView
+          name={file.name}
+          pdf={pdf}
+          image={isImage(file.type) ? url : null}
+          onClose={() => setFull(false)}
+        />
+      )}
     </Sheet>
   )
 }
