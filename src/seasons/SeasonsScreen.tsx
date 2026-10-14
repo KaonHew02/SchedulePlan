@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Segmented, Toggle } from '../components/FormFields'
-import { ChevronLeft, ChevronRight, PlaneIcon } from '../components/Icons'
+import { ChevronLeft, ChevronRight, PinIcon, PlaneIcon } from '../components/Icons'
 import { isZh, tr } from '../lib/i18n'
 import DestinationSheet from './DestinationSheet'
 import {
@@ -12,10 +12,10 @@ import {
   countryIsArea,
   eventsIn,
   firstOf,
+  foundOn,
   highlightMonths,
   homeName,
   joinList,
-  matches,
   monthLabel,
   nameOf,
   noChange,
@@ -25,10 +25,13 @@ import {
   seasonsOf,
   spanIn,
   spanLabel,
+  termsLeft,
   townsOf,
+  usePlaces,
   useRuleDates,
   useSeasons,
   type Destination,
+  type Found,
   type YearEvent,
 } from './seasons'
 
@@ -159,8 +162,28 @@ function subtitle(d: Destination): string {
   return d.region !== d.country && !countryIsArea(d) ? `${d.country} · ${where}` : where
 }
 
+/**
+ * What a card was found by when it was not its own words: 佛山市 · 顺德区 on
+ * 广东, Illinois · Chicago on New York and the Northeast — saying so when
+ * the card is only the nearest one.
+ */
+function FoundLine({ found }: { found: Found }) {
+  const total = found.names.length + found.more
+  return (
+    <span className="flex min-w-0 items-center gap-1 text-[12px] leading-[18px] text-brand-600">
+      <PinIcon className="h-3.5 w-3.5" />
+      <span className="min-w-0 truncate">
+        {joinList(found.names)}
+        {found.more > 0 && tr(` and ${found.more} more`, ` 等 ${total} 处`)}
+        {found.near && <span className="text-neutral-400">{tr(' · nearest card', ' · 最近的卡')}</span>}
+      </span>
+    </span>
+  )
+}
+
 function Card({
   d,
+  found,
   month,
   year,
   dates,
@@ -168,6 +191,7 @@ function Card({
   onOpen,
 }: {
   d: Destination
+  found?: Found
   month: number
   year: number
   dates: Map<string, string[]> | null
@@ -193,6 +217,7 @@ function Card({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold leading-6">{nameOf(d)}</span>
           <span className="block truncate text-[12px] text-neutral-400">{subtitle(d)}</span>
+          {found && <FoundLine found={found} />}
         </span>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${RATING_TINT[r]}`}>
           {ratingLabel(r)}
@@ -254,14 +279,27 @@ function FlightLine({ d }: { d: Destination }) {
 }
 
 /** A plain row, for the months that are not the time to go. */
-function Row({ d, month, onOpen }: { d: Destination; month: number; onOpen: (d: Destination) => void }) {
+function Row({
+  d,
+  found,
+  month,
+  onOpen,
+}: {
+  d: Destination
+  found?: Found
+  month: number
+  onOpen: (d: Destination) => void
+}) {
   return (
     <button
       onClick={() => onOpen(d)}
       className="grid w-full grid-cols-1 gap-x-4 gap-y-0.5 py-2.5 text-left md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]"
     >
-      <span className="truncate text-[14px] font-medium">
-        {d.region === d.country ? d.country : `${d.country} · ${nameOf(d)}`}
+      <span className="min-w-0">
+        <span className="block truncate text-[14px] font-medium">
+          {d.region === d.country ? d.country : `${d.country} · ${nameOf(d)}`}
+        </span>
+        {found && <FoundLine found={found} />}
       </span>
       <span className="text-[13px] leading-5 text-neutral-500">{d.notes[month - 1]}</span>
     </button>
@@ -298,7 +336,24 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   // The search first, then the flights and the area: each row of chips counts
   // what the search and the other row let through, so 樱花 shows at a glance
   // which parts of the world have any, and how many of those are 直飞.
-  const searched = useMemo(() => all.filter((d) => matches(d, query.trim())), [all, query])
+  //
+  // A card's own words are looked at first; what they do not have is looked
+  // for in the places on it, so 顺德 finds 广东 by 佛山市 · 顺德区. The places
+  // come only once something is typed.
+  const q = query.trim()
+  const { places, failed: placesFailed } = usePlaces(q !== '')
+  const { searched, foundBy } = useMemo(() => {
+    const foundBy = new Map<string, Found>()
+    const searched = all.filter((d) => {
+      const left = termsLeft(d, q)
+      if (left.length === 0) return true
+      const found = foundOn(d.id, left, places, q)
+      if (found) foundBy.set(d.id, found)
+      return Boolean(found)
+    })
+    return { searched, foundBy }
+  }, [all, q, places])
+  const lookingFurther = q !== '' && places === null && !placesFailed
   const found = useMemo(() => searched.filter((d) => fits(d, flight)), [searched, flight])
   const list = useMemo(() => found.filter((d) => area === ALL || d.area === area), [found, area])
 
@@ -399,8 +454,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={tr(
-              'Search a country, city or word: Hokkaido, cherry blossom, aurora',
-              '搜索国家、城市或关键词：北海道、樱花、极光',
+              'Search a place or word: Hokkaido, Chicago, cherry blossom',
+              '搜索地方或关键词：北海道、顺德、樱花',
             )}
             aria-label={tr('Search destinations', '搜索目的地')}
             className="min-w-0 flex-1 rounded-lg bg-neutral-100 px-3 py-2 text-[14px] outline-hidden placeholder:text-neutral-400"
@@ -454,7 +509,9 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
         ) : list.length === 0 ? (
           <div className="mt-6 rounded-2xl bg-neutral-50 px-4 py-8 text-center">
             <p className="text-[14px] text-neutral-600">
-              {tr(`Nothing found${query.trim() && ` for "${query.trim()}"`}`, `没有找到${query.trim() && `「${query.trim()}」`}`)}
+              {lookingFurther
+                ? tr('Looking through every town and district…', '正在查找所有城市和区县…')
+                : tr(`Nothing found${q && ` for "${q}"`}`, `没有找到${q && `「${q}」`}`)}
             </p>
             <p className="mx-auto mt-1 max-w-[300px] text-[13px] leading-5 text-neutral-400">
               {isZh() ? (
@@ -505,6 +562,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                       <Card
                         key={d.id}
                         d={d}
+                        found={foundBy.get(d.id)}
                         month={month}
                         year={year}
                         dates={dates}
@@ -536,7 +594,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                 </summary>
                 <div className="divide-y divide-neutral-100 border-t border-neutral-100">
                   {byRating[1].map((d) => (
-                    <Row key={d.id} d={d} month={month} onOpen={setOpen} />
+                    <Row key={d.id} d={d} found={foundBy.get(d.id)} month={month} onOpen={setOpen} />
                   ))}
                 </div>
               </details>
@@ -550,14 +608,14 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
                 </h2>
                 <div className="divide-y divide-neutral-100 border-y border-neutral-100">
                   {byRating[0].map((d) => (
-                    <Row key={d.id} d={d} month={month} onOpen={setOpen} />
+                    <Row key={d.id} d={d} found={foundBy.get(d.id)} month={month} onOpen={setOpen} />
                   ))}
                 </div>
               </>
             )}
           </>
         ) : (
-          <YearTable list={list} month={month} year={year} dates={dates} events={events} onMonth={setMonth} onOpen={setOpen} />
+          <YearTable list={list} foundBy={foundBy} month={month} year={year} dates={dates} events={events} onMonth={setMonth} onOpen={setOpen} />
         )}
 
         <div className="space-y-1 pt-10 text-[12px] leading-5 text-neutral-400">
@@ -589,6 +647,12 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
               `直飞指从${homeName()}出发不用换飞机，包括中途经停，和直飞附近城市再坐车。航线常有增减，核对于 ${FLIGHTS.checked.replace('-', ' 年 ')} 月，订票前以航空公司为准。`,
             )}
           </p>
+          <p>
+            {tr(
+              'Towns and districts to search by: GeoNames (CC BY 4.0), Wikidata and the National Bureau of Statistics of China.',
+              '搜索用的城市和区县：GeoNames（CC BY 4.0）、Wikidata、国家统计局。',
+            )}
+          </p>
         </div>
       </main>
 
@@ -615,6 +679,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
  */
 function YearTable({
   list,
+  foundBy,
   month,
   year,
   dates,
@@ -623,6 +688,7 @@ function YearTable({
   onOpen,
 }: {
   list: Destination[]
+  foundBy: Map<string, Found>
   month: number
   year: number
   dates: Map<string, string[]> | null
@@ -684,6 +750,14 @@ function YearTable({
                       <span className="block truncate text-[13px] font-medium">{nameOf(d)}</span>
                       {d.region !== d.country && !countryIsArea(d) && (
                         <span className="block truncate text-[11px] text-neutral-400">{d.country}</span>
+                      )}
+                      {foundBy.has(d.id) && (
+                        <span className="block truncate text-[11px] text-brand-600">
+                          {joinList(foundBy.get(d.id)!.names)}
+                          {foundBy.get(d.id)!.near && (
+                            <span className="text-neutral-400">{tr(' · nearest card', ' · 最近的卡')}</span>
+                          )}
+                        </span>
                       )}
                     </button>
                   </th>

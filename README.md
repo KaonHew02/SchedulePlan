@@ -178,6 +178,12 @@ Hokkaido. A destination opens onto its full year, how to get there, its
 highlights, what to avoid and the tips, and goes onto the wishlist in a tap
 with its best months in the note.
 
+The search finds any place, not only the towns a card names: every 省, 市
+and 区县 in China, and elsewhere every state and every town of 15,000 people
+or more, in Chinese or English. 顺德 finds 广东 and says 佛山市 · 顺德区; 海淀
+finds 北京; Chicago finds New York and the Northeast and says it is only the
+nearest card, as the Midwest has none of its own.
+
 **It keeps itself current.** The year at the top is the year the dates are
 for: Chinese New Year, Ramadan, Easter and every festival hung off them carry
 a rule rather than a date, and are worked out on the phone for whichever year

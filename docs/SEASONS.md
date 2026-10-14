@@ -29,6 +29,7 @@ both. See *The yearly read-through* below.
 | A destination's public holidays, and its state's where `holidayRegion` names one | The same source as the calendar (`src/lib/holidays.ts`) | **Worked out on the phone**; Malaysia from the gazette |
 | The airports each destination is flown to, and the one a train ride away | `destinations.json` (`airports`, `via`), names in `src/seasons/airports.json` | No — airports do not move |
 | Where Kuala Lumpur flies without a change of plane | `src/seasons/flights.json` | **Read through once a year** — routes open and close |
+| Every other province, city and district, and the card each is on | `src/seasons/places.json`, written by `npm run places` from `scripts/places-map.mjs` | Rarely — **rebuild once a year** |
 
 ## How a moving festival works
 
@@ -259,6 +260,50 @@ Day), `LA` is Louisiana (Mardi Gras). Malaysia's codes are the gazette's,
 Ratings are 3 best, 2 good, 1 possible but not the time, 0 not advisable
 (typhoons, monsoon, roads closed). Every destination has at least one 3.
 
+## Finding any place
+
+A card names a handful of towns, but a search can be for anywhere: 顺德,
+海淀区, 朝阳, Chicago, Ipoh. `src/seasons/places.json` lists everywhere else —
+every 省, 市 and 区县 in China, and elsewhere every state or province and every
+town of 15,000 people or more — each filed under the card it is on. A search
+looks at a card's own words first, then at its places, and a card found by a
+place says which one, under its name: 佛山市 · 顺德区 on 广东. 朝阳 finds both
+北京 (朝阳区) and 辽宁 (朝阳市), because both are true.
+
+Where a part of a country has no card of its own, its places go on the
+nearest card and the card says so: Chicago is on New York and the Northeast
+as *nearest card*, 宜宾 on 成都及周边. A country with no card at all is not
+there, and in China nothing smaller than a 区县 is: 西塘 and 周庄 are 镇, and
+are found only where a card names them. Development zones and industrial
+parks (呼和浩特经济技术开发区) are left out; their city finds the card.
+
+The file is about 35,000 places, so the app fetches it only once something
+is typed in the search, and the cards never wait for it.
+
+It is built, not written by hand. The sources are downloaded into a folder
+outside the repository and read from there:
+
+```
+npm run places -- fetch ../places-data
+npm run places -- build ../places-data
+```
+
+- **China**: `pca.json` from github.com/modood/Administrative-divisions-of-China,
+  国家统计局's list. The English is the pinyin (`pinyin-pro`), with 内蒙古,
+  西藏 and 陕西 written the usual way.
+- **Everywhere else**: GeoNames (geonames.org, CC BY 4.0, credited at the
+  foot of the screen) — `cities15000`, `admin1CodesASCII` and `admin2Codes`.
+- **Their Chinese names**: Wikidata (CC0), asked by GeoNames number,
+  simplified first, and Malaysia's own Chinese for Malaysia (亚庇).
+
+Which card a province, state or district is on is `scripts/places-map.mjs`,
+kept by hand: by 市 (and the odd 区县) for the Chinese provinces with several
+cards, by state or province for the other countries with several, and `~` in
+front of a card for *nearest*. The build stops on a name the data does not
+have and on a division no card was given, so a new province or a renamed
+state shows up as an error. Run it once a year with the read-through; the
+check below makes sure every card it names still exists.
+
 ## The check
 
 `node scripts/seasons.mjs --check` runs at the start of every `npm run build`,
@@ -272,6 +317,9 @@ twice, an airport that is not a
 three-letter code or has no name, a route listed under two kinds, and a year
 written into the evergreen file — 2027年, with or without a space. A year before 2020 is
 history and is left alone: 1987年列入世界遗产 stays true.
+
+It checks `places.json` too: every card it files a place under exists, and
+every place's parent comes before it.
 
 It checks the English the same way: every destination, event and airport has
 its English; the same number of towns, notes and highlights, in the same

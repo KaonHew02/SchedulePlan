@@ -7,6 +7,7 @@ import areasFile from './areas.json'
 import eventsFile from './events.json'
 import eventsEnFile from './events.en.json'
 import flightsFile from './flights.json'
+import placesUrl from './places.json?url'
 
 /**
  * The travel calendar: where in the world is at its best in which month.
@@ -738,8 +739,9 @@ export const townsOf = (d: Destination): string[] =>
 /** Everything a search can match, lower-cased once. */
 const haystacks = new WeakMap<Destination, string>()
 
-export function matches(d: Destination, query: string): boolean {
-  if (!query) return true
+/** The words of a search a card's own text does not have — none when it matches. */
+export function termsLeft(d: Destination, query: string): string[] {
+  if (!query) return []
   let hay = haystacks.get(d)
   if (hay === undefined) {
     hay = [
@@ -762,6 +764,164 @@ export function matches(d: Destination, query: string): boolean {
   return query
     .toLowerCase()
     .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => text.includes(term))
+    .filter((term) => term && !text.includes(term))
+}
+
+/*
+ * Every other place, for the search: each province, state, city and district
+ * that is not one of a card's own towns, filed under the card it is on — 顺德区
+ * under 广东, 海淀区 under 北京 — or under the nearest card when its part of the
+ * country has none, as Chicago is under New York and the Northeast. Some
+ * 35,000 of them, so the file comes only when something is typed in the
+ * search, and the cards never wait for it. scripts/places.mjs writes it.
+ */
+
+/** As places.json keeps one: [中文, English, parent, flags], names a|b. */
+type PlaceRow = [string, string, number?, number?]
+
+interface Place {
+  zh: string
+  en: string
+  parent: number
+  /** Only the nearest card, not the one it is on. */
+  near: boolean
+  /** There only to name a place under it, as 昆明市 is on the card with 东川. */
+  context: boolean
+  /** The card's own province, 广东省 on 广东: never named in front of a place. */
+  root: boolean
+  /** Its own names, lower-cased. */
+  own: string
+  /** Its own names and those of every place it is in, so 广东 佛山 顺德 finds 顺德区. */
+  hay: string
+}
+
+let places: Map<string, Place[]> | null = null
+let placesLoading: Promise<void> | null = null
+
+function loadPlaces(): Promise<void> {
+  // Fetched as a file rather than imported: TypeScript would otherwise read
+  // all 35,000 to work out their type, on every build.
+  placesLoading ??= fetch(placesUrl).then(async (response) => {
+    if (!response.ok) throw new Error(`places: ${response.status}`)
+    const rows = ((await response.json()) as { places: Record<string, PlaceRow[]> }).places
+    const map = new Map<string, Place[]>()
+    for (const [id, list] of Object.entries(rows)) {
+      const built: Place[] = []
+      for (const [zh, en, parent = -1, flags = 0] of list) {
+        const own = `${zh}|${en}`.toLowerCase()
+        built.push({
+          zh,
+          en,
+          parent,
+          near: (flags & 1) !== 0,
+          context: (flags & 2) !== 0,
+          root: (flags & 4) !== 0,
+          own,
+          hay: parent >= 0 ? `${own}|${built[parent].hay}` : own,
+        })
+      }
+      map.set(id, built)
+    }
+    places = map
+  })
+  return placesLoading
+}
+
+/**
+ * The places, once they are in; null before. Asked for only while there is
+ * a search. When they cannot be fetched — offline before the file was ever
+ * kept — failed says so, and the search makes do with the cards' own words.
+ */
+export function usePlaces(wanted: boolean): { places: Map<string, Place[]> | null; failed: boolean } {
+  const [, setArrived] = useState(0)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    if (!wanted || places) return
+    let live = true
+    setFailed(false)
+    loadPlaces()
+      .then(() => live && setArrived((n) => n + 1))
+      .catch(() => {
+        // Let the next search try again rather than remembering the failure.
+        placesLoading = null
+        if (live) setFailed(true)
+      })
+    return () => {
+      live = false
+    }
+  }, [wanted])
+  return { places, failed }
+}
+
+/** A card found by a place rather than its own words, and which places. */
+export interface Found {
+  /** 佛山市 · 顺德区 — at most two. */
+  names: string[]
+  /** How many more there are. */
+  more: number
+  /** Every one shown is only nearest this card. */
+  near: boolean
+}
+
+const firstName = (names: string) => names.split('|')[0]
+const placeName = (p: Place) => (isZh() && p.zh ? firstName(p.zh) : firstName(p.en))
+
+/** 朝阳 is 朝阳区 and 朝阳市: the name without the word for what kind of place it is. */
+const KIND = /(特别行政区|自治区|自治州|自治县|地区|省|市|区|县|州|盟|旗)$/
+
+/**
+ * Whether a word of the search starts a word in these names. Chicago is in
+ * East Chicago, but 佛山 is not in 史丹佛山 (Stamford Hill, in Cantonese):
+ * Chinese has no spaces, so there it has to start the name.
+ */
+function startsIn(text: string, term: string): boolean {
+  for (let at = text.indexOf(term); at >= 0; at = text.indexOf(term, at + 1)) {
+    if (at === 0 || /[|\s\-('’/]/.test(text[at - 1])) return true
+  }
+  return false
+}
+
+/**
+ * How well a place answers a search: 0 named exactly that (Chicago, 朝阳区
+ * for 朝阳), 1 a name that starts with it (Chicago Heights), 2 a later word
+ * of its name (East Chicago), 3 only the place it is in (佛山's districts).
+ */
+function rankOf(p: Place, terms: string[]): number {
+  const names = p.own.split('|')
+  if (terms.some((term) => names.some((name) => name === term || name.replace(KIND, '') === term))) return 0
+  if (terms.some((term) => names.some((name) => name.startsWith(term)))) return 1
+  if (terms.some((term) => startsIn(p.own, term))) return 2
+  return 3
+}
+
+/**
+ * The places on a card a search is about. Only the best of them are named —
+ * Chicago, not Chicago Lawn and East Chicago with it — and the ones on the
+ * card before the ones it is only nearest to. A place named with the whole
+ * of what was typed comes first, so East Chicago is East Chicago even on a
+ * card whose own name has "east" in it.
+ */
+export function foundOn(id: string, terms: string[], all: Map<string, Place[]> | null, query = ''): Found | null {
+  const list = all?.get(id)
+  if (!list || terms.length === 0) return null
+  const phrase = query.toLowerCase().trim().replace(/\s+/g, ' ')
+  const hits: { p: Place; rank: number }[] = []
+  for (const p of list) {
+    if (p.context || !terms.every((term) => startsIn(p.hay, term))) continue
+    const whole = phrase.includes(' ') && p.own.split('|').some((name) => name.startsWith(phrase))
+    hits.push({ p, rank: (whole ? -1 : rankOf(p, terms)) + (p.near ? 5 : 0) })
+  }
+  if (hits.length === 0) return null
+  // Stable, so places of one rank stay in the file's order: divisions, then towns by size.
+  hits.sort((a, b) => a.rank - b.rank)
+  const best = hits.filter((hit) => hit.rank === hits[0].rank)
+  const shown = best.slice(0, 2)
+  return {
+    names: shown.map(({ p }) => {
+      const parent = p.parent >= 0 ? list[p.parent] : null
+      return parent && !parent.root ? `${placeName(parent)} · ${placeName(p)}` : placeName(p)
+    }),
+    more: best.length - shown.length,
+    near: shown.every(({ p }) => p.near),
+  }
 }

@@ -54,6 +54,7 @@ const FLIGHTS = join(ROOT, 'src/seasons/flights.json')
 const DESTINATIONS_EN = join(ROOT, 'src/seasons/destinations.en.json')
 const EVENTS_EN = join(ROOT, 'src/seasons/events.en.json')
 const AIRPORTS_EN = join(ROOT, 'src/seasons/airports.en.json')
+const PLACES = join(ROOT, 'src/seasons/places.json')
 const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
 /** The same list the screen groups by, so the two cannot disagree. */
@@ -738,6 +739,31 @@ function review(file) {
   console.log(`Change the same sentence in ${shown(DESTINATIONS_EN)} — the English does not follow by itself.`)
 }
 
+/**
+ * places.json, which scripts/places.mjs writes: a card renamed or taken out
+ * here would leave its towns filed under nothing, so every id it names has
+ * to be a card, and every place's parent has to come before it.
+ */
+function checkPlaces(file, places) {
+  const problems = []
+  const say = (what) => problems.push(`${shown(PLACES)}: ${what}`)
+  const ids = new Set(file.destinations.map((d) => d.id))
+  for (const [id, list] of Object.entries(places.places ?? {})) {
+    if (!ids.has(id)) say(`${id} is no destination — run npm run places -- build again`)
+    if (!Array.isArray(list)) {
+      say(`${id} should be a list`)
+      continue
+    }
+    list.forEach((row, i) => {
+      const [zh, en, parent = -1, flags = 0] = Array.isArray(row) ? row : []
+      if (typeof zh !== 'string' || typeof en !== 'string' || !en) say(`${id} place ${i + 1} should be [中文, English, …]`)
+      if (!Number.isInteger(parent) || parent < -1 || parent >= i) say(`${id} place ${i + 1}'s parent should come before it`)
+      if (!Number.isInteger(flags) || flags < 0 || flags > 7) say(`${id} place ${i + 1} has flags ${flags}`)
+    })
+  }
+  return problems
+}
+
 // ------------------------------------------------------------------- main
 
 const args = process.argv.slice(2)
@@ -752,10 +778,15 @@ const flights = JSON.parse(readFileSync(FLIGHTS, 'utf8'))
 const english = JSON.parse(readFileSync(DESTINATIONS_EN, 'utf8'))
 const eventsEnglish = JSON.parse(readFileSync(EVENTS_EN, 'utf8'))
 const namesEnglish = JSON.parse(readFileSync(AIRPORTS_EN, 'utf8'))
+const places = JSON.parse(readFileSync(PLACES, 'utf8'))
 
 // Checked before anything is written, so --format never rewrites a file it
 // would have refused.
-const problems = [...checkFlights(flights, names), ...check(file, events, names, Array.isArray(flights.home) ? flights.home : [])]
+const problems = [
+  ...checkFlights(flights, names),
+  ...check(file, events, names, Array.isArray(flights.home) ? flights.home : []),
+  ...checkPlaces(file, places),
+]
 // The English is only worth comparing with Chinese that is itself sound.
 if (problems.length === 0) {
   problems.push(...checkEnglish(file, english, events, eventsEnglish, names, namesEnglish, flights))

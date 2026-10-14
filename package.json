@@ -8,7 +8,8 @@
     "build": "node scripts/seasons.mjs --check && tsc -b && vite build && node scripts/service-worker.mjs",
     "preview": "vite preview",
     "holidays": "node scripts/holidays.mjs",
-    "seasons": "node scripts/seasons.mjs"
+    "seasons": "node scripts/seasons.mjs",
+    "places": "node scripts/places.mjs"
   },
   "dependencies": {
     "d3-geo": "^3.1.1",
@@ -27,6 +28,7 @@
     "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-react": "^4.3.4",
     "pdfjs-dist": "~4.10.38",
+    "pinyin-pro": "^3.29.5",
     "postcss": "^8.4.49",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.7.2",
