@@ -30,6 +30,7 @@ both. See *The yearly read-through* below.
 | The airports each destination is flown to, and the one a train ride away | `destinations.json` (`airports`, `via`), names in `src/seasons/airports.json` | No — airports do not move |
 | Where Kuala Lumpur flies without a change of plane | `src/seasons/flights.json` | **Read through once a year** — routes open and close |
 | Every other province, city and district, and the card each is on | `src/seasons/places.json`, written by `npm run places` from `scripts/places-map.mjs` | Rarely — **rebuild once a year** |
+| Each card's pin on the map, and the towns that place an OpenStreetMap find on a card | `src/seasons/points.json`, written by the same `npm run places` | Rarely — with `places.json` |
 
 ## How a moving festival works
 
@@ -304,6 +305,52 @@ have and on a division no card was given, so a new province or a renamed
 state shows up as an error. Run it once a year with the read-through; the
 check below makes sure every card it names still exists.
 
+## The map, and anywhere on it
+
+Seasons has a third view beside 这个月去哪 and 全年日历: **地图**. Every card is a
+pin in the colour of the month's rating, with its name beside it once
+zoomed in far enough to read, on OpenStreetMap's map — drawn by Leaflet, and
+as detailed as Google's: zoom in on 罗平 and the villages, roads and hills
+are there. The search, the areas and the flights decide which pins show, so
+樱花 in April is a map of where the blossom is. A pin opens its card, and
+every card's sheet has a map of its own, opened at a region's zoom, with a
+link to the same spot on Google Maps.
+
+The search goes one step further when asked. Under the chips is **在地图上找
+「…」** (and the keyboard's search key does the same): it asks OpenStreetMap
+(nominatim.openstreetmap.org) for anything with that name — a village, a
+waterfall, a temple, a street — and lists what it finds with what it is,
+where it is and the card it falls on: 金鸡峰丛 · 自然保护区 · 云南省 · 曲靖市 ·
+罗平县 · 元阳罗平建水东川. Tapping one opens it the way Google Maps does: the
+address, a map with the spot on it, how this month is there, the card, and
+a button to open it in Google Maps.
+
+Which card an OpenStreetMap place falls on:
+
+- A country with one card: that card.
+- China: the address names the 省, which picks the province's cards, and its
+  市 or 区县, looked up among `places.json`'s places, picks between them —
+  小金县 is 川西高原 although the rest of 阿坝 is 九寨沟. 香港 and 澳门 come back
+  as China with `CN-HK` and `CN-MO` and go on their own cards.
+- Anywhere else with several cards: the card of the nearest town in
+  `points.json` — the towns `places.json` filed, with where they are — so a
+  village is filed as its town would be, *nearest card* and all.
+
+OpenStreetMap's rules for its search are one question a second, none while
+typing, and a credit; the app asks only when the button or the search key
+is pressed, waits a second between questions, keeps the answers for the
+session, and credits OpenStreetMap under the results, on every map and at
+the foot of the screen. What is typed goes to OpenStreetMap and nowhere else.
+The map's tiles come from tile.openstreetmap.org each time; the offline copy
+does not keep them. Both servers are in the page's security policy in
+`vite.config.ts`.
+
+`points.json` comes out of `npm run places -- build` with `places.json`. A
+card's pin is the first of its own towns that is one of the towns on it (广州
+for 广东), so a 元阳 in another province cannot pull it away; a card with no
+town of 15,000 people — Koh Samui, 九寨沟, Easter Island — has its pin in
+`PINS` in `scripts/places-map.mjs`, and the build says which cards need one.
+
 ## The check
 
 `node scripts/seasons.mjs --check` runs at the start of every `npm run build`,
@@ -319,7 +366,8 @@ written into the evergreen file — 2027年, with or without a space. A year bef
 history and is left alone: 1987年列入世界遗产 stays true.
 
 It checks `places.json` too: every card it files a place under exists, and
-every place's parent comes before it.
+every place's parent comes before it; and `points.json`: a pin for every
+card, and no town off the map or on a card that is gone.
 
 It checks the English the same way: every destination, event and airport has
 its English; the same number of towns, notes and highlights, in the same

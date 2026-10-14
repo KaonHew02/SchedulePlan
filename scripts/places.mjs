@@ -3,7 +3,8 @@
  * and the card each one is on.
  *
  *   npm run places -- fetch <folder>   download the sources into <folder>
- *   npm run places -- build <folder>   write src/seasons/places.json from them
+ *   npm run places -- build <folder>   write src/seasons/places.json and
+ *                                      points.json (the map's) from them
  *
  * A card names a handful of towns — 广州、佛山、深圳 under 广东 — but a trip is
  * planned from wherever it starts: 顺德, 海淀区, Chicago, Ipoh. So beside the
@@ -36,11 +37,12 @@ import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { inflateRawSync } from 'node:zlib'
 import { customPinyin, pinyin } from 'pinyin-pro'
-import { ADMIN2, CHINA, EXTRA, SPLIT } from './places-map.mjs'
+import { ADMIN2, CHINA, EXTRA, PINS, SPLIT } from './places-map.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const DESTINATIONS = join(ROOT, 'src/seasons/destinations.json')
 const OUT = join(ROOT, 'src/seasons/places.json')
+const POINTS = join(ROOT, 'src/seasons/points.json')
 const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
 const GEONAMES = 'https://download.geonames.org/export/dump/'
@@ -79,12 +81,12 @@ function divisions(name) {
   })
 }
 
-/** cities15000.txt, without the places that are no longer there. */
-function towns() {
+/** cities15000.txt, every country, without the places that are no longer there. */
+function everyTown() {
   const gone = new Set(['PPLH', 'PPLQ', 'PPLW'])
   return lines('cities15000.txt')
     .map((line) => line.split('\t'))
-    .filter((f) => wanted(f[8]) && !gone.has(f[7]))
+    .filter((f) => !gone.has(f[7]))
     .map((f) => ({
       id: f[0],
       display: f[1],
@@ -96,8 +98,13 @@ function towns() {
       admin1: f[10],
       admin2: f[11],
       people: Number(f[14]),
+      lat: Number(f[4]),
+      lon: Number(f[5]),
     }))
 }
+
+/** The towns of the countries with a card, China's aside. */
+const towns = () => everyTown().filter((town) => wanted(town.country))
 
 // --- fetch ---------------------------------------------------------------------
 
@@ -357,6 +364,21 @@ const zone = (name) => /(开发区|产业园区|工业园区|化工园区|创意
 
 const pca = JSON.parse(readFileSync(file('pca.json'), 'utf8'))
 
+/**
+ * Which card each 市 and 区县 is on, by its name with and without 市 or 区 —
+ * for putting GeoNames' Chinese towns, which come with a place on the map
+ * but no 省 or 市, on the right card. A name two cards share says nothing.
+ */
+const chinaCards = new Map()
+/** Each province's cards, by its English name as GeoNames spells it: shaanxi, inner mongolia. */
+const provinceCards = new Map()
+function chinaCard(name, where) {
+  for (const key of new Set([name, bare(name)])) {
+    const seen = chinaCards.get(key) ?? chinaCards.set(key, new Map()).get(key)
+    seen.set(where.id, where.near)
+  }
+}
+
 /** Every name in China, with and without its 市 or 区, for telling a mistaken one abroad. */
 const chinaNames = new Set()
 for (const [province, cities] of Object.entries(pca)) {
@@ -391,6 +413,7 @@ for (const [province, cities] of Object.entries(pca)) {
     }
   }
   const root = new Map([...cards].map((id) => [id, add(id, province, english(province), -1, PROVINCE)]))
+  provinceCards.set(english(province).split('|')[0].toLowerCase(), cards)
 
   for (const [city, counties] of Object.entries(cities)) {
     const cityTarget = target(city)
@@ -400,6 +423,7 @@ for (const [province, cities] of Object.entries(pca)) {
     const parentIn = new Map()
     if (!filing(city)) {
       parentIn.set(home.id, add(home.id, city, english(city), root.get(home.id), home.near ? NEAR : 0))
+      chinaCard(city, home)
     }
     for (const county of counties) {
       if (zone(county)) continue
@@ -408,6 +432,7 @@ for (const [province, cities] of Object.entries(pca)) {
         parentIn.set(there.id, filing(city) ? root.get(there.id) : add(there.id, city, english(city), root.get(there.id), CONTEXT))
       }
       add(there.id, county, english(county), parentIn.get(there.id), there.near ? NEAR : 0)
+      chinaCard(county, there)
     }
   }
 }
@@ -541,6 +566,23 @@ for (const d of admin2.values()) {
   divisionIndex.set(key, add(home.id, chinese(d.id, country), divisionName(d), parent, home.near ? NEAR : 0))
 }
 
+/** The towns of the countries with several cards, for the map: [lat, lon, card, nearest]. */
+const order = destinations.map((d) => d.id)
+const pointsOf = new Map()
+function point(town, home) {
+  const list = pointsOf.get(town.country) ?? pointsOf.set(town.country, []).get(town.country)
+  const at = (n) => Math.round(n * 100) / 100
+  list.push([at(town.lat), at(town.lon), order.indexOf(home.id), home.near ? 1 : 0])
+}
+
+/** The towns on each card itself, biggest first, for choosing where its pin goes. */
+const townsOn = new Map()
+function onCard(id, town) {
+  const list = townsOn.get(id) ?? townsOn.set(id, []).get(id)
+  const names = [town.display, town.ascii, ...town.han, ...town.han.map(bare)].map((name) => name.toLowerCase())
+  list.push({ names: new Set(names), lat: town.lat, lon: town.lon })
+}
+
 const all = towns().sort((a, b) => b.people - a.people)
 const unplaced = []
 const unknown = []
@@ -571,6 +613,58 @@ for (const town of all) {
     .filter((name) => name && !theirs.includes(name))
     .join('|')
   add(home.id, names, either(town.display, town.ascii), parent, home.near ? NEAR : 0)
+  if (SPLIT[town.country]) point(town, home)
+  if (!home.near) onCard(home.id, town)
+}
+
+// --- Where on the map ------------------------------------------------------------
+
+/*
+ * points.json, for the map. A pin for every card, and for every country with
+ * more than one card its towns and the card each is on, so a place found on
+ * OpenStreetMap — a village, a waterfall — is put on the card of the town
+ * nearest it: 金鸡峰丛 on 元阳罗平建水东川, by 罗平.
+ */
+
+// China's towns by their Chinese names, as GeoNames gives them no 省.
+let unmatched = 0
+for (const town of everyTown().filter((t) => t.country === 'CN').sort((a, b) => b.people - a.people)) {
+  // GeoNames does say which province, in English: Shaanxi, Inner Mongolia.
+  const province = admin1.get(`CN.${town.admin1}`)
+  const allowed = provinceCards.get(province?.ascii.toLowerCase()) ?? new Set()
+  const cards = new Map()
+  if (allowed.size === 1) cards.set([...allowed][0], false)
+  else {
+    // A province with several cards: the town's own name says which, 东川 is
+    // 元阳罗平建水东川's — but only a 东川 in Yunnan, not Qinghai's.
+    for (const name of town.han) {
+      for (const key of [name, bare(name)]) {
+        for (const [id, near] of chinaCards.get(key) ?? []) if (allowed.has(id)) cards.set(id, near)
+      }
+    }
+  }
+  if (cards.size === 1) {
+    const [[id, near]] = cards
+    point(town, { id, near })
+    if (!near) onCard(id, town)
+  } else unmatched++
+}
+
+/**
+ * Each card's pin: the first of its own towns that is one of the towns on
+ * it — 广州 for 广东, Sapporo for Hokkaido — so a 元阳 in another province
+ * cannot pull the pin there; failing that its biggest town, and where
+ * places-map.mjs says for the few with no town of 15,000 people.
+ */
+const inEnglish = JSON.parse(readFileSync(join(ROOT, 'src/seasons/destinations.en.json'), 'utf8'))
+const pins = []
+for (const d of destinations) {
+  const names = [...d.cities, ...d.cities.map(bare), ...(inEnglish[d.id]?.cities ?? [])].map((name) => name.toLowerCase())
+  const here = townsOn.get(d.id) ?? []
+  const town = names.map((name) => here.find((t) => t.names.has(name))).find(Boolean) ?? here[0]
+  const pin = PINS[d.id] ?? (town && [town.lat, town.lon])
+  if (!pin) say(`${d.id} has no town of 15,000 people — give it a pin in places-map.mjs`)
+  else pins.push([Math.round(pin[0] * 100) / 100, Math.round(pin[1] * 100) / 100])
 }
 
 // --- Writing it ------------------------------------------------------------------
@@ -607,6 +701,29 @@ const body = Object.entries(places)
 writeFileSync(
   OUT,
   `{\n  "sources": "China: 国家统计局 via github.com/modood/Administrative-divisions-of-China. Elsewhere: GeoNames (geonames.org, CC BY 4.0). Chinese names: Wikidata (CC0).",\n  "places": {\n${body}\n  }\n}\n`,
+)
+
+// The map's file: the cards in the order of destinations.json, a pin for
+// each, and the towns of each country with several cards.
+const pointLines = [...pointsOf].map(([country, list]) => `    ${JSON.stringify(country)}: ${JSON.stringify(list)}`)
+writeFileSync(
+  POINTS,
+  [
+    '{',
+    '  "sources": "GeoNames (geonames.org, CC BY 4.0). Towns are [lat, lon, card, nearest]; card counts from 0 in cards.",',
+    `  "cards": ${JSON.stringify(order)},`,
+    `  "pins": ${JSON.stringify(pins)},`,
+    '  "towns": {',
+    pointLines.join(',\n'),
+    '  }',
+    '}',
+    '',
+  ].join('\n'),
+)
+const pointCount = [...pointsOf.values()].reduce((sum, list) => sum + list.length, 0)
+console.log(
+  `${shown(POINTS)}: ${pins.length} pins, ${pointCount} towns in ${pointsOf.size} countries (${unmatched} of China's left out, their name on two cards or none); ` +
+    `${Math.round(readFileSync(POINTS).length / 1024)} KB.`,
 )
 
 const count = Object.values(places).reduce((sum, list) => sum + list.length, 0)

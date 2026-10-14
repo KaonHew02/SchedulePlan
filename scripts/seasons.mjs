@@ -55,6 +55,7 @@ const DESTINATIONS_EN = join(ROOT, 'src/seasons/destinations.en.json')
 const EVENTS_EN = join(ROOT, 'src/seasons/events.en.json')
 const AIRPORTS_EN = join(ROOT, 'src/seasons/airports.en.json')
 const PLACES = join(ROOT, 'src/seasons/places.json')
+const POINTS = join(ROOT, 'src/seasons/points.json')
 const shown = (path) => relative(ROOT, path).replaceAll('\\', '/')
 
 /** The same list the screen groups by, so the two cannot disagree. */
@@ -744,10 +745,22 @@ function review(file) {
  * here would leave its towns filed under nothing, so every id it names has
  * to be a card, and every place's parent has to come before it.
  */
-function checkPlaces(file, places) {
+function checkPlaces(file, places, points) {
   const problems = []
   const say = (what) => problems.push(`${shown(PLACES)}: ${what}`)
   const ids = new Set(file.destinations.map((d) => d.id))
+  // points.json, the map's: a pin for every card, and towns naming cards that exist.
+  const cards = Array.isArray(points.cards) ? points.cards : []
+  for (const d of file.destinations) {
+    if (!cards.includes(d.id)) problems.push(`${shown(POINTS)}: ${d.id} has no pin — run npm run places -- build again`)
+  }
+  for (const id of cards) if (!ids.has(id)) problems.push(`${shown(POINTS)}: ${id} is no destination`)
+  if (!Array.isArray(points.pins) || points.pins.length !== cards.length) problems.push(`${shown(POINTS)}: one pin for each card`)
+  for (const [country, towns] of Object.entries(points.towns ?? {})) {
+    if (towns.some(([lat, lon, card]) => !(Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && card >= 0 && card < cards.length))) {
+      problems.push(`${shown(POINTS)}: a town in ${country} is off the map or on no card`)
+    }
+  }
   for (const [id, list] of Object.entries(places.places ?? {})) {
     if (!ids.has(id)) say(`${id} is no destination — run npm run places -- build again`)
     if (!Array.isArray(list)) {
@@ -779,13 +792,14 @@ const english = JSON.parse(readFileSync(DESTINATIONS_EN, 'utf8'))
 const eventsEnglish = JSON.parse(readFileSync(EVENTS_EN, 'utf8'))
 const namesEnglish = JSON.parse(readFileSync(AIRPORTS_EN, 'utf8'))
 const places = JSON.parse(readFileSync(PLACES, 'utf8'))
+const points = JSON.parse(readFileSync(POINTS, 'utf8'))
 
 // Checked before anything is written, so --format never rewrites a file it
 // would have refused.
 const problems = [
   ...checkFlights(flights, names),
   ...check(file, events, names, Array.isArray(flights.home) ? flights.home : []),
-  ...checkPlaces(file, places),
+  ...checkPlaces(file, places, points),
 ]
 // The English is only worth comparing with Chinese that is itself sound.
 if (problems.length === 0) {

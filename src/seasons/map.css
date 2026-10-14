@@ -1,0 +1,48 @@
+/*
+ * The pins on a Seasons map: a dot in the colour of the month's rating, and
+ * the card's name beside it, white-edged so it reads over roads and rivers.
+ */
+/* No position here: Leaflet places each marker with position: absolute, and
+   the dot and the name are laid out against that. */
+.seasons-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+
+.seasons-label {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: #171717;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 3px #fff;
+  pointer-events: none;
+}
+
+/* Zoomed out to a continent, the names would sit on top of each other. */
+.seasons-far .seasons-label {
+  display: none;
+}
+
+/* The one place a map is about, the way Google marks it. */
+.seasons-spot {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: #e11d48;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+
+.leaflet-container {
+  font: inherit;
+}

@@ -184,6 +184,13 @@ or more, in Chinese or English. 顺德 finds 广东 and says 佛山市 · 顺德
 finds 北京; Chicago finds New York and the Northeast and says it is only the
 nearest card, as the Midwest has none of its own.
 
+And there is a map, like Google's. 地图 shows every card as a pin in the
+colour of the month, on OpenStreetMap down to the village; each card's sheet
+has a map of where it is. 在地图上找「…」 asks OpenStreetMap for anything at
+all — 金鸡峰丛, 九份, 尖沙咀, a temple in Kyoto — and shows each with its
+address, a map with the spot on it, and the card it falls on, with a button
+to open it in Google Maps.
+
 **It keeps itself current.** The year at the top is the year the dates are
 for: Chinese New Year, Ramadan, Easter and every festival hung off them carry
 a rule rather than a date, and are worked out on the phone for whichever year

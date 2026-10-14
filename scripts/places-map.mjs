@@ -472,3 +472,26 @@ export const SPLIT = {
  * another's: Svalbard is SJ, and its card is the Arctic one with Greenland.
  */
 export const EXTRA = { SJ: 'xx-arctic' }
+
+/**
+ * Where a card's pin goes on the map when none of its towns is a GeoNames
+ * town of 15,000 people: the Antarctic Peninsula, Easter Island.
+ */
+export const PINS = {
+  'cn-sichuan-jiuzhaigou': [33.26, 103.92], // 九寨沟 沟口
+  'cn-yunnan-tengchong-nujiang': [25.02, 98.49], // 腾冲
+  'cn-tibet-ngari': [30.29, 81.18], // 普兰
+  'my-highlands': [4.47, 101.38], // Tanah Rata, Cameron Highlands
+  'th-samui-gulf': [9.51, 100.01], // Koh Samui
+  'id-lombok-gili': [-8.35, 116.04], // Gili Trawangan
+  'lu-luxembourg': [49.61, 6.13], // Luxembourg City
+  'es-canary': [28.47, -16.25], // Santa Cruz de Tenerife
+  'sc-seychelles': [-4.62, 55.45], // Victoria, Mahé
+  'pw-palau': [7.34, 134.48], // Koror
+  'vu-vanuatu-cook-islands': [-17.73, 168.32], // Port Vila
+  'aq-antarctica': [-64.6, -62.5], // the Antarctic Peninsula, by Paradise Bay
+  'cl-easter-island': [-27.15, -109.43], // Hanga Roa
+  'xx-arctic': [78.22, 15.65], // Longyearbyen
+  // GeoNames calls it New York City, so New York would find Boston, the next town.
+  'us-northeast': [40.71, -74.01],
+}

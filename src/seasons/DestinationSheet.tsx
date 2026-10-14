@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import CountryBadge from '../components/CountryBadge'
 import Sheet from '../components/Sheet'
 import { holidayName, useHolidayYear, type Holiday } from '../lib/holidays'
@@ -29,6 +29,9 @@ import {
   type Destination,
   type FlightKind,
 } from './seasons'
+import { googleMapsUrl, pinOf, usePoints } from './where'
+
+const LeafletMap = lazy(() => import('./LeafletMap'))
 
 /**
  * One destination, the whole year of it.
@@ -188,6 +191,7 @@ export default function DestinationSheet({
     year,
   )
   const [saving, setSaving] = useState(false)
+  const pin = pinOf(usePoints(), d.id)
 
   const best = d.ratings.flatMap((r, i) => (r === 3 ? [i + 1] : []))
   const events = eventsIn(year).filter((event) => event.ids.includes(d.id))
@@ -277,6 +281,29 @@ export default function DestinationSheet({
       <Section title={tr('Places to see', '主要去处')}>
         <p className="text-[14px] leading-6 text-neutral-700">{d.places}</p>
       </Section>
+
+      {/* Where it is, the way Google Maps shows a region: drag to look
+          around, zoom in to the villages and the roads. */}
+      {pin && (
+        <Section title={tr('On the map', '地图')}>
+          <Suspense fallback={<div className="h-56 rounded-2xl bg-neutral-100" />}>
+            <LeafletMap
+              className="h-56"
+              center={pin}
+              zoom={7}
+              pins={[{ key: d.id, lat: pin[0], lon: pin[1], label: name, tint: RATING_TINT[d.ratings[month - 1]] }]}
+            />
+          </Suspense>
+          <a
+            href={googleMapsUrl(pin[0], pin[1])}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block pt-2 text-[13px] font-medium text-brand-600"
+          >
+            {tr('Open in Google Maps →', '在 Google 地图打开 →')}
+          </a>
+        </Section>
+      )}
 
       <Section title={tr(`Getting there · from ${homeName()}`, `怎么去 · 从${homeName()}出发`)}>
         <GettingThere d={d} />

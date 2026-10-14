@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { Segmented, Toggle } from '../components/FormFields'
-import { ChevronLeft, ChevronRight, PinIcon, PlaneIcon } from '../components/Icons'
+import { ChevronLeft, ChevronRight, GlobeIcon, PinIcon, PlaneIcon } from '../components/Icons'
 import { isZh, tr } from '../lib/i18n'
 import DestinationSheet from './DestinationSheet'
+import type { MapPin } from './LeafletMap'
+import PlaceSheet from './PlaceSheet'
+import { cardOf, loadPoints, pinOf, searchMap, usePoints, type MapPlace, type OnCard } from './where'
 import {
   AREAS,
   EVENT_YEARS,
@@ -42,7 +45,12 @@ import {
  * good?" is the month view: everything at its best or good that month,
  * grouped by part of the world, with what is happening there. "When should I
  * go to Hokkaido?" is the year view: every destination as a row of twelve
- * colours, read across.
+ * colours, read across. And "what is near 罗平?" is the map: every card as a
+ * pin in the colour of the month, on a map that zooms down to the village.
+ *
+ * The search finds the cards' own words, then every 省, 市 and 区县 and town
+ * Seasons keeps (places.json), and when asked, anywhere at all on
+ * OpenStreetMap — a waterfall, a temple — with the card it falls on.
  *
  * The year at the top is the year the dates are for. The weather does not
  * change with it; Chinese New Year, Ramadan, Easter and a year's one-off
@@ -53,7 +61,7 @@ import {
  * the app's language from useSeasons; the screen's own words are here.
  */
 
-type View = 'month' | 'year'
+type View = 'month' | 'year' | 'map'
 
 /**
  * Flights from home. 直飞 is everywhere got to without changing planes: a
@@ -69,7 +77,13 @@ const NO_DESTINATIONS: Destination[] = []
 const views = (): { value: View; label: string }[] => [
   { value: 'month', label: tr('Where this month', '这个月去哪') },
   { value: 'year', label: tr('Whole year', '全年日历') },
+  { value: 'map', label: tr('Map', '地图') },
 ]
+
+const LeafletMap = lazy(() => import('./LeafletMap'))
+
+/** An OpenStreetMap search, and what came back. */
+type MapSearch = { query: string; status: 'looking' | 'done' | 'failed'; places: MapPlace[] }
 
 const flightChoices = (): { value: Flight; label: string }[] => [
   { value: 'all', label: tr('All', '全部') },
@@ -319,6 +333,9 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
   // and a sheet left open across a switch should redraw in the new one.
   const [openId, setOpenId] = useState<string | null>(null)
   const setOpen = (d: Destination) => setOpenId(d.id)
+  // A place found on OpenStreetMap, in a sheet of its own.
+  const [openPlace, setOpenPlace] = useState<MapPlace | null>(null)
+  const [mapSearch, setMapSearch] = useState<MapSearch | null>(null)
 
   const setYear = (value: number) => setYearState((kept.year = value))
   const setMonth = (value: number) => setMonthState((kept.month = value))
@@ -354,6 +371,25 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
     return { searched, foundBy }
   }, [all, q, places])
   const lookingFurther = q !== '' && places === null && !placesFailed
+
+  // OpenStreetMap, only when asked — the button, or the keyboard's search
+  // key — and with the towns that say which card a place is on, so the
+  // answers come with their card. A search typed over hides the last answers.
+  const askMap = () => {
+    if (!q) return
+    const asking = q
+    setMapSearch({ query: asking, status: 'looking', places: [] })
+    Promise.all([searchMap(asking), loadPoints().catch(() => null)]).then(
+      ([found]) => setMapSearch((now) => (now?.query === asking ? { query: asking, status: 'done', places: found } : now)),
+      () => setMapSearch((now) => (now?.query === asking ? { query: asking, status: 'failed', places: [] } : now)),
+    )
+  }
+  const mapAnswer = mapSearch?.query === q ? mapSearch : null
+  const where = usePoints(mapAnswer !== null || view === 'map')
+  const onCards = useMemo(
+    () => new Map((mapAnswer?.places ?? []).map((p) => [p.key, cardOf(p, all, places, where)])),
+    [mapAnswer, all, places, where],
+  )
   const found = useMemo(() => searched.filter((d) => fits(d, flight)), [searched, flight])
   const list = useMemo(() => found.filter((d) => area === ALL || d.area === area), [found, area])
 
@@ -446,13 +482,20 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
       <main className="px-5 pb-28 lg:px-8 lg:pb-10">
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          {/* A set width: left to size itself, the pair squeezed 这个月去哪 onto two lines. */}
-          <div className="w-full shrink-0 md:w-64">
+          {/* A set width: left to size itself, the three squeezed 这个月去哪 onto two lines. */}
+          <div className="w-full shrink-0 md:w-80">
             <Segmented value={view} options={views()} onChange={setView} />
           </div>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            enterKeyHint="search"
+            onKeyDown={(event) => {
+              // Not while a pinyin keyboard is still choosing the characters.
+              if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+              event.currentTarget.blur()
+              askMap()
+            }}
             placeholder={tr(
               'Search a place or word: Hokkaido, Chicago, cherry blossom',
               '搜索地方或关键词：北海道、顺德、樱花',
@@ -499,6 +542,17 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
             </button>
           ))}
         </div>
+
+        {q && data && (
+          <MapAnswers
+            query={q}
+            answer={mapAnswer}
+            onCards={onCards}
+            month={month}
+            onAsk={askMap}
+            onPick={setOpenPlace}
+          />
+        )}
 
         {!data ? (
           <p className="py-16 text-center text-[13px] text-neutral-400">
@@ -614,8 +668,10 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
               </>
             )}
           </>
-        ) : (
+        ) : view === 'year' ? (
           <YearTable list={list} foundBy={foundBy} month={month} year={year} dates={dates} events={events} onMonth={setMonth} onOpen={setOpen} />
+        ) : (
+          <MapView list={list} month={month} onOpen={setOpen} />
         )}
 
         <div className="space-y-1 pt-10 text-[12px] leading-5 text-neutral-400">
@@ -649,8 +705,8 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           </p>
           <p>
             {tr(
-              'Towns and districts to search by: GeoNames (CC BY 4.0), Wikidata and the National Bureau of Statistics of China.',
-              '搜索用的城市和区县：GeoNames（CC BY 4.0）、Wikidata、国家统计局。',
+              'Towns and districts to search by: GeoNames (CC BY 4.0), Wikidata and the National Bureau of Statistics of China. The map, and places found on it: © OpenStreetMap contributors.',
+              '搜索用的城市和区县：GeoNames（CC BY 4.0）、Wikidata、国家统计局。地图和地图上找到的地方：© OpenStreetMap 贡献者。',
             )}
           </p>
         </div>
@@ -666,6 +722,153 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
           onToast={onToast}
         />
       )}
+
+      {openPlace && (
+        <PlaceSheet
+          place={openPlace}
+          on={onCards.get(openPlace.key) ?? null}
+          month={month}
+          onOpenCard={(d) => {
+            setOpenPlace(null)
+            setOpen(d)
+          }}
+          onClose={() => setOpenPlace(null)}
+        />
+      )}
+    </>
+  )
+}
+
+/**
+ * The search on OpenStreetMap: first a button offering it, then what it
+ * found — each place with what it is, where, and the card it is on.
+ */
+function MapAnswers({
+  query,
+  answer,
+  onCards,
+  month,
+  onAsk,
+  onPick,
+}: {
+  query: string
+  answer: MapSearch | null
+  onCards: Map<string, OnCard | null>
+  month: number
+  onAsk: () => void
+  onPick: (place: MapPlace) => void
+}) {
+  if (!answer) {
+    return (
+      <button
+        onClick={onAsk}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-[13px] text-neutral-700 active:bg-neutral-50"
+      >
+        <GlobeIcon className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 truncate">
+          {tr(`Find “${query}” on the map — villages, sights, anywhere`, `在地图上找「${query}」：村镇、景点，哪里都行`)}
+        </span>
+      </button>
+    )
+  }
+  return (
+    <section className="mt-3 rounded-2xl border border-neutral-100">
+      <p className="flex items-center justify-between gap-3 px-4 pt-3 text-[12px] text-neutral-400">
+        <span>{tr(`On the map: “${query}”`, `地图上的「${query}」`)}</span>
+        <span>© OpenStreetMap</span>
+      </p>
+      {answer.status === 'looking' ? (
+        <p className="px-4 py-4 text-[13px] text-neutral-500">{tr('Looking…', '正在找…')}</p>
+      ) : answer.status === 'failed' ? (
+        <p className="px-4 py-4 text-[13px] text-neutral-500">
+          {tr('Could not reach the map. Check the internet and try again.', '连不上地图，请检查网络再试一次。')}
+        </p>
+      ) : answer.places.length === 0 ? (
+        <p className="px-4 py-4 text-[13px] text-neutral-500">
+          {tr(`Nothing on the map is called “${query}”.`, `地图上也没有叫「${query}」的地方。`)}
+        </p>
+      ) : (
+        <ul className="divide-y divide-neutral-100 pb-1">
+          {answer.places.map((place) => {
+            const on = onCards.get(place.key) ?? null
+            return (
+              <li key={place.key}>
+                <button onClick={() => onPick(place)} className="flex w-full items-start gap-2.5 px-4 py-2.5 text-left active:bg-neutral-50">
+                  <PinIcon className="mt-0.5 h-4 w-4 text-rose-500" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-medium">
+                      {place.name}
+                      {place.kind && <span className="font-normal text-neutral-400"> · {place.kind}</span>}
+                    </span>
+                    <span className="block truncate text-[12px] text-neutral-500">{place.address}</span>
+                    {on ? (
+                      <span className="block truncate text-[12px] text-brand-600">
+                        {nameOf(on.d)} · {monthLabel(month)} {ratingLabel(on.d.ratings[month - 1])}
+                        {on.near && <span className="text-neutral-400">{tr(' · nearest card', ' · 最近的卡')}</span>}
+                      </span>
+                    ) : (
+                      <span className="block text-[12px] text-neutral-400">
+                        {tr('No card for this country yet', '这个国家还没有卡片')}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Every card on the map: a pin in the colour of the month's rating, and its
+ * name beside it once zoomed in far enough to read. Tapping a pin opens the
+ * card. What the search, the areas and the flights let through is what is
+ * pinned, so 樱花 in April is a map of where the blossom is.
+ */
+function MapView({ list, month, onOpen }: { list: Destination[]; month: number; onOpen: (d: Destination) => void }) {
+  const where = usePoints()
+  // The pins keep their handler from the first draw; this keeps it current.
+  const opener = useRef(onOpen)
+  opener.current = onOpen
+  const pins = useMemo<MapPin[]>(
+    () =>
+      list.flatMap((d) => {
+        const at = pinOf(where, d.id)
+        if (!at) return []
+        // 北部 alone on a map could be anywhere: 越南·北部, but 云南·昆明大理丽江 as it is.
+        const label = d.region !== d.country && !countryIsArea(d) ? `${d.country}·${nameOf(d)}` : nameOf(d)
+        return [{ key: d.id, lat: at[0], lon: at[1], label, tint: RATING_TINT[d.ratings[month - 1]], onClick: () => opener.current(d) }]
+      }),
+    [list, where, month],
+  )
+  // A few cards are shown whole; one close up, as Google shows a region; all
+  // of them from Asia, where most trips from Kuala Lumpur go.
+  const bounds: [[number, number], [number, number]] | undefined =
+    pins.length > 1 && pins.length <= 40
+      ? [
+          [Math.min(...pins.map((p) => p.lat)), Math.min(...pins.map((p) => p.lon))],
+          [Math.max(...pins.map((p) => p.lat)), Math.max(...pins.map((p) => p.lon))],
+        ]
+      : undefined
+  const center: [number, number] = pins.length === 1 ? [pins[0].lat, pins[0].lon] : [22, 108]
+
+  return (
+    <>
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-6 text-[13px] text-neutral-500">
+        {([3, 2, 1, 0] as const).map((r) => (
+          <span key={r} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${RATING_TINT[r]}`} />
+            {ratingLabel(r)}
+          </span>
+        ))}
+        <span className="text-neutral-400">{tr(`in ${monthLabel(month)} · tap a dot to open it`, `${month}月 · 点圆点打开卡片`)}</span>
+      </p>
+      <Suspense fallback={<div className="mt-3 h-[65vh] rounded-2xl bg-neutral-100" />}>
+        <LeafletMap className="mt-3 h-[65vh]" pins={pins} bounds={bounds} center={center} zoom={pins.length === 1 ? 7 : 3} />
+      </Suspense>
     </>
   )
 }
