@@ -102,17 +102,14 @@ export function useFileUrl(id: string | null, as?: string): string | null {
 }
 
 /**
- * One attachment: the tile, and its name under it.
- *
- * The only one — the detail sheets each grew a cut-down copy that drew a bare
- * page icon for everything, so eleven files looked like eleven identical
- * blanks with nothing to tell them apart.
+ * One photo: the tile, and its name under it.
  *
  * The name is on the page rather than in a `title`, because a tooltip needs a
- * pointer to hover and a phone has no pointer: on mobile a grid of thumbnails
- * was eleven squares and no way to tell which one you wanted. It wraps to two
- * lines and breaks mid-word — file names have no spaces to break at, and a
- * name that overflows its tile drags the whole row out of line.
+ * pointer to hover and a phone has no pointer. It wraps to two lines and
+ * breaks mid-word — file names have no spaces to break at, and a name that
+ * overflows its tile drags the whole row out of line. Two lines is enough
+ * here because the picture is what tells photos apart; a document has only
+ * its name, and gets a `FileRow` instead.
  */
 export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
   const { url, state } = useStoredFile(file.id)
@@ -169,6 +166,96 @@ export function Thumb({ file, onOpen }: { file: Attachment; onOpen: () => void }
   )
 }
 
+/** "PDF", "DOCX" — from the name, which says it better than a MIME type. */
+function typeLabel(file: Attachment): string {
+  const dot = file.name.lastIndexOf('.')
+  if (dot > 0 && dot < file.name.length - 1) return file.name.slice(dot + 1).toUpperCase()
+  return isPdf(file.type) ? 'PDF' : ''
+}
+
+/**
+ * One document, as a row the width of the page with the whole name in it.
+ *
+ * Tickets for the same trip are named alike and differ at the end — "Cruise
+ * Ticket 20224496 - Ms Tan", "Cruise Ticket 20224497 - Mr Chan" — and a 72px
+ * tile cut both off at "Cruise Ticket 2022…", which is exactly the part they
+ * share. A page icon cannot tell them apart either, so the name is the only
+ * way to find the right one, and it is shown in full however long it runs.
+ */
+export function FileRow({ file, onOpen }: { file: Attachment; onOpen: () => void }) {
+  const { state } = useStoredFile(file.id)
+  const label = typeLabel(file)
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+        state === 'missing'
+          ? 'border-amber-300 bg-amber-50'
+          : 'border-neutral-200 hover:bg-neutral-50'
+      }`}
+    >
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+          state === 'missing' ? 'text-amber-700' : 'bg-neutral-100 text-neutral-400'
+        }`}
+      >
+        {state === 'loading' ? <Spinner className="h-4 w-4" /> : <FileIcon className="h-5 w-5" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={`block text-[14px] leading-5 [overflow-wrap:anywhere] ${
+            state === 'missing' ? 'text-amber-800' : 'text-neutral-800'
+          }`}
+        >
+          {file.name}
+        </span>
+        <span
+          className={`block text-[12px] leading-4 ${
+            state === 'missing' ? 'text-amber-700' : 'text-neutral-400'
+          }`}
+        >
+          {state === 'missing'
+            ? tr('Missing — not in this browser', '缺失——不在这个浏览器里')
+            : [label, prettySize(file.size)].filter(Boolean).join(' · ')}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/**
+ * Every attachment of something: photos as a grid of pictures, then each
+ * document on a line of its own. The one layout, used by the forms and the
+ * detail sheets alike, so a file looks the same wherever it is found.
+ */
+export function AttachmentList({
+  files,
+  onOpen,
+}: {
+  files: Attachment[]
+  onOpen: (file: Attachment) => void
+}) {
+  const photos = files.filter((file) => isImage(file.type))
+  const documents = files.filter((file) => !isImage(file.type))
+
+  return (
+    <div className="flex flex-col gap-2">
+      {photos.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {photos.map((file) => (
+            <Thumb key={file.id} file={file} onOpen={() => onOpen(file)} />
+          ))}
+        </div>
+      )}
+      {documents.map((file) => (
+        <FileRow key={file.id} file={file} onOpen={() => onOpen(file)} />
+      ))}
+    </div>
+  )
+}
+
 export function AttachmentStrip({
   files,
   onChange,
@@ -218,10 +305,8 @@ export function AttachmentStrip({
   return (
     <div>
       {files.length > 0 && (
-        <div className="mb-2.5 flex flex-wrap gap-2">
-          {files.map((file) => (
-            <Thumb key={file.id} file={file} onOpen={() => setViewing(file)} />
-          ))}
+        <div className="mb-2.5">
+          <AttachmentList files={files} onOpen={setViewing} />
         </div>
       )}
 

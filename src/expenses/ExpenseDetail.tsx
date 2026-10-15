@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileViewer, Thumb } from '../components/Attachments'
+import { AttachmentList, FileViewer } from '../components/Attachments'
 import { CalendarIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import Sheet from '../components/Sheet'
 import { longDate } from '../lib/date'
@@ -82,11 +82,7 @@ export default function ExpenseDetail({
                 `${expense.attachments.length} 个附件`,
               )}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {expense.attachments.map((file) => (
-                <Thumb key={file.id} file={file} onOpen={() => setViewing(file)} />
-              ))}
-            </div>
+            <AttachmentList files={expense.attachments} onOpen={setViewing} />
           </div>
         )}
 

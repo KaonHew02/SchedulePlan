@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { FileViewer, Thumb } from '../components/Attachments'
+import { AttachmentList, FileViewer } from '../components/Attachments'
 import {
   LinkIcon,
   PencilIcon,
@@ -157,11 +157,7 @@ export default function ScheduleDetail({
                 `${item.attachments.length} 个附件`,
               )}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {item.attachments.map((file) => (
-                <Thumb key={file.id} file={file} onOpen={() => setViewing(file)} />
-              ))}
-            </div>
+            <AttachmentList files={item.attachments} onOpen={setViewing} />
           </div>
         )}
 
