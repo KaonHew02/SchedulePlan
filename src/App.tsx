@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BackupBar from './components/BackupBar'
 import BottomNav from './components/BottomNav'
 import DataSheet from './components/DataSheet'
+import MoreSheet from './components/MoreSheet'
 import SideNav from './components/SideNav'
 import Toast from './components/Toast'
 import UpdateBar from './components/UpdateBar'
@@ -9,6 +10,7 @@ import CurrencyScreen from './currency/CurrencyScreen'
 import ExpensesScreen from './expenses/ExpensesScreen'
 import { MONEY } from './lib/features'
 import { useLang } from './lib/i18n'
+import { withTransition } from './lib/transition'
 import RemindersScreen from './reminders/RemindersScreen'
 import SeasonsScreen from './seasons/SeasonsScreen'
 import TranslateScreen from './translate/TranslateScreen'
@@ -35,9 +37,42 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('schedule')
   const [toast, setToast] = useState<string | null>(null)
   const [showData, setShowData] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   // Read here so that changing the language draws everything again — every
   // screen under this reads the language through `tr` as it draws.
   useLang()
+
+  /**
+   * Every way of changing screens comes through here: the tab bar, the More
+   * sheet, the sidebar, and the + when it has to go to Schedule first.
+   *
+   * A new screen starts at the top, as a tab does — not wherever the last
+   * one had been scrolled to. Tapping the tab you are already on scrolls
+   * back up, as it does on an iPhone.
+   */
+  const go = (next: Screen) => {
+    if (next === screen) {
+      setMoreOpen(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    withTransition(() => {
+      setScreen(next)
+      setMoreOpen(false)
+      window.scrollTo(0, 0)
+    })
+  }
+
+  // The More sheet is a phone thing. Widening the window past the point
+  // where the sidebar takes over (lg, 1024px) puts it away.
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 1024px)')
+    const close = () => {
+      if (wide.matches) setMoreOpen(false)
+    }
+    wide.addEventListener('change', close)
+    return () => wide.removeEventListener('change', close)
+  }, [])
 
   return (
     <>
@@ -52,7 +87,7 @@ export default function App() {
         letting its text run to 1900px.
       */}
       <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white sm:border-x sm:border-neutral-200 md:max-w-xl lg:max-w-none lg:flex-row lg:border-x-0">
-        <SideNav current={screen} onChange={setScreen} />
+        <SideNav current={screen} onChange={go} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/*
@@ -89,7 +124,15 @@ export default function App() {
       {showData && <DataSheet onClose={() => setShowData(false)} onToast={setToast} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       <UpdateBar />
-      <BottomNav current={screen} onChange={setScreen} />
+      <BottomNav
+        current={screen}
+        onChange={go}
+        moreOpen={moreOpen}
+        onMore={() => setMoreOpen(true)}
+      />
+      {moreOpen && (
+        <MoreSheet current={screen} onPick={go} onClose={() => setMoreOpen(false)} />
+      )}
     </>
   )
 }

@@ -1,49 +1,108 @@
+import type { ComponentType } from 'react'
+import { pressAdd, useAddLabel } from '../lib/add'
+import { tr } from '../lib/i18n'
 import type { Screen } from '../types'
-import { NAV, navLabel } from './navItems'
+import { Plus } from './Icons'
+import { MORE_TAB, SHEET, TABS, navItem, navLabel } from './navItems'
 
+/**
+ * The phone's tab bar: two tabs, the +, a tab, and More.
+ *
+ * Which screens get a tab, and why, is in navItems (TABS). The + is an action
+ * rather than a place, so it does not look like a tab: a raised disc standing
+ * a little proud of the bar. More is a tab that opens a sheet rather than a
+ * screen, and it stays lit while any screen from that sheet is open, so the
+ * bar always says where you are.
+ *
+ * `vt-tabbar` names it for the screen-change animation (index.css): the
+ * screens fade and rise behind it while the bar itself stays put.
+ */
 export default function BottomNav({
   current,
   onChange,
+  moreOpen,
+  onMore,
 }: {
   current: Screen
   onChange: (screen: Screen) => void
+  moreOpen: boolean
+  onMore: () => void
 }) {
+  const addLabel = useAddLabel()
+  const tab = (id: Screen) => {
+    const item = navItem(id)
+    return (
+      <Tab
+        key={id}
+        on={!moreOpen && current === id}
+        label={navLabel(item)}
+        Icon={item.Icon}
+        onClick={() => onChange(id)}
+      />
+    )
+  }
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-30 lg:hidden">
-      {/*
-        One cell per module, counted rather than written down: the column count
-        used to be `grid-cols-6` in this file and the list of modules lives in
-        another, which is two places to remember and one of them was going to
-        be forgotten.
-        
-        It is seven now. On a 320px phone that is 45px a cell, and neither
-        'Reminders' nor 'Translate' fits at 11px — hence the smaller type below
-        640px and the truncate. Shrinking the word is better than the two
-        alternatives: a label that wraps to two lines makes the bar taller than
-        the content it sits under, and one that overflows pushes the page
-        sideways. Past seven the honest answer is a different bar, not a
-        smaller font.
-      */}
-      <div
-        className="mx-auto grid max-w-md border-t border-neutral-100 bg-white/90 backdrop-blur-sm pb-safe sm:border-x sm:border-neutral-200 md:max-w-xl"
-        style={{ gridTemplateColumns: `repeat(${NAV.length}, minmax(0, 1fr))` }}
-      >
-        {NAV.map(({ id, label, zh, Icon }) => (
+    <nav className="vt-tabbar fixed inset-x-0 bottom-0 z-30 select-none lg:hidden">
+      <div className="mx-auto grid max-w-md grid-cols-5 border-t border-neutral-200/70 bg-white/85 px-1.5 pt-1.5 pb-safe-2 backdrop-blur-xl backdrop-saturate-[1.8] sm:border-x sm:border-neutral-200 md:max-w-xl">
+        {TABS.slice(0, 2).map(tab)}
+
+        <div className="flex justify-center">
           <button
-            key={id}
-            onClick={() => onChange(id)}
-            aria-current={current === id ? 'page' : undefined}
-            className={`flex min-w-0 flex-col items-center gap-1 py-2.5 transition-colors ${
-              current === id ? 'text-neutral-900' : 'text-neutral-400'
-            }`}
+            onClick={() => pressAdd(() => onChange('schedule'))}
+            aria-label={addLabel ?? tr('Add to schedule', '添加日程')}
+            className="-mt-[22px] grid h-[54px] w-[54px] place-items-center rounded-full bg-brand-500 text-white shadow-[0_6px_16px_rgba(108,92,231,0.38),0_0_0_5px_#fff] transition-[scale] duration-150 active:scale-[0.92]"
           >
-            <Icon className="w-[22px] h-[22px]" />
-            <span className="w-full truncate px-0.5 text-center text-[10px] sm:text-[11px]">
-              {navLabel({ label, zh })}
-            </span>
+            <Plus />
           </button>
-        ))}
+        </div>
+
+        {TABS.slice(2).map(tab)}
+
+        <Tab
+          on={moreOpen || SHEET.includes(current)}
+          label={navLabel(MORE_TAB)}
+          Icon={MORE_TAB.Icon}
+          onClick={onMore}
+          expanded={moreOpen}
+        />
       </div>
     </nav>
+  )
+}
+
+function Tab({
+  on,
+  label,
+  Icon,
+  onClick,
+  expanded,
+}: {
+  on: boolean
+  label: string
+  Icon: ComponentType<{ className?: string }>
+  onClick: () => void
+  /** Only for More, which opens a sheet. */
+  expanded?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={on && expanded === undefined ? 'page' : undefined}
+      aria-expanded={expanded}
+      className={`flex min-w-0 flex-col items-center gap-[3px] pb-0.5 pt-1 text-[11px] font-semibold transition-[color,scale] duration-150 active:scale-[0.92] ${
+        on ? 'text-brand-600' : 'text-neutral-400'
+      }`}
+    >
+      {/* The chosen tab's icon sits on a pill, the way a phone marks it. */}
+      <span
+        className={`grid h-[30px] w-14 place-items-center rounded-full transition-colors duration-200 ${
+          on ? 'bg-brand-50' : ''
+        }`}
+      >
+        <Icon className="h-[22px] w-[22px]" />
+      </span>
+      <span className="w-full truncate px-0.5 text-center">{label}</span>
+    </button>
   )
 }

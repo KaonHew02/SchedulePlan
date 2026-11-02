@@ -5,6 +5,7 @@ import DataSheet from '../components/DataSheet'
 import HolidaySettings from '../components/HolidaySettings'
 import { ChevronRight, ScanIcon, TagIcon, WalletIcon } from '../components/Icons'
 import Logo from '../components/Logo'
+import ScreenTitle from '../components/ScreenTitle'
 import { MONEY } from '../lib/features'
 import { tr } from '../lib/i18n'
 import LabelsScreen from '../tools/LabelsScreen'
@@ -62,9 +63,9 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('More', '更多')}</h1>
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
+          <ScreenTitle>{tr('Settings', '设置')}</ScreenTitle>
         </div>
       </header>
 

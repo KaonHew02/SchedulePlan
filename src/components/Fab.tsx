@@ -1,14 +1,19 @@
+import { useAddAction } from '../lib/add'
 import { Plus } from './Icons'
 
 /**
- * The one add button, just above the bottom nav on a phone and in the bottom
- * right corner on a laptop. Its container has to track the frame's width
- * classes exactly, or it drifts out of line with the content it belongs to.
+ * The one add button. On a laptop it sits in the bottom right corner; on a
+ * phone it is not drawn here at all — it becomes the + in the middle of the
+ * tab bar (lib/add.ts), so this only tells the tab bar what to do. Its
+ * container has to track the frame's width classes exactly, or it drifts out
+ * of line with the content it belongs to.
  */
 export default function Fab({ label, onClick }: { label: string; onClick: () => void }) {
+  useAddAction(label, onClick)
+
   return (
-    <div className="fixed inset-x-0 bottom-[72px] z-30 pointer-events-none mb-safe lg:bottom-8">
-      <div className="mx-auto flex max-w-md justify-end px-5 md:max-w-xl lg:max-w-none lg:px-8">
+    <div className="pointer-events-none fixed inset-x-0 bottom-8 z-30 max-lg:hidden">
+      <div className="mx-auto flex justify-end px-8">
         <button
           onClick={onClick}
           aria-label={label}

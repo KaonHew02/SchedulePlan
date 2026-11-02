@@ -62,11 +62,11 @@ server in a static repo would only confuse. It is in git history at commit
 - **It lives in one browser, at one address.** `localhost:5173` and the Pages
   URL are separate stores. Your phone is a third.
 - **Clearing browsing data deletes everything** unless a copy is elsewhere.
-  That is what Export and the Drive buttons in More are for.
+  That is what Export and the Drive buttons in Settings are for.
 - **Records and attachments live in IndexedDB**, which is measured in
   gigabytes rather than the ~5 MB localStorage allowed. The app asks the
   browser to mark the data as persistent, which is a request and not a
-  guarantee — **Your data** in More says whether it was granted.
+  guarantee — **Your data** in Settings says whether it was granted.
 - Nothing syncs by itself, and nobody can recover it for you.
 
 **Export and the Drive sync are what make this survivable.** Export writes one

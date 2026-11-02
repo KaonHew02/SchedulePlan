@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useFileUrl } from '../components/Attachments'
 import CountryBadge from '../components/CountryBadge'
 import { ChevronRight, LinkIcon, PaperclipIcon, PinIcon, Plus } from '../components/Icons'
+import ScreenTitle from '../components/ScreenTitle'
 import { daysBetween, rangeLabel, todayISO } from '../lib/date'
 import { money } from '../lib/currency'
 import { MONEY } from '../lib/features'
@@ -407,11 +408,9 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="px-5 pb-2 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">
-            {tr('Travel', '旅行')}
-          </h1>
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="px-5 pb-2 pt-3 lg:px-8 lg:pt-4">
+          <ScreenTitle>{tr('Travel', '旅行')}</ScreenTitle>
           <p className="flex items-center gap-1.5 pt-0.5 text-[13px] text-neutral-500">
             <PinIcon className="h-3.5 w-3.5 text-neutral-400" />
             {here ? (

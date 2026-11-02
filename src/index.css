@@ -49,6 +49,17 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+@utility pb-safe-2 {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* The screens' sticky headers: clear of the clock and the notch should the
+   status bar ever be drawn over the page. With the "default" status bar
+   index.html asks for it is not, and this is zero. */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 @utility pb-safe-5 {
   /* Like pb-5, but clearing the home indicator too. Plain `pb-5 pb-safe`
      would not stack: the later rule simply wins and the padding goes. */
@@ -103,6 +114,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* On a touch screen a button gives a little under the finger, the way a
+     native one does. In the base layer, so a button with its own
+     active:scale-* keeps it; and touch only, so a mouse click on a laptop
+     moves nothing. */
+  @media (hover: none) and (pointer: coarse) {
+    button:not(:disabled):active {
+      scale: 0.97;
+    }
+  }
+
   /* Tailwind 4 gives buttons the browser's own arrow; 3 gave them the hand.
      On a laptop the hand is what says a thing can be clicked, and every
      chip, row and toggle in this app is a button. */
@@ -142,6 +163,42 @@
   .animate-sheet-up,
   .animate-fade-in {
     animation: none;
+  }
+}
+
+/*
+  Changing screens (lib/transition.ts). The browser pictures the page before
+  and after; the old picture fades quickly and the new one rises into place.
+  The tab bar and the sidebar are pictured on their own, so they stay still
+  while the screen behind them changes — only the tab bar's lit pill
+  cross-fades from one tab to the next.
+*/
+.vt-tabbar {
+  view-transition-name: tabbar;
+}
+
+.vt-sidenav {
+  view-transition-name: sidenav;
+}
+
+::view-transition-old(root) {
+  animation: screen-out 0.12s ease-out both;
+}
+
+::view-transition-new(root) {
+  animation: screen-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes screen-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 }
 

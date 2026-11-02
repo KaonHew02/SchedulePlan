@@ -10,6 +10,7 @@ import {
   ZoomIcon,
 } from '../components/Icons'
 import Popover from '../components/Popover'
+import ScreenTitle from '../components/ScreenTitle'
 import {
   COMMON_LANGUAGES,
   LANGUAGES,
@@ -364,11 +365,9 @@ export default function TranslateScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">
-            {tr('Translate', '翻译')}
-          </h1>
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="flex items-center px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
+          <ScreenTitle>{tr('Translate', '翻译')}</ScreenTitle>
         </div>
       </header>
 

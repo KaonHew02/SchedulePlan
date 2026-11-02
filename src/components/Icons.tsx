@@ -50,6 +50,39 @@ export const MoreIcon = ({ className = 'w-6 h-6' }: Props) => (
   </svg>
 )
 
+/** Four tiles — the phone's More tab, which opens a sheet of them. */
+export const GridIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+    <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
+  </svg>
+)
+
+export const GearIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.3 3.6a1.7 1.7 0 0 1 3.4 0l.1.8a1.7 1.7 0 0 0 2.5 1.1l.7-.4a1.7 1.7 0 0 1 2.4 2.4l-.4.7a1.7 1.7 0 0 0 1.1 2.5l.8.1a1.7 1.7 0 0 1 0 3.4l-.8.1a1.7 1.7 0 0 0-1.1 2.5l.4.7a1.7 1.7 0 0 1-2.4 2.4l-.7-.4a1.7 1.7 0 0 0-2.5 1.1l-.1.8a1.7 1.7 0 0 1-3.4 0l-.1-.8a1.7 1.7 0 0 0-2.5-1.1l-.7.4a1.7 1.7 0 0 1-2.4-2.4l.4-.7a1.7 1.7 0 0 0-1.1-2.5l-.8-.1a1.7 1.7 0 0 1 0-3.4l.8-.1a1.7 1.7 0 0 0 1.1-2.5l-.4-.7a1.7 1.7 0 0 1 2.4-2.4l.7.4a1.7 1.7 0 0 0 2.5-1.1Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+)
+
+/** A phone with an arrow going into it — Add to Home Screen. */
+export const InstallIcon = ({ className = 'w-6 h-6' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="6" y="2.5" width="12" height="19" rx="3" />
+    <path d="M12 7v7M9 11l3 3 3-3M10.5 18.5h3" />
+  </svg>
+)
+
+/** Safari's Share symbol, so the instructions point at what is actually on screen. */
+export const ShareIcon = ({ className = 'w-4 h-4' }: Props) => (
+  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12M8 7l4-4 4 4" />
+    <path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" />
+  </svg>
+)
+
 export const PinIcon = ({ className = 'w-4 h-4' }: Props) => (
   <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z" />

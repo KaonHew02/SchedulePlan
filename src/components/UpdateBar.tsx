@@ -9,10 +9,10 @@ import { applyUpdate, useUpdateReady } from '../lib/offline'
  * booking reference would lose it. Put off with Later, the new version still
  * arrives the next time every SchedulePlan tab has been closed.
  *
- * On a phone it sits above the add button, which takes the bottom right
- * corner from 72px to 128px up: level with it, the bar ran under the button on
- * a 375px screen. Under the toasts rather than over them — a toast is gone in
- * two seconds, and this can wait that long.
+ * On a phone it sits above where the toasts appear, which sit above the tab
+ * bar's raised +, so the three never cover each other. Under the toasts
+ * rather than over them — a toast is gone in two seconds, and this can wait
+ * that long.
  */
 export default function UpdateBar() {
   const ready = useUpdateReady()

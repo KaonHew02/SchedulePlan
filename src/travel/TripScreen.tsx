@@ -343,7 +343,7 @@ export default function TripScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-5 pb-3 pt-4 lg:px-8">
           <button
             onClick={onBack}

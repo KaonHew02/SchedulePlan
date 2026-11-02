@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { Segmented, Toggle } from '../components/FormFields'
 import { ChevronLeft, ChevronRight, GlobeIcon, PinIcon, PlaneIcon } from '../components/Icons'
+import ScreenTitle from '../components/ScreenTitle'
 import { isZh, tr } from '../lib/i18n'
 import DestinationSheet from './DestinationSheet'
 import type { MapPin } from './MapCanvas'
@@ -424,11 +425,11 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="px-5 pb-3 pt-4 lg:px-8">
-          <div className="flex items-start justify-between gap-3">
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
+          <div className="flex items-end justify-between gap-3 lg:items-start">
             <div className="min-w-0">
-              <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('Seasons', '季节')}</h1>
+              <ScreenTitle>{tr('Seasons', '季节')}</ScreenTitle>
               <p className="truncate pt-0.5 text-[13px] text-neutral-500">
                 {tr('Where to go, month by month', '全球旅行月历')} · {seasonsOf(month)}
               </p>

@@ -483,7 +483,7 @@ export function SplitEditor({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onClose} aria-label={tr('Back to bills', '返回账单列表')} className="p-1.5 text-neutral-400">
             <ChevronLeft />

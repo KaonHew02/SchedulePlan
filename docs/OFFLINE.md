@@ -31,10 +31,12 @@ Anything that fails for want of a signal says so, and nothing else stops working
 
 1. **Open the site once with a connection.** The copy is made in the background:
    about 1.1 MB to download, once.
-2. **Check it took.** More → tap the saved time in the bar → **Your data**. The
+2. **Check it took.** Settings → tap the saved time in the bar → **Your data**. The
    **With no signal** line says when the app is saved in the browser.
 3. **Install it, if you like.** It is not needed for the offline copy, but it
    puts SchedulePlan on the home screen and opens it without the browser bars.
+   On a phone, the More sheet shows these steps for the phone it is on (or an
+   Install button, in Chrome), until the app is installed.
    - **Android, Chrome:** ⋮ → *Add to Home screen* (or *Install app*). The
      installed app shares Chrome's storage, so the notebook is already there.
    - **iPhone, Safari:** Share → *Add to Home Screen*. **An app added to the

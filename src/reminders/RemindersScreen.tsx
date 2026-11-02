@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import EmptyState from '../components/EmptyState'
 import Fab from '../components/Fab'
+import ScreenTitle from '../components/ScreenTitle'
 import { tr } from '../lib/i18n'
 import { dueAt, dueLabel, groupOf, isActive, isRange, occurrenceDays, at } from '../lib/reminders'
 import { toggleReminder, useReminders } from '../lib/store'
@@ -132,9 +133,9 @@ export default function RemindersScreen({ onToast }: { onToast: (message: string
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-baseline justify-between px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="text-[19px] font-semibold tracking-tight lg:text-[22px]">{tr('Reminders', '提醒')}</h1>
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="flex items-end justify-between gap-3 px-5 pb-3 pt-3 lg:items-baseline lg:px-8 lg:pt-4">
+          <ScreenTitle>{tr('Reminders', '提醒')}</ScreenTitle>
           {canAsk && (
             <button
               onClick={() => void Notification.requestPermission().then(() => setCanAsk(false))}

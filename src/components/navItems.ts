@@ -5,8 +5,9 @@ import type { Screen } from '../types'
 import {
   BellIcon,
   CalendarIcon,
+  GearIcon,
   GlobeIcon,
-  MoreIcon,
+  GridIcon,
   SunriseIcon,
   SwapIcon,
   TranslateIcon,
@@ -14,11 +15,12 @@ import {
 } from './Icons'
 
 /**
- * The modules, in the order both navs show them.
+ * The modules, in the order the sidebar shows them.
  *
- * One list, read by the bottom bar and the sidebar. They used to keep a copy
- * each, which was fine at five tabs and is exactly the sort of thing that
- * drifts the first time a sixth is added.
+ * One list, read by the sidebar and — through TABS and SHEET below — by the
+ * phone's tab bar and More sheet. They used to keep a copy each, which was
+ * fine at five tabs and is exactly the sort of thing that drifts the first
+ * time a sixth is added.
  *
  * Currency is a module rather than a tool behind More because on a trip it is
  * opened as often as the schedule is — it sits after Reminders, where the
@@ -49,8 +51,30 @@ export const NAV: { id: Screen; label: string; zh: string; Icon: ComponentType<{
   { id: 'reminders', label: 'Reminders', zh: '提醒', Icon: BellIcon },
   { id: 'currency', label: 'Currency', zh: '汇率', Icon: SwapIcon },
   { id: 'translate', label: 'Translate', zh: '翻译', Icon: TranslateIcon },
-  { id: 'more', label: 'More', zh: '更多', Icon: MoreIcon },
+  { id: 'more', label: 'Settings', zh: '设置', Icon: GearIcon },
 ]
+
+/**
+ * The phone's tab bar, which is not the list above laid out narrow.
+ *
+ * Seven cells across a phone was 53px each and 10px labels, and it read as a
+ * web page's menu rather than an app's tabs. On a phone (asked for on
+ * 2026-11-02, alongside MoneyFlow's) the bar is the three lists you add to —
+ * Schedule, Travel, Reminders — with a + in the middle that adds to whichever
+ * is open (lib/add.ts), and More, which slides up a sheet holding the rest.
+ *
+ * The cost is one more tap to Currency and Translate, which were put in the
+ * bar because on a trip they are opened as often as the schedule. If that
+ * turns out to matter more, swap one of them into TABS here and the screen it
+ * replaces into SHEET; nothing else needs to change.
+ */
+export const TABS: Screen[] = ['schedule', 'travel', 'reminders']
+export const SHEET: Screen[] = ['seasons', 'currency', 'translate', ...(MONEY ? ['expenses' as const] : []), 'more']
+
+/** The phone's More tab: not a screen, so it is not in NAV. */
+export const MORE_TAB = { label: 'More', zh: '更多', Icon: GridIcon }
+
+export const navItem = (id: Screen) => NAV.find((item) => item.id === id)!
 
 /**
  * A module's name in the app's language. Both are kept on the entry rather

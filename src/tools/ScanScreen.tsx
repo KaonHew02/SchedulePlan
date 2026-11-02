@@ -184,11 +184,11 @@ export default function ScanScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button
             onClick={onBack}
-            aria-label={tr('Back to More', '返回「更多」')}
+            aria-label={tr('Back to Settings', '返回「设置」')}
             className="p-1.5 text-neutral-400"
           >
             <ChevronLeft />

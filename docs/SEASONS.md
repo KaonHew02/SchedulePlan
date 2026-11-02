@@ -130,7 +130,7 @@ train ride away. Everything else is **要转机**.
 
 ## In English
 
-The app has an **English / 中文** switch beside Auto in the top bar (in More
+The app has an **English / 中文** switch beside Auto in the top bar (in Settings
 on a phone), and Seasons follows it like every other screen. The calendar is
 still written in Chinese first. The English is a second layer of words, kept
 in three files beside the Chinese ones:
@@ -235,7 +235,7 @@ it crosses a border, none for Antarctica. `holidayRegion` is optional: the
 state or province of the first country, in date-holidays' codes, for the days
 off only it keeps — `12` is Sabah (Kaamatan), `SCT` is Scotland (St Andrew's
 Day), `LA` is Louisiana (Mardi Gras). Malaysia's codes are the gazette's,
-`01` Johor to `16` Putrajaya, the same ones More → Calendar uses.
+`01` Johor to `16` Putrajaya, the same ones Settings → Calendar uses.
 
 ```json
 {

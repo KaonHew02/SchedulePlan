@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import Fab from '../components/Fab'
+import ScreenTitle from '../components/ScreenTitle'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
 import ExpenseForm from '../expenses/ExpenseForm'
 import { MONEY } from '../lib/features'
@@ -222,11 +223,9 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4 lg:px-8">
-          <h1 className="truncate text-[19px] font-semibold tracking-tight lg:text-[22px]">
-            {title}
-          </h1>
+      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+        <div className="flex items-end justify-between gap-3 px-5 pb-3 pt-3 lg:items-center lg:px-8 lg:pt-4">
+          <ScreenTitle>{title}</ScreenTitle>
 
           <div className="flex shrink-0 items-center gap-3">
             {/* On a laptop the toggle fits beside the title; on a phone it

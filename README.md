@@ -11,11 +11,21 @@ that reads a receipt or a booking with no account and no API key, a Travel
 screen that counts where you have been, and Seasons — a travel calendar of
 when to go where.
 
-Seven tabs — Schedule, Travel, Seasons, Reminders, Currency, Translate, More.
-Everything else lives behind **More**.
+Seven screens — Schedule, Travel, Seasons, Reminders, Currency, Translate,
+Settings. A laptop lists all seven down the sidebar. A phone is laid out like
+an app (see [On a phone](#on-a-phone)): a tab bar of Schedule, Travel,
+Reminders and More, with a **+** in the middle, and the rest one tap further
+in the More sheet.
+
+**It goes on the home screen.** iPhone: Safari → Share → *Add to Home Screen*.
+Android: Chrome → ⋮ → *Install app*. It opens full screen with no browser bars,
+and works with no signal. The More sheet shows the steps for whichever phone
+it is on, until the app is installed — and on an iPhone, the one thing worth
+knowing first: the home-screen app can keep its own notebook, apart from
+Safari's, so move the notebook across with Drive or Export → Import.
 
 **English or 中文.** The switch sits beside **Auto** in the top bar on a
-laptop, and at the top of **More** on a phone. Every screen follows it,
+laptop, and at the top of **Settings** on a phone. Every screen follows it,
 Seasons included — its 242 places have an English twin of every line. The
 choice is kept on the device, not in the notebook, so restoring a backup does
 not change it; the first time, the app opens in the phone's own language.
@@ -60,7 +70,7 @@ a location, links, notes and attachments.
 
 **Public holidays** are on the calendar in red, the way a printed calendar has
 them: the date turns red in the month grid and the week strip, and the day says
-what the holiday is. Pick the country, and the state, in **More → Calendar** —
+what the holiday is. Pick the country, and the state, in **Settings → Calendar** —
 in Malaysia a third of the holidays belong to some states only, so with no
 state picked just the ones most of the country has off show. A day off given back for a holiday on
 a Sunday (Friday in Kedah, Kelantan and Terengganu) shows as a replacement
@@ -365,7 +375,7 @@ migrated across on first run and then left alone, as a way back.
 
 That is still one copy in one browser, and it has teeth: clearing site data
 clears it, and `localhost` and the live site keep separate copies. The bar at
-the top of **More** is what makes it survivable:
+the top of **Settings** is what makes it survivable:
 
 - **Export / Import** — one JSON file, attachments inlined. No account, no
   internet, no setup.
@@ -478,8 +488,9 @@ SchedulePlan/
                                 editions generated from it)
   public/                       favicon.svg, logo-mark.svg
   src/
-    App.tsx                     The responsive shell: the six screens, and the
-                                nav that swaps sides with the viewport
+    App.tsx                     The responsive shell: the seven screens, the
+                                nav that swaps sides with the viewport, and the
+                                phone's More sheet
     types.ts                    Shared types
     lib/
       idb.ts                    IndexedDB, wrapped thin; storage estimates
@@ -496,6 +507,10 @@ SchedulePlan/
       repeat.ts                 Unrolling a repeating schedule item into the
                                 days it lands on, and saying the rule in words
       autosave.ts               The Drive Auto switch, and its one honest limit
+      add.ts                    What the phone tab bar's + does on each screen
+      install.ts                Add to Home Screen: installed already, Chrome's
+                                Install prompt, or the iPhone's Share steps
+      transition.ts             The fade-and-rise between screens
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
       translate.ts              The translator chain, the voice lookup, and the
@@ -513,7 +528,8 @@ SchedulePlan/
     components/                 Popover, DatePicker, TimePicker, CurrencySelect,
                                 CountrySelect, CountryBadge, Attachments,
                                 BackupBar, DataSheet, Sheet, Confirm,
-                                BottomNav, SideNav, navItems, Toast, Fab,
+                                BottomNav, MoreSheet, SideNav, navItems,
+                                ScreenTitle, Toast, Fab,
                                 Icons, Logo, TagEditor, FormFields
     screens/                    ScheduleScreen, MoreScreen
     schedule/                   DayStrip, DayView, WeekView, MonthView,
@@ -561,7 +577,7 @@ two rows to it.
 
 | Width | Shape |
 | --- | --- |
-| under 640px — phone | Full-bleed column, bottom nav, floating add button |
+| under 640px — phone | Full-bleed column, laid out as an app: large titles, a tab bar with the + in it, the More sheet |
 | 640–1023px — tablet | Same column, wider (`max-w-xl`), on a lavender page |
 | 1024px and up — laptop | Sidebar on the left, backup bar across the top, content filling the rest, screens in two columns |
 | 1280px and up — desktop | Schedule and Travel add a third column: a calendar to jump with and what is coming next |
@@ -578,9 +594,34 @@ grows a second column past 1024px, and the two widest — Schedule and Travel �
 wait until 1280px before adding their rail, because a 300px rail beside a
 1024px window leaves the timeline narrower than the phone column it replaced.
 
-The backup bar moves with the layout too: a dark card inside More on a phone, a
+The backup bar moves with the layout too: a dark card inside Settings on a phone, a
 light row across the top of every screen on a laptop. `BackupBar` takes a
 `variant` for the two; it is one component because it is one set of controls.
+
+### On a phone
+
+Below 1024px, where the sidebar gives way, SchedulePlan stops being a web page
+laid out narrow and is laid out the way a phone app is. Asked for on
+2026-11-02, the same day as MoneyFlow's, once it could live on the home screen:
+
+- **The screen's name, large, under today's date** — `ScreenTitle`. On a
+  laptop it is the 22px heading it always was.
+- **A tab bar of four and a +.** Seven cells across a phone had come down to
+  53px each and 10px labels. Schedule, Travel and Reminders — the three lists
+  you add to — keep a tab; **More** slides up a sheet with Seasons, Currency,
+  Translate and Settings. Which screens get a tab is two lines in
+  `navItems.ts` (`TABS`, `SHEET`), so swapping Currency in is a one-line change.
+- **The + adds to whatever is open.** Each screen still says what its add
+  button does by drawing `Fab`; on a phone Fab draws nothing and hands its
+  action to the tab bar instead (`lib/add.ts`). A screen with nothing of its
+  own to add — Travel's trips are schedule items — goes to Schedule and opens
+  the new-item form.
+- **Screens change with a fade and a short rise**, through the browser's View
+  Transitions (`lib/transition.ts`), with the tab bar held still. Safari before
+  18, and a phone set to reduce motion, just change, as before.
+- **Sheets have a grip, and pull down to close.** Only the grip and title row
+  take the pull, so a form's own scrolling is left alone.
+- **Buttons give a little under a finger** (touch screens only).
 
 React + TypeScript + Tailwind, built by Vite. One runtime dependency beyond
 React: `tesseract.js`, and it is only fetched when you scan something.
@@ -678,7 +719,7 @@ Older files read back fine: missing fields are filled in once, on read —
 become empty.
 
 `end_time`, `end_date`, `location`, `notes` and `tag` are nullable. `tag` and
-`category` hold an id, and every one is editable in **More → Labels** — the
+`category` hold an id, and every one is editable in **Settings → Labels** — the
 ones that ship are only defaults. Deleting one untags the records using it; it
 never deletes them.
 

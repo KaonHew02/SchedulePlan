@@ -15,6 +15,14 @@
          mark changes. -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Safari → Share → Add to Home Screen: open full screen with no address
+         bar, under this name rather than the page title. "default" keeps the
+         status bar its own white strip above the app, so nothing is drawn
+         under the clock. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="SchedulePlan" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>SchedulePlan</title>
   </head>
   <body>

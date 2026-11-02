@@ -2,7 +2,7 @@
 
 The schedule lives in one browser. Drive is how it survives that browser.
 
-Two buttons in **More**:
+Two buttons in **Settings**:
 
 - **Save to Drive** — writes everything to one file, replacing what was there.
 - **Load from Drive** — reads it back, replacing everything on this device.
@@ -89,7 +89,7 @@ clientId: '…….apps.googleusercontent.com',
 folderId: '…….',
 ```
 
-Commit and push. The Drive buttons in More turn on by themselves — the app
+Commit and push. The Drive buttons in Settings turn on by themselves — the app
 checks whether both values are still placeholders and stays disabled until they
 are not.
 

@@ -93,6 +93,10 @@ export const shortDate = (iso: string) =>
 /** 'Thursday' · 星期四 */
 export const weekday = (iso: string) => format(iso, { weekday: 'long' })
 
+/** 'Thursday, 10 September' · 9月10日星期四 — over a screen's name on a phone. */
+export const headerDate = (iso: string) =>
+  format(iso, { weekday: 'long', day: 'numeric', month: 'long' }, 'en-MY')
+
 /** 'Thu' · 周四 */
 export const weekdayShort = (iso: string) => format(iso, { weekday: 'short' })
 
