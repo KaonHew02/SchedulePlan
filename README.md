@@ -25,10 +25,12 @@ knowing first: the home-screen app can keep its own notebook, apart from
 Safari's, so move the notebook across with Drive or Export → Import.
 
 **English or 中文.** The switch sits beside **Auto** in the top bar on a
-laptop, and at the top of **Settings** on a phone. Every screen follows it,
-Seasons included — its 242 places have an English twin of every line. The
-choice is kept on the device, not in the notebook, so restoring a backup does
-not change it; the first time, the app opens in the phone's own language.
+laptop; on a phone it is in the **More** sheet, and at the top of
+**Settings**. Every screen follows it, Seasons included — its 242 places have
+an English twin of every line. The choice is kept on the device, not in the
+notebook, so restoring a backup does not change it; the first time, the app
+opens in the phone's own language. On an iPhone the home-screen app keeps its
+own choice, apart from Safari's, so it is set once in each.
 Text is written in both languages side by side where it is used —
 `tr('Saved', '已保存')`, from `src/lib/i18n.ts` — so the two cannot drift
 apart unnoticed.

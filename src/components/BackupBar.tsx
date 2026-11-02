@@ -43,7 +43,9 @@ import {
  *
  * The language switch rides along beside Auto. It is not about backups, but
  * this is the one strip that is on every screen of a laptop and at the top of
- * More on a phone — the two places someone looks for a setting like that.
+ * Settings on a phone — the two places someone looks for a setting like that.
+ * The More sheet's tiles leave it out: the sheet has its own English and 中文
+ * tiles under these (MoreSheet).
  */
 
 /** A pending replace, held until the user has seen what it would do. */

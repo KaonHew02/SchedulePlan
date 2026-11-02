@@ -1,8 +1,8 @@
 import { promptInstall, useInstallWay } from '../lib/install'
-import { tr } from '../lib/i18n'
+import { LANGS, setLang, tr, useLang } from '../lib/i18n'
 import type { Screen } from '../types'
 import BackupBar from './BackupBar'
-import { InstallIcon, ShareIcon } from './Icons'
+import { CheckIcon, InstallIcon, ShareIcon } from './Icons'
 import { SHEET, navItem, navLabel } from './navItems'
 import Sheet from './Sheet'
 
@@ -24,8 +24,8 @@ const TINT: Partial<Record<Screen, string>> = {
 /**
  * What the phone's More tab opens, laid out as MoneyFlow's is: the screens
  * without a tab, two by two, with the icon beside the name so each sits on
- * one line; the backup buttons with their names in full; and — until the app
- * is on the home screen — how to put it there.
+ * one line; the backup buttons with their names in full; English or 中文; and
+ * — until the app is on the home screen — how to put it there.
  */
 export default function MoreSheet({
   current,
@@ -73,6 +73,11 @@ export default function MoreSheet({
       </h3>
       <BackupBar variant="sheet" onToast={onToast} onOpenData={onOpenData} />
 
+      <h3 className="mb-2.5 mt-6 text-[12px] font-bold uppercase tracking-[0.06em] text-neutral-400">
+        {tr('Language', '语言')}
+      </h3>
+      <LanguageTiles />
+
       <InstallCard />
 
       <button
@@ -82,6 +87,44 @@ export default function MoreSheet({
         {tr('Done', '完成')}
       </button>
     </Sheet>
+  )
+}
+
+/**
+ * English or 中文, a tile each, the one in use filled in the accent as Auto is
+ * when it is on.
+ *
+ * Here and not only in Settings because this is the sheet a phone opens from
+ * every screen, and the home-screen app on an iPhone keeps its own choice,
+ * apart from Safari's — so it is the first place it will be looked for. Two
+ * tiles rather than the backup bar's pill: there are only two choices, both
+ * fit, and one tap does it, where the pill would open a menu inside a sheet.
+ * Each is written in its own language, so it can be found by someone who
+ * opened the app in the one they cannot read.
+ */
+function LanguageTiles() {
+  const lang = useLang()
+  return (
+    <div role="radiogroup" aria-label={tr('Language', '语言')} className="grid grid-cols-2 gap-2.5">
+      {LANGS.map((choice) => {
+        const on = choice.value === lang
+        return (
+          <button
+            key={choice.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => setLang(choice.value)}
+            className={`flex min-h-[50px] min-w-0 items-center justify-center gap-2 rounded-2xl px-3 text-[14.5px] font-semibold transition-[scale,background-color] duration-150 ${
+              on ? 'bg-brand-500 text-white' : 'bg-page text-neutral-900'
+            }`}
+          >
+            {on && <CheckIcon className="h-[17px] w-[17px]" />}
+            {choice.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
