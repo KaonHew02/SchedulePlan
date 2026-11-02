@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { registerOffline } from './lib/offline'
+import { hideSplash } from './lib/splash'
 import { initStore } from './lib/store'
 import { installSpeedBumps } from './lib/tamper'
 import './index.css'
@@ -32,4 +33,5 @@ initStore()
         <App />
       </StrictMode>,
     )
+    hideSplash()
   })

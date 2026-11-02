@@ -6,7 +6,8 @@ import { Plus } from './Icons'
 import { MORE_TAB, SHEET, TABS, navItem, navLabel } from './navItems'
 
 /**
- * The phone's tab bar: two tabs, the +, a tab, and More.
+ * The phone's tab bar: two tabs, the +, a tab, and More — Schedule, Travel,
+ * +, Seasons, More.
  *
  * Which screens get a tab, and why, is in navItems (TABS). The + is an action
  * rather than a place, so it does not look like a tab: a raised disc standing

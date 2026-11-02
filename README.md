@@ -14,7 +14,7 @@ when to go where.
 Seven screens — Schedule, Travel, Seasons, Reminders, Currency, Translate,
 Settings. A laptop lists all seven down the sidebar. A phone is laid out like
 an app (see [On a phone](#on-a-phone)): a tab bar of Schedule, Travel,
-Reminders and More, with a **+** in the middle, and the rest one tap further
+Seasons and More, with a **+** in the middle, and the rest one tap further
 in the More sheet.
 
 **It goes on the home screen.** iPhone: Safari → Share → *Add to Home Screen*.
@@ -486,7 +486,8 @@ SchedulePlan/
   docs/                         DEPLOY, DRIVE, RUNNING, and the project
                                 proposal (PROPOSAL.md, with Word and PDF
                                 editions generated from it)
-  public/                       favicon.svg, logo-mark.svg
+  public/                       favicon.svg, logo-mark.svg, splash.css (the
+                                opening screen)
   src/
     App.tsx                     The responsive shell: the seven screens, the
                                 nav that swaps sides with the viewport, and the
@@ -511,6 +512,7 @@ SchedulePlan/
       install.ts                Add to Home Screen: installed already, Chrome's
                                 Install prompt, or the iPhone's Share steps
       transition.ts             The fade-and-rise between screens
+      splash.ts                 When the opening screen fades out
       drive.ts                  Google sign-in and the Drive read/write
       drive-config.ts           Client ID and folder ID (both safe to publish)
       translate.ts              The translator chain, the voice lookup, and the
@@ -606,11 +608,16 @@ laid out narrow and is laid out the way a phone app is. Asked for on
 
 - **The screen's name, large, under today's date** — `ScreenTitle`. On a
   laptop it is the 22px heading it always was.
+- **An opening screen** while the notebook is read off disk: the globe from
+  the app mark, with its plane flying round it and a trail of dots behind.
+  It is plain HTML in `index.html`, styled by `public/splash.css`, so it is
+  drawn before any script has run; `lib/splash.ts` keeps it up for at least
+  one turn of the plane (1.3s from opening) and fades it out.
 - **A tab bar of four and a +.** Seven cells across a phone had come down to
-  53px each and 10px labels. Schedule, Travel and Reminders — the three lists
-  you add to — keep a tab; **More** slides up a sheet with Seasons, Currency,
-  Translate and Settings. Which screens get a tab is two lines in
-  `navItems.ts` (`TABS`, `SHEET`), so swapping Currency in is a one-line change.
+  53px each and 10px labels. Schedule, Travel and Seasons keep a tab;
+  **More** slides up a sheet with Reminders, Currency, Translate and Settings.
+  Which screens get a tab is two lines in `navItems.ts` (`TABS`, `SHEET`), so
+  swapping one in is a one-line change.
 - **The + adds to whatever is open.** Each screen still says what its add
   button does by drawing `Fab`; on a phone Fab draws nothing and hands its
   action to the tab bar instead (`lib/add.ts`). A screen with nothing of its

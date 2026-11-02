@@ -59,17 +59,20 @@ export const NAV: { id: Screen; label: string; zh: string; Icon: ComponentType<{
  *
  * Seven cells across a phone was 53px each and 10px labels, and it read as a
  * web page's menu rather than an app's tabs. On a phone (asked for on
- * 2026-11-02, alongside MoneyFlow's) the bar is the three lists you add to —
- * Schedule, Travel, Reminders — with a + in the middle that adds to whichever
- * is open (lib/add.ts), and More, which slides up a sheet holding the rest.
+ * 2026-11-02, alongside MoneyFlow's) the bar is three tabs with a + in the
+ * middle that adds to whichever screen is open (lib/add.ts), and More, which
+ * slides up a sheet holding the rest.
  *
- * The cost is one more tap to Currency and Translate, which were put in the
- * bar because on a trip they are opened as often as the schedule. If that
- * turns out to matter more, swap one of them into TABS here and the screen it
- * replaces into SHEET; nothing else needs to change.
+ * The three are Schedule, Travel and Seasons. Reminders had the third tab
+ * until Seasons was asked for on the bar the same day; four tabs and the +
+ * is what fits without the + leaving the middle, so Reminders went into the
+ * sheet. Its + still works there — it is the + in the bar, on its screen.
+ *
+ * To change which screens get a tab, move them between TABS and SHEET;
+ * nothing else needs to change.
  */
-export const TABS: Screen[] = ['schedule', 'travel', 'reminders']
-export const SHEET: Screen[] = ['seasons', 'currency', 'translate', ...(MONEY ? ['expenses' as const] : []), 'more']
+export const TABS: Screen[] = ['schedule', 'travel', 'seasons']
+export const SHEET: Screen[] = ['reminders', 'currency', 'translate', ...(MONEY ? ['expenses' as const] : []), 'more']
 
 /** The phone's More tab: not a screen, so it is not in NAV. */
 export const MORE_TAB = { label: 'More', zh: '更多', Icon: GridIcon }

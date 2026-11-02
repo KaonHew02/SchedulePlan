@@ -1,0 +1,104 @@
+/*
+  The opening screen: the app mark come to life, a plane flying round the
+  globe with a trail of dots behind it, while the notebook is read off disk.
+
+  A plain stylesheet in public/ rather than part of index.css, for two reasons.
+  It has to draw before any script has run, and the dev server only adds
+  index.css from a script, which would show the splash unstyled for a moment.
+  And it cannot be a <style> block in index.html: the Content-Security-Policy
+  (vite.config.ts) refuses inline styles.
+
+  lib/splash.ts takes it away once the first screen has been drawn.
+*/
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: 6vh;
+  background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#splash.is-done {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+
+.splash-mark {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 18px;
+  overflow: visible;
+}
+
+/* The plane and its trail turn together, so the dots always follow it. */
+.splash-flight {
+  transform-origin: 0 0;
+  animation: splash-orbit 1.15s cubic-bezier(0.45, 0.05, 0.35, 0.95) infinite;
+}
+
+@keyframes splash-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.splash-globe {
+  animation: splash-breathe 2.3s ease-in-out infinite;
+  transform-origin: 0 0;
+}
+
+@keyframes splash-breathe {
+  50% {
+    transform: scale(0.94);
+  }
+}
+
+.splash-name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #171717;
+}
+
+.splash-sub {
+  margin: 0;
+  font-size: 13px;
+  color: #a3a3a3;
+  /* After a beat, by when the script has usually said which language the app
+     is in — so the line does not change under the eye from English to 中文. */
+  opacity: 0;
+  animation: splash-show 0.4s ease 0.35s forwards;
+}
+
+@keyframes splash-show {
+  to {
+    opacity: 1;
+  }
+}
+
+html[lang|='zh'] .splash-en,
+html:not([lang|='zh']) .splash-zh {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-flight,
+  .splash-globe {
+    animation: none;
+  }
+
+  .splash-sub {
+    opacity: 1;
+    animation: none;
+  }
+}
