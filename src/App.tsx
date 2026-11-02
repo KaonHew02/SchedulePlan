@@ -131,7 +131,18 @@ export default function App() {
         onMore={() => setMoreOpen(true)}
       />
       {moreOpen && (
-        <MoreSheet current={screen} onPick={go} onClose={() => setMoreOpen(false)} />
+        <MoreSheet
+          current={screen}
+          onPick={go}
+          onClose={() => setMoreOpen(false)}
+          onToast={setToast}
+          // Your data is a sheet too, and drawn earlier in the page, so it
+          // would open underneath this one. This one goes first.
+          onOpenData={() => {
+            setMoreOpen(false)
+            setShowData(true)
+          }}
+        />
       )}
     </>
   )

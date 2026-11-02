@@ -1,6 +1,7 @@
 import { promptInstall, useInstallWay } from '../lib/install'
 import { tr } from '../lib/i18n'
 import type { Screen } from '../types'
+import BackupBar from './BackupBar'
 import { InstallIcon, ShareIcon } from './Icons'
 import { SHEET, navItem, navLabel } from './navItems'
 import Sheet from './Sheet'
@@ -21,18 +22,24 @@ const TINT: Partial<Record<Screen, string>> = {
 }
 
 /**
- * What the phone's More tab opens: the screens without a tab, two by two,
- * with the icon beside the name so each sits on one line, and — until the app
+ * What the phone's More tab opens, laid out as MoneyFlow's is: the screens
+ * without a tab, two by two, with the icon beside the name so each sits on
+ * one line; the backup buttons with their names in full; and — until the app
  * is on the home screen — how to put it there.
  */
 export default function MoreSheet({
   current,
   onPick,
   onClose,
+  onToast,
+  onOpenData,
 }: {
   current: Screen
   onPick: (screen: Screen) => void
   onClose: () => void
+  onToast: (message: string) => void
+  /** "Saved 12:51" opens Your data, which is a sheet of its own. */
+  onOpenData: () => void
 }) {
   return (
     <Sheet title={tr('More', '更多')} onClose={onClose} large>
@@ -60,6 +67,11 @@ export default function MoreSheet({
           )
         })}
       </div>
+
+      <h3 className="mb-2.5 mt-6 text-[12px] font-bold uppercase tracking-[0.06em] text-neutral-400">
+        {tr('Backup & sync', '备份与同步')}
+      </h3>
+      <BackupBar variant="sheet" onToast={onToast} onOpenData={onOpenData} />
 
       <InstallCard />
 

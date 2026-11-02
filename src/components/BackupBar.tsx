@@ -35,10 +35,11 @@ import {
  * copy anywhere else* — and makes the four actions one tap rather than a row
  * to read and then choose.
  *
- * Two shapes, because it lives in two places. On a phone it is a dark card
- * inside More, where it has a column's width and needs to hold together as a
- * block. On a laptop it is a light row pinned across the top of every screen,
- * where a black slab would shout over the content underneath it.
+ * Three shapes, because it lives in three places. On a phone it is a dark
+ * card at the top of Settings, where it has a column's width and needs to hold
+ * together as a block — and big labelled tiles in the More sheet, a tap from
+ * any screen. On a laptop it is a light row pinned across the top of every
+ * screen, where a black slab would shout over the content underneath it.
  *
  * The language switch rides along beside Auto. It is not about backups, but
  * this is the one strip that is on every screen of a laptop and at the top of
@@ -89,8 +90,13 @@ export default function BackupBar({
 }: {
   onToast: (message: string) => void
   onOpenData: () => void
-  /** 'card' is the dark block in More; 'bar' is the light desktop top row. */
-  variant?: 'card' | 'bar'
+  /**
+   * 'card' is the dark block in Settings; 'bar' is the light desktop top row;
+   * 'sheet' is the phone's More sheet, big buttons two by two, each with its
+   * name in full — the one place on a phone a thumb finds them without
+   * opening Settings.
+   */
+  variant?: 'card' | 'bar' | 'sheet'
 }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const settings = useSettings()
@@ -326,6 +332,50 @@ export default function BackupBar({
       />
     </>
   )
+
+  if (variant === 'sheet') {
+    // A tile each, as MoneyFlow's More sheet has them. Auto, switched on, is
+    // filled in the accent, so that it stays unmistakably on.
+    const tile =
+      'flex min-h-[50px] min-w-0 items-center justify-center gap-2 rounded-2xl px-3 text-[14.5px] font-semibold transition-[scale,background-color] duration-150 disabled:opacity-35'
+    return (
+      <>
+        <button
+          onClick={onOpenData}
+          className="mb-2.5 flex min-w-0 items-center gap-1.5 px-1 text-[13px] font-semibold text-neutral-500"
+        >
+          {savedLabel}
+        </button>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            onClick={() => updateSettings({ autoDrive: !settings.autoDrive })}
+            disabled={!configured}
+            aria-pressed={settings.autoDrive}
+            className={`${tile} ${settings.autoDrive ? 'bg-brand-500 text-white' : 'bg-page text-neutral-900'}`}
+          >
+            <RefreshIcon className={`h-[17px] w-[17px] ${settings.autoDrive ? '' : 'text-brand-500'}`} />
+            {tr('Auto', '自动')}
+          </button>
+          {actions.map(({ key, icon: Icon, label, onClick, disabled }) => (
+            <button
+              key={key}
+              onClick={onClick}
+              disabled={disabled || busy !== null}
+              className={`${tile} bg-page text-neutral-900`}
+            >
+              {busy === key ? (
+                <Spinner className="h-[17px] w-[17px] text-brand-500" />
+              ) : (
+                <Icon className="h-[17px] w-[17px] text-brand-500" />
+              )}
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
+        </div>
+        {notices}
+      </>
+    )
+  }
 
   if (!dark) {
     return (

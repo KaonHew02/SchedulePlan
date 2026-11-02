@@ -615,7 +615,10 @@ laid out narrow and is laid out the way a phone app is. Asked for on
   one turn of the plane (1.3s from opening) and fades it out.
 - **A tab bar of four and a +.** Seven cells across a phone had come down to
   53px each and 10px labels. Schedule, Travel and Seasons keep a tab;
-  **More** slides up a sheet with Reminders, Currency, Translate and Settings.
+  **More** slides up a sheet with Reminders, Currency, Translate and Settings,
+  and under them **Backup & sync** — Auto, To Drive, From Drive, Export and
+  Import as big buttons with their names in full, as MoneyFlow's sheet has
+  them, so a backup is two taps from any screen.
   Which screens get a tab is two lines in `navItems.ts` (`TABS`, `SHEET`), so
   swapping one in is a one-line change.
 - **The + adds to whatever is open.** Each screen still says what its add
