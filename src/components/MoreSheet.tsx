@@ -5,13 +5,18 @@ import { InstallIcon, ShareIcon } from './Icons'
 import { SHEET, navItem, navLabel } from './navItems'
 import Sheet from './Sheet'
 
-/** Each tile's icon on its own colour, so four tiles are told apart at a glance rather than read. */
+/**
+ * Each tile's icon on its own colour, so four tiles are told apart at a glance
+ * rather than read. The 100 shades, not the 50s: on an iPhone the 50s were so
+ * close to the tile that Seasons' square all but vanished, and the tile it sat
+ * in read as an empty box.
+ */
 const TINT: Partial<Record<Screen, string>> = {
-  seasons: 'bg-amber-50 text-amber-600',
-  currency: 'bg-emerald-50 text-emerald-600',
-  translate: 'bg-sky-50 text-sky-600',
-  expenses: 'bg-rose-50 text-rose-600',
-  more: 'bg-brand-50 text-brand-600',
+  seasons: 'bg-amber-100 text-amber-600',
+  currency: 'bg-emerald-100 text-emerald-600',
+  translate: 'bg-sky-100 text-sky-600',
+  expenses: 'bg-rose-100 text-rose-600',
+  more: 'bg-brand-100 text-brand-600',
 }
 
 /**
@@ -29,7 +34,9 @@ export default function MoreSheet({
   onClose: () => void
 }) {
   return (
-    <Sheet title={tr('More', '更多')} onClose={onClose}>
+    <Sheet title={tr('More', '更多')} onClose={onClose} large>
+      {/* The screen you are on is ringed in the accent, inside the tile's
+          own edge, as MoneyFlow marks it — the tile keeps its colour. */}
       <div className="grid grid-cols-2 gap-2.5">
         {SHEET.map((id) => {
           const item = navItem(id)
@@ -38,14 +45,14 @@ export default function MoreSheet({
               key={id}
               onClick={() => onPick(id)}
               aria-current={current === id ? 'page' : undefined}
-              className={`flex min-w-0 items-center gap-3 rounded-2xl bg-neutral-50 p-3 text-left text-[14.5px] font-semibold transition-[scale] duration-150 ${
-                current === id ? 'ring-2 ring-brand-500' : ''
+              className={`flex min-w-0 items-center gap-3 rounded-[18px] bg-page p-3 text-left text-[14.5px] font-semibold transition-[scale] duration-150 ${
+                current === id ? 'ring-2 ring-inset ring-brand-500' : ''
               }`}
             >
               <span
                 className={`grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] ${TINT[id] ?? 'bg-neutral-100 text-neutral-600'}`}
               >
-                <item.Icon className="h-5 w-5" />
+                <item.Icon className="h-[21px] w-[21px] stroke-[2.1]" />
               </span>
               <span className="min-w-0 truncate">{navLabel(item)}</span>
             </button>
@@ -54,6 +61,13 @@ export default function MoreSheet({
       </div>
 
       <InstallCard />
+
+      <button
+        onClick={onClose}
+        className="mt-5 min-h-[52px] w-full rounded-2xl bg-brand-500 text-[16px] font-bold text-white"
+      >
+        {tr('Done', '完成')}
+      </button>
     </Sheet>
   )
 }

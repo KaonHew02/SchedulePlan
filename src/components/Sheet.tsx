@@ -18,10 +18,12 @@ interface Props {
   children: ReactNode
   /** Pinned below the scroll area, so the primary action never scrolls away. */
   footer?: ReactNode
+  /** A menu's heading, set large like a screen's, rather than a form's. */
+  large?: boolean
 }
 
 /** A bottom sheet: the app's one modal pattern. Mounted only while open. */
-export default function Sheet({ onClose, title, children, footer }: Props) {
+export default function Sheet({ onClose, title, children, footer, large = false }: Props) {
   const panel = useRef<HTMLDivElement>(null)
   const [floor, setFloor] = useState(0)
 
@@ -128,7 +130,15 @@ export default function Sheet({ onClose, title, children, footer }: Props) {
         >
           <span aria-hidden className="mx-auto mt-2 block h-[5px] w-10 rounded-full bg-neutral-200 sm:hidden" />
           <div className="flex items-center justify-between px-5 pt-2 pb-3 sm:pt-4">
-            <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
+            <h2
+              className={
+                large
+                  ? 'text-[22px] font-extrabold tracking-[-0.02em]'
+                  : 'text-[17px] font-semibold tracking-tight'
+              }
+            >
+              {title}
+            </h2>
             <button
               onClick={onClose}
               aria-label={tr('Close', '关闭')}
