@@ -6,11 +6,72 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
+import { flushSync } from 'react-dom'
 import { Close } from './Icons'
 import { tr } from '../lib/i18n'
 
 /** How far a sheet has to be pulled down, in pixels, before letting go closes it. */
 const DISMISS = 90
+
+/** The screen this much shorter than the page is a keyboard, not a toolbar. */
+const KEYBOARD = 120
+
+/** The gap left around a field brought back into view. */
+const CLEARANCE = 12
+
+/** The strip of the page a keyboard leaves showing. */
+interface Room {
+  top: number
+  height: number
+}
+
+function keyboardRoom(): Room | null {
+  const view = window.visualViewport
+  // Pinched in, the view is small because it is zoomed, not because it is covered.
+  if (!view || view.scale > 1.05 || window.innerHeight - view.height < KEYBOARD) return null
+  return { top: Math.round(view.offsetTop), height: Math.round(view.height) }
+}
+
+/**
+ * Where a sheet has to fit while the keyboard is up, and null while it is not.
+ *
+ * A phone's keyboard does not make the page shorter. It covers the page, and
+ * the browser slides the page up behind the glass to show the field being
+ * typed in. `fixed` goes by the page, not by what can be seen, so a sheet
+ * slides up with it. An add form had it worst: its title takes focus the
+ * moment the sheet mounts, while the sheet is still below the screen on its
+ * way up, so an iPhone slid the page as far as it would go — and the title
+ * then rose into place above the top of the screen, with the keyboard up and
+ * nothing to type into.
+ *
+ * Fitting the sheet to the strip that is left works whatever the browser
+ * chose to do, because `offsetTop` says how far it slid. With no keyboard this
+ * is null and the sheet is laid out by its classes alone.
+ */
+function useKeyboardRoom() {
+  const [room, setRoom] = useState(keyboardRoom)
+
+  useEffect(() => {
+    const view = window.visualViewport
+    if (!view) return
+    const measure = () => {
+      const next = keyboardRoom()
+      // At once, not on the next tick: a Popover open on this sheet hears the
+      // same event straight after, and has to measure the sheet as it now is.
+      flushSync(() =>
+        setRoom((now) => (now?.top === next?.top && now?.height === next?.height ? now : next)),
+      )
+    }
+    view.addEventListener('resize', measure)
+    view.addEventListener('scroll', measure)
+    return () => {
+      view.removeEventListener('resize', measure)
+      view.removeEventListener('scroll', measure)
+    }
+  }, [])
+
+  return room
+}
 
 interface Props {
   onClose: () => void
@@ -25,7 +86,9 @@ interface Props {
 /** A bottom sheet: the app's one modal pattern. Mounted only while open. */
 export default function Sheet({ onClose, title, children, footer, large = false }: Props) {
   const panel = useRef<HTMLDivElement>(null)
+  const body = useRef<HTMLDivElement>(null)
   const [floor, setFloor] = useState(0)
+  const room = useKeyboardRoom()
 
   /**
    * Once open, the panel only ever grows.
@@ -41,7 +104,9 @@ export default function Sheet({ onClose, title, children, footer, large = false 
    * dependency list on purpose: this has to re-measure after any render that
    * changed the content, and `setFloor` with an unchanged value is a no-op.
    * `offsetHeight` is already clamped by max-h-[92vh], so the floor can never
-   * push the panel past the bottom of the screen.
+   * push the panel past the bottom of the screen. A keyboard is the exception:
+   * it takes the room after the floor was measured, so the floor gives way to
+   * it below, and is back when the keyboard goes.
    */
   useLayoutEffect(() => {
     const height = panel.current?.offsetHeight ?? 0
@@ -56,6 +121,20 @@ export default function Sheet({ onClose, title, children, footer, large = false 
     window.addEventListener('resize', reset)
     return () => window.removeEventListener('resize', reset)
   }, [])
+
+  // The keyboard has just taken the bottom of the sheet, and the field being
+  // typed in may be in what it took. By hand, not scrollIntoView, which would
+  // scroll the page too — the very thing a sheet has to stay out of.
+  const roomHeight = room?.height
+  useLayoutEffect(() => {
+    const box = body.current
+    const field = document.activeElement
+    if (!roomHeight || !box || !field || !box.contains(field)) return
+    const shown = box.getBoundingClientRect()
+    const rect = field.getBoundingClientRect()
+    if (rect.bottom > shown.bottom) box.scrollTop += rect.bottom - shown.bottom + CLEARANCE
+    else if (rect.top < shown.top) box.scrollTop -= shown.top - rect.top + CLEARANCE
+  }, [roomHeight])
 
   /**
    * Pulled down by its top edge, it goes, as a sheet does on a phone.
@@ -102,15 +181,20 @@ export default function Sheet({ onClose, title, children, footer, large = false 
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-neutral-900/25 animate-fade-in" onClick={onClose} />
+    <div
+      style={room ? { top: room.top, height: room.height, bottom: 'auto' } : undefined}
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    >
+      {/* Fixed, so it still covers the page while the sheet is in the strip above the keyboard. */}
+      <div className="fixed inset-0 bg-neutral-900/25 animate-fade-in" onClick={onClose} />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         style={{
-          minHeight: floor || undefined,
+          minHeight: (room ? Math.min(floor, room.height) : floor) || undefined,
+          maxHeight: room?.height,
           transform: drag ? `translateY(${drag}px)` : undefined,
           transition: dragging ? 'none' : 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
@@ -151,11 +235,20 @@ export default function Sheet({ onClose, title, children, footer, large = false 
         {/* min-h-0 is what lets this scroll inside a capped column; flex-1 is
             what makes it absorb the floor above rather than leaving a gap
             under the footer. */}
-        <div className={`min-h-0 flex-1 overflow-y-auto px-5 ${footer ? 'pb-4' : 'pb-safe-5'}`}>
+        <div
+          ref={body}
+          className={`min-h-0 flex-1 overflow-y-auto px-5 ${footer ? 'pb-4' : 'pb-safe-5'}`}
+        >
           {children}
         </div>
+        {/* Over a keyboard there is no home indicator to clear, and every line
+            given back here is a line more of the form. */}
         {footer && (
-          <div className="shrink-0 border-t border-neutral-100 bg-white px-5 pt-4 pb-safe-7 sm:rounded-b-3xl">
+          <div
+            className={`shrink-0 border-t border-neutral-100 bg-white px-5 pt-4 sm:rounded-b-3xl ${
+              room ? 'pb-3' : 'pb-safe-7'
+            }`}
+          >
             {footer}
           </div>
         )}

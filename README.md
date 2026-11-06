@@ -633,6 +633,10 @@ laid out narrow and is laid out the way a phone app is. Asked for on
   18, and a phone set to reduce motion, just change, as before.
 - **Sheets have a grip, and pull down to close.** Only the grip and title row
   take the pull, so a form's own scrolling is left alone.
+- **Sheets fit above the keyboard.** A keyboard covers the page rather than
+  shortening it, so while one is up `Sheet` sizes itself to what
+  `visualViewport` says can still be seen, title at the top and Save at the
+  bottom, and the form scrolls between them. `Popover` measures the same way.
 - **Buttons give a little under a finger** (touch screens only).
 
 React + TypeScript + Tailwind, built by Vite. One runtime dependency beyond

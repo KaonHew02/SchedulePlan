@@ -37,7 +37,11 @@ export default function Popover({ anchor, onClose, children, label }: Props) {
       const width = box.offsetWidth
       const height = box.offsetHeight
       const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
+      // What can be seen, not the page: a keyboard covers the page rather than
+      // shortening it, and a calendar behind a keyboard is no calendar.
+      const view = window.visualViewport
+      const ceiling = (view?.offsetTop ?? 0) + MARGIN
+      const ground = (view ? view.offsetTop + view.height : window.innerHeight) - MARGIN
 
       // Right edges line up: these triggers sit at the right of their row, so
       // hanging the panel leftward from them is what keeps it on screen.
@@ -49,9 +53,9 @@ export default function Popover({ anchor, onClose, children, label }: Props) {
       const below = rect.bottom + GAP
       const above = rect.top - height - GAP
       let top: number
-      if (below + height <= viewportHeight - MARGIN) top = below
-      else if (above >= MARGIN) top = above
-      else top = Math.max(MARGIN, viewportHeight - height - MARGIN)
+      if (below + height <= ground) top = below
+      else if (above >= ceiling) top = above
+      else top = Math.max(ceiling, ground - height)
 
       setPosition({ top, left })
     }
@@ -60,9 +64,15 @@ export default function Popover({ anchor, onClose, children, label }: Props) {
     // Capture phase: the sheet's own scroll container never bubbles to window.
     window.addEventListener('scroll', place, true)
     window.addEventListener('resize', place)
+    // A keyboard coming or going moves the sheet, and window hears nothing of it.
+    const view = window.visualViewport
+    view?.addEventListener('resize', place)
+    view?.addEventListener('scroll', place)
     return () => {
       window.removeEventListener('scroll', place, true)
       window.removeEventListener('resize', place)
+      view?.removeEventListener('resize', place)
+      view?.removeEventListener('scroll', place)
     }
   }, [anchor])
 
