@@ -99,8 +99,9 @@
     }
   }
 
-  /* A double tap never zooms the app; a pinch still does. maximum-scale in
-     index.html does not stop it, because iOS ignores that for gestures.
+  /* A double tap never zooms the app. maximum-scale in index.html does not
+     stop it, because iOS ignores that for gestures. This value also allows a
+     pinch, which lib/nozoom.ts refuses.
      On every element rather than on the root, because WebKit starts
      touch-action afresh at each element that scrolls, so a rule on the root
      never reaches the inside of a sheet. In the base layer, so touch-none and

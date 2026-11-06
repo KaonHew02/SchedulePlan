@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { stopPageZoom } from './lib/nozoom'
 import { registerOffline } from './lib/offline'
 import { hideSplash } from './lib/splash'
 import { initStore } from './lib/store'
@@ -9,6 +10,8 @@ import './index.css'
 
 // Built site only: in development the tools and the console are for working in.
 if (import.meta.env.PROD) installSpeedBumps()
+
+stopPageZoom()
 
 // Keep a copy of the app itself, so it opens with no signal. Also built site only.
 registerOffline()
