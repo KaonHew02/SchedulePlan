@@ -19,6 +19,9 @@ const KEYBOARD = 120
 /** The gap left around a field brought back into view. */
 const CLEARANCE = 12
 
+/** How long to keep looking, in ms, after something that could have moved the page. */
+const SETTLE = 600
+
 /** The strip of the page a keyboard leaves showing. */
 interface Room {
   top: number
@@ -27,8 +30,10 @@ interface Room {
 
 function keyboardRoom(): Room | null {
   const view = window.visualViewport
+  if (!view) return null
+  const page = Math.max(window.innerHeight, document.documentElement.clientHeight)
   // Pinched in, the view is small because it is zoomed, not because it is covered.
-  if (!view || view.scale > 1.05 || window.innerHeight - view.height < KEYBOARD) return null
+  if (view.scale > 1.05 || page - view.height < KEYBOARD) return null
   return { top: Math.round(view.offsetTop), height: Math.round(view.height) }
 }
 
@@ -38,11 +43,7 @@ function keyboardRoom(): Room | null {
  * A phone's keyboard does not make the page shorter. It covers the page, and
  * the browser slides the page up behind the glass to show the field being
  * typed in. `fixed` goes by the page, not by what can be seen, so a sheet
- * slides up with it. An add form had it worst: its title takes focus the
- * moment the sheet mounts, while the sheet is still below the screen on its
- * way up, so an iPhone slid the page as far as it would go — and the title
- * then rose into place above the top of the screen, with the keyboard up and
- * nothing to type into.
+ * slides up with it and its top goes off the screen, out of reach.
  *
  * Fitting the sheet to the strip that is left works whatever the browser
  * chose to do, because `offsetTop` says how far it slid. With no keyboard this
@@ -62,11 +63,41 @@ function useKeyboardRoom() {
         setRoom((now) => (now?.top === next?.top && now?.height === next?.height ? now : next)),
       )
     }
-    view.addEventListener('resize', measure)
-    view.addEventListener('scroll', measure)
+
+    // A phone can report a slide before it has finished it, and say nothing
+    // when it ends. So after anything that could move the page — the focus
+    // changing, a letter typed — keep looking for a moment. It is what keeps
+    // the sheet on the field while it is being typed in.
+    let frame = 0
+    let until = 0
+    const look = () => {
+      measure()
+      frame = performance.now() < until ? requestAnimationFrame(look) : 0
+    }
+    // A frame later, not now: autoFocus fires focusin in the middle of a React
+    // commit, and flushSync cannot run in there.
+    const settle = () => {
+      until = performance.now() + SETTLE
+      if (!frame) frame = requestAnimationFrame(look)
+    }
+    const moved = () => {
+      measure()
+      settle()
+    }
+
+    view.addEventListener('resize', moved)
+    view.addEventListener('scroll', moved)
+    document.addEventListener('focusin', settle)
+    document.addEventListener('focusout', settle)
+    document.addEventListener('input', settle)
+    settle()
     return () => {
-      view.removeEventListener('resize', measure)
-      view.removeEventListener('scroll', measure)
+      cancelAnimationFrame(frame)
+      view.removeEventListener('resize', moved)
+      view.removeEventListener('scroll', moved)
+      document.removeEventListener('focusin', settle)
+      document.removeEventListener('focusout', settle)
+      document.removeEventListener('input', settle)
     }
   }, [])
 
@@ -89,6 +120,26 @@ export default function Sheet({ onClose, title, children, footer, large = false 
   const body = useRef<HTMLDivElement>(null)
   const [floor, setFloor] = useState(0)
   const room = useKeyboardRoom()
+
+  /**
+   * How it arrives: slid up from below the screen, unless a field in it has
+   * the focus already. autoFocus has run by the time this does.
+   *
+   * A field has to be where it will stay when it takes the focus. An iPhone
+   * slides the page to bring the field above the keyboard, going by where the
+   * field is then, and a title still below the screen on its way up made it
+   * slide the page as far as it would go. The title then rose into place above
+   * the top of the screen, with the keyboard up and nothing to type into.
+   *
+   * So a sheet with a field in use only rises a little. A fade would not do:
+   * an iPhone hides the caret of a field it sees as transparent. Set before the
+   * first paint, so neither way ever shows the sheet standing still first.
+   */
+  const [arrival, setArrival] = useState('')
+  useLayoutEffect(() => {
+    const typing = panel.current?.contains(document.activeElement)
+    setArrival(typing ? 'animate-sheet-rise' : 'animate-sheet-up')
+  }, [])
 
   /**
    * Once open, the panel only ever grows.
@@ -132,6 +183,8 @@ export default function Sheet({ onClose, title, children, footer, large = false 
     if (!roomHeight || !box || !field || !box.contains(field)) return
     const shown = box.getBoundingClientRect()
     const rect = field.getBoundingClientRect()
+    // A long note will not fit whatever is done; the browser follows its caret.
+    if (rect.height > shown.height) return
     if (rect.bottom > shown.bottom) box.scrollTop += rect.bottom - shown.bottom + CLEARANCE
     else if (rect.top < shown.top) box.scrollTop -= shown.top - rect.top + CLEARANCE
   }, [roomHeight])
@@ -200,7 +253,7 @@ export default function Sheet({ onClose, title, children, footer, large = false 
         }}
         // max-w-lg, not md: on a phone the sheet is the screen either way, and
         // on a desktop md is 448px of a 1900px screen to write a paragraph in.
-        className="relative w-full sm:max-w-lg max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-xl animate-sheet-up"
+        className={`relative w-full sm:max-w-lg max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-xl ${arrival}`}
       >
         {/* The grip says the sheet can be pulled down; the row below it is
             where the pull is taken. Phone only — a centred dialog has no

@@ -637,6 +637,8 @@ laid out narrow and is laid out the way a phone app is. Asked for on
   shortening it, so while one is up `Sheet` sizes itself to what
   `visualViewport` says can still be seen, title at the top and Save at the
   bottom, and the form scrolls between them. `Popover` measures the same way.
+  A sheet that opens with a field focused rises only a little instead of
+  sliding up from off the screen, or an iPhone pushes the page up to find it.
 - **Buttons give a little under a finger** (touch screens only).
 
 React + TypeScript + Tailwind, built by Vite. One runtime dependency beyond
