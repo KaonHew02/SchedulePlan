@@ -453,9 +453,13 @@ export default function FullView({
         </button>
       </div>
 
+      {/* pan-x pan-y leaves the pinch to the listeners above. touch-auto on
+          everything inside, because index.css gives every element
+          manipulation, and WebKit reads manipulation under pan-x pan-y as
+          none: on an iPhone the pages would stop scrolling. */}
       <div
         ref={scroller}
-        className="relative min-h-0 flex-1 overflow-auto overscroll-contain"
+        className="relative min-h-0 flex-1 overflow-auto overscroll-contain [&_*]:touch-auto"
         style={{ touchAction: 'pan-x pan-y' }}
       >
         {/* w-max so a zoomed page can be scrolled to its right edge;

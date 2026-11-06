@@ -99,6 +99,16 @@
     }
   }
 
+  /* A double tap never zooms the app; a pinch still does. maximum-scale in
+     index.html does not stop it, because iOS ignores that for gestures.
+     On every element rather than on the root, because WebKit starts
+     touch-action afresh at each element that scrolls, so a rule on the root
+     never reaches the inside of a sheet. In the base layer, so touch-none and
+     the map's own stylesheet still win. */
+  * {
+    touch-action: manipulation;
+  }
+
   /* Number fields keep their spinners out of a form that is all chips. */
   input[type='number']::-webkit-outer-spin-button,
   input[type='number']::-webkit-inner-spin-button {
