@@ -425,7 +425,7 @@ export default function SeasonsScreen({ onToast }: { onToast: (message: string) 
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
           <div className="flex items-end justify-between gap-3 lg:items-start">
             <div className="min-w-0">
@@ -773,7 +773,7 @@ function MapAnswers({
     )
   }
   return (
-    <section className="mt-3 rounded-2xl border border-neutral-100">
+    <section className="mt-3 rounded-2xl border border-neutral-100 bg-white">
       <p className="flex items-center justify-between gap-3 px-4 pt-3 text-[12px] text-neutral-400">
         <span>{tr(`On the map: “${query}”`, `地图上的「${query}」`)}</span>
         <span>© OpenStreetMap</span>
@@ -912,7 +912,7 @@ function YearTable({
   }, [list, dates, year, events])
 
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-100">
+    <div className="mt-6 overflow-x-auto rounded-2xl border border-neutral-100 bg-white">
       <table className="w-full min-w-[560px] border-separate border-spacing-0 text-[13px]">
         <thead>
           <tr>

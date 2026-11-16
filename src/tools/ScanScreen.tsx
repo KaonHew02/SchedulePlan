@@ -184,7 +184,7 @@ export default function ScanScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button
             onClick={onBack}
@@ -236,7 +236,7 @@ export default function ScanScreen({
                 '2026年10月2日\n10:00 在滨海湾邮轮中心办理登船\n13:00 救生演习',
               )}
               aria-label={tr('Text to look for appointments in', '要从中找出安排的文字')}
-              className="w-full resize-y rounded-2xl border border-neutral-200 p-4 text-[15px] leading-6 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+              className="w-full resize-y rounded-2xl border border-neutral-200 bg-white p-4 text-[15px] leading-6 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
             />
             <p className="pt-1.5 text-[12px] leading-5 text-neutral-400">
               {tr(

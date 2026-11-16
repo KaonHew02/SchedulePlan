@@ -26,6 +26,11 @@
   --color-canvas: #dedbf5;
   /* The ground inside the column, behind white cards. */
   --color-page: #f7f7fb;
+  /* What every screen stands on: a pale lavender, so white panels and the
+     tag-tinted cards have something to sit against. The sticky headers use
+     it too (bg-ground/90), or they would be white bars across a coloured
+     page. */
+  --color-ground: #f3f2fb;
 
   --radius-card: 1.25rem;
 }
@@ -72,6 +77,19 @@
 
 @utility mb-safe {
   margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+  The app column's background: the ground colour with a faint grid of dots,
+  like the paper of a travel journal or a map. White was clean, and it was
+  also the reason the app looked like a form rather than a trip planner.
+  The dots are 7% of the accent — there to give the page a texture, not to
+  be looked at.
+*/
+@utility bg-journey {
+  background-color: var(--color-ground);
+  background-image: radial-gradient(rgb(108 92 231 / 0.08) 1px, transparent 1.4px);
+  background-size: 18px 18px;
 }
 
 @utility no-scrollbar {

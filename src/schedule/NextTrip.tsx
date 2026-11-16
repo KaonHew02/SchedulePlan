@@ -75,7 +75,7 @@ export default function NextTrip({
     return (
       <button
         onClick={onPlan}
-        className={`relative flex w-full items-center gap-3 overflow-hidden rounded-[22px] border-2 border-dashed border-brand-200 bg-brand-50/60 px-4 py-3.5 text-left transition-transform active:scale-[0.99] ${className}`}
+        className={`relative flex w-full items-center gap-3 overflow-hidden rounded-[22px] border-2 border-dashed border-brand-200 bg-white/70 px-4 py-3.5 text-left transition-transform active:scale-[0.99] ${className}`}
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[22px] shadow-xs">
           🧳
@@ -144,8 +144,8 @@ export default function NextTrip({
 
       {/* The tear-off stub, behind a perforation with a notch top and bottom. */}
       <span className="relative flex w-[92px] shrink-0 flex-col items-center justify-center border-l-2 border-dashed border-white/35 px-2 py-3 text-center">
-        <span className="absolute -left-[9px] -top-2 h-4 w-4 rounded-full bg-white" />
-        <span className="absolute -bottom-2 -left-[9px] h-4 w-4 rounded-full bg-white" />
+        <span className="absolute -left-[9px] -top-2 h-4 w-4 rounded-full bg-ground" />
+        <span className="absolute -bottom-2 -left-[9px] h-4 w-4 rounded-full bg-ground" />
         {above && (
           <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/75">
             {above}

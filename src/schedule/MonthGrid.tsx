@@ -150,7 +150,11 @@ export default function MonthGrid({
                 {band && (
                   <span
                     aria-hidden
-                    className={`absolute inset-y-0 ${tintFor(band.tag, tags).bg} ${
+                    className={`absolute inset-y-0 ${
+                      // Untagged cards are white now, which on this white
+                      // card would be no band at all.
+                      band.tag ? tintFor(band.tag, tags).bg : 'bg-neutral-100'
+                    } ${
                       bandStart ? 'rounded-l-full' : ''
                     } ${bandEnd ? 'rounded-r-full' : ''} ${thisMonth ? '' : 'opacity-50'}`}
                     style={{

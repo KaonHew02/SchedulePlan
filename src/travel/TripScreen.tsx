@@ -293,7 +293,7 @@ function PlanField({
       rows={rows}
       placeholder={placeholder}
       aria-label={label}
-      className="w-full resize-none overflow-hidden rounded-2xl border border-neutral-200 p-4 text-[15px] leading-7 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
+      className="w-full resize-none overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 text-[15px] leading-7 outline-hidden transition-colors focus:border-brand-300 placeholder:text-neutral-300"
     />
   )
 }
@@ -343,7 +343,7 @@ export default function TripScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-5 pb-3 pt-4 lg:px-8">
           <button
             onClick={onBack}
@@ -360,7 +360,7 @@ export default function TripScreen({
 
       <main className="px-5 pb-28 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:px-8 lg:pb-10">
         <div>
-          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-4">
             <CountryBadge code={trip.place.country} size="lg" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-medium">

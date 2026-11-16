@@ -408,7 +408,7 @@ export default function TravelScreen({ onToast }: { onToast: (message: string) =
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="px-5 pb-2 pt-3 lg:px-8 lg:pt-4">
           <ScreenTitle>{tr('Travel', '旅行')}</ScreenTitle>
           <p className="flex items-center gap-1.5 pt-0.5 text-[13px] text-neutral-500">

@@ -63,7 +63,7 @@ export default function MoreScreen({ onToast }: { onToast: (message: string) => 
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
           <ScreenTitle>{tr('Settings', '设置')}</ScreenTitle>
         </div>

@@ -165,7 +165,7 @@ function LineCard({
   onRemoveCard?: () => void
 }) {
   return (
-    <div className="mt-2.5 rounded-2xl border border-neutral-200 px-3.5 py-3">
+    <div className="mt-2.5 rounded-2xl border border-neutral-200 bg-white px-3.5 py-3">
       <div className="flex items-center gap-2">
         <span className="truncate text-[13px] font-semibold uppercase tracking-wide">{title}</span>
         {badge && (
@@ -313,7 +313,7 @@ function ShareCard({
       <h2 className="pb-2 pt-6 text-[13px] font-medium text-neutral-400">
         {tr('Put it in your expenses', '记入你的支出')}
       </h2>
-      <div className="rounded-2xl border border-neutral-200 p-4">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4">
         {split.people.length > 1 && (
           <div className="flex flex-wrap gap-2 pb-3">
             {split.people.map((person) => (
@@ -483,7 +483,7 @@ export function SplitEditor({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button onClick={onClose} aria-label={tr('Back to bills', '返回账单列表')} className="p-1.5 text-neutral-400">
             <ChevronLeft />
@@ -505,7 +505,7 @@ export function SplitEditor({
           and is deliberately not a field: a bill with a typed total *and* a
           list of lines has two answers and no way to say which is wrong.
         */}
-        <div className="rounded-2xl border border-neutral-200 p-4 lg:p-5">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-4 lg:p-5">
           <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-400">
             {tr('Bill total', '账单总额')}
           </p>

@@ -33,7 +33,10 @@ export default function MonthView({
 
   return (
     <div>
-      <MonthGrid anchor={anchor} items={items} onSelect={onSelect} holidays={holidays} />
+      {/* The calendar on a white card of its own, standing on the page. */}
+      <div className="mx-3 rounded-[22px] bg-white py-3 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(108,92,231,0.25)] lg:mx-0">
+        <MonthGrid anchor={anchor} items={items} onSelect={onSelect} holidays={holidays} />
+      </div>
 
       <button
         onClick={() => onPickDay(anchor)}
@@ -55,7 +58,7 @@ export default function MonthView({
       <HolidayLines holidays={holidays.get(anchor)} className="px-4 pb-2" />
 
       {selectedItems.length === 0 ? (
-        <p className="mx-4 mb-6 flex items-center gap-2 rounded-2xl border border-dashed border-neutral-200 px-4 py-3 text-[13px] text-neutral-400">
+        <p className="mx-4 mb-6 flex items-center gap-2 rounded-2xl border border-dashed border-brand-200 bg-white/60 px-4 py-3 text-[13px] text-neutral-400">
           <span className="text-[16px]">☀️</span>
           {tr('Free day — tap + to plan something', '空闲的一天 — 点 + 安排行程')}
         </p>

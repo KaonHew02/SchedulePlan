@@ -145,7 +145,7 @@ const TINTS: Tint[] = [
 ]
 
 /** Untagged things stay grey rather than borrowing somebody else's colour. */
-const PLAIN: Tint = { bg: 'bg-neutral-50', bar: 'bg-neutral-300', text: 'text-neutral-500' }
+const PLAIN: Tint = { bg: 'bg-white', bar: 'bg-neutral-300', text: 'text-neutral-500' }
 
 export function tintFor(id: string | null, order?: readonly { id: string }[]): Tint {
   if (!id) return PLAIN

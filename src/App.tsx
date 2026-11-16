@@ -86,7 +86,7 @@ export default function App() {
         there, which is why each one grows a second column rather than simply
         letting its text run to 1900px.
       */}
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white sm:border-x sm:border-neutral-200 md:max-w-xl lg:max-w-none lg:flex-row lg:border-x-0">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-journey sm:border-x sm:border-neutral-200 md:max-w-xl lg:max-w-none lg:flex-row lg:border-x-0">
         <SideNav current={screen} onChange={go} />
 
         <div className="flex min-w-0 flex-1 flex-col">

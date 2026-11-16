@@ -365,7 +365,7 @@ export default function TranslateScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
         <div className="flex items-center px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
           <ScreenTitle>{tr('Translate', '翻译')}</ScreenTitle>
         </div>
@@ -373,7 +373,7 @@ export default function TranslateScreen({
 
       <main className="px-5 pb-28 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10 lg:px-8 lg:pb-10">
         <div>
-          <div className="rounded-2xl border border-neutral-200 p-4">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4">
             <div className="flex items-center justify-between gap-3">
               <LanguagePicker
                 value={from}
