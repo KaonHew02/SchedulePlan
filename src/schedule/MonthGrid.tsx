@@ -9,8 +9,8 @@ import {
   weekDays,
   weekdayShort,
 } from '../lib/date'
-import { onDay, useTags } from '../lib/store'
-import { tintFor } from '../lib/tags'
+import { lastDay, onDay, spansDays, useTags } from '../lib/store'
+import { TRAVEL_TAG, tintFor } from '../lib/tags'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
 import { holidayName, type Holiday } from '../lib/holidays'
 import { isZh, tr } from '../lib/i18n'
@@ -31,6 +31,12 @@ import type { ScheduleItem } from '../types'
  * four dots is a number nobody can read at a glance — and the count stays
  * neutral on purpose, since a coloured number would claim a category the day
  * does not have.
+ *
+ * Something that runs over several days — a trip, above all — is drawn as a
+ * band behind its dates, in its card's colour, the way a booking site shows
+ * the nights you have picked. A trip then reads as a journey across the
+ * month instead of a row of identical dots. A trip tagged Travel wins the
+ * band when two overlap, and the banded item gives up its dot.
  *
  * A public holiday turns the date itself red, the way a printed calendar does.
  * Not a dot: the dots are what you put in the diary, and a holiday is not.
@@ -108,9 +114,18 @@ export default function MonthGrid({
       </div>
 
       <div className={`grid grid-cols-7 ${compact ? '' : 'px-2'}`}>
-        {grid.map((day) => {
-          const list = onDays.get(day) ?? []
-          const count = list.length
+        {grid.map((day, index) => {
+          const all = onDays.get(day) ?? []
+          const band =
+            all.find((item) => spansDays(item) && item.tag === TRAVEL_TAG) ??
+            all.find((item) => spansDays(item))
+          const list = band ? all.filter((item) => item !== band) : all
+          const count = all.length
+          const column = index % 7
+          const bandStart = band && (band.date === day || column === 0)
+          const bandEnd = band && (lastDay(band) === day || column === 6)
+          // Half the date circle, so the band's round ends sit on the circle.
+          const half = compact ? 12 : 14
           const selected = day === anchor
           const thisMonth = isSameMonth(day, anchor)
           const holiday = holidays?.get(day)
@@ -131,34 +146,56 @@ export default function MonthGrid({
                 compact ? 'h-9' : 'h-12 md:h-16'
               }`}
             >
-              <span
-                className={[
-                  'flex items-center justify-center rounded-full tabular-nums',
-                  compact ? 'h-6 w-6 text-[12px]' : 'h-7 w-7 text-[13px]',
-                  selected ? 'bg-brand-500 font-medium text-white' : '',
-                  !selected && day === today ? 'font-semibold text-brand-500' : '',
-                  // Today keeps its own colour even on a holiday: which day it
-                  // is matters more, and the line under the grid says the rest.
-                  !selected && day !== today && holiday
-                    ? thisMonth
-                      ? 'font-semibold text-rose-600'
-                      : 'text-rose-300'
-                    : '',
-                  !selected && day !== today && !holiday && thisMonth ? 'text-neutral-900' : '',
-                  !selected && !holiday && !thisMonth ? 'text-neutral-300' : '',
-                ].join(' ')}
-              >
-                {dayNumber(day)}
+              <span className="relative flex w-full justify-center">
+                {band && (
+                  <span
+                    aria-hidden
+                    className={`absolute inset-y-0 ${tintFor(band.tag, tags).bg} ${
+                      bandStart ? 'rounded-l-full' : ''
+                    } ${bandEnd ? 'rounded-r-full' : ''} ${thisMonth ? '' : 'opacity-50'}`}
+                    style={{
+                      left: bandStart ? `calc(50% - ${half}px)` : 0,
+                      right: bandEnd ? `calc(50% - ${half}px)` : 0,
+                    }}
+                  />
+                )}
+                <span
+                  className={[
+                    'relative flex items-center justify-center rounded-full tabular-nums',
+                    compact ? 'h-6 w-6 text-[12px]' : 'h-7 w-7 text-[13px]',
+                    selected ? 'bg-brand-500 font-medium text-white' : '',
+                    !selected && day === today ? 'font-semibold text-brand-500' : '',
+                    // Today keeps its own colour even on a holiday: which day it
+                    // is matters more, and the line under the grid says the rest.
+                    !selected && day !== today && holiday
+                      ? thisMonth
+                        ? 'font-semibold text-rose-600'
+                        : 'text-rose-300'
+                      : '',
+                    !selected && day !== today && !holiday && thisMonth ? 'text-neutral-900' : '',
+                    !selected && !holiday && !thisMonth ? 'text-neutral-300' : '',
+                  ].join(' ')}
+                >
+                  {dayNumber(day)}
+                </span>
+                {band && band.tag === TRAVEL_TAG && band.date === day && !compact && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-1.5 left-1/2 ml-2 text-[10px] leading-none"
+                  >
+                    ✈️
+                  </span>
+                )}
               </span>
 
               <span className="flex h-1.5 items-center gap-[3px]">
-                {count > 3 ? (
+                {list.length > 3 ? (
                   <span
                     className={`text-[10px] font-semibold leading-none tabular-nums ${
                       thisMonth ? 'text-neutral-500' : 'text-neutral-300'
                     }`}
                   >
-                    {count}
+                    {list.length}
                   </span>
                 ) : (
                   list.map((item) => (

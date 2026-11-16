@@ -33,6 +33,7 @@ import DayView from '../schedule/DayView'
 import ItemCard from '../schedule/ItemCard'
 import MonthGrid from '../schedule/MonthGrid'
 import MonthView from '../schedule/MonthView'
+import NextTrip, { FlightPath } from '../schedule/NextTrip'
 import ScheduleDetail from '../schedule/ScheduleDetail'
 import ScheduleForm from '../schedule/ScheduleForm'
 import WeekView from '../schedule/WeekView'
@@ -223,8 +224,13 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/90 pt-safe backdrop-blur-sm">
-        <div className="flex items-end justify-between gap-3 px-5 pb-3 pt-3 lg:items-center lg:px-8 lg:pt-4">
+      {/*
+        A sky behind the title, and a dotted flight path across it: the first
+        hint that this is a diary for going places, not an office calendar.
+      */}
+      <header className="sticky top-0 z-20 overflow-hidden bg-gradient-to-b from-[#efeefe]/95 via-[#f5f7ff]/90 to-white/90 pt-safe backdrop-blur-sm">
+        <FlightPath dot={false} className="absolute -top-1 right-20 h-14 w-40 text-brand-300/60 lg:right-72" />
+        <div className="relative flex items-end justify-between gap-3 px-5 pb-3 pt-3 lg:items-center lg:px-8 lg:pt-4">
           <ScreenTitle>{title}</ScreenTitle>
 
           <div className="flex shrink-0 items-center gap-3">
@@ -250,7 +256,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
           </div>
         </div>
 
-        <ViewToggle view={view} onChange={setView} className="mx-5 mb-3 lg:hidden" />
+        <ViewToggle view={view} onChange={setView} className="relative mx-5 mb-3 lg:hidden" />
 
         {view === 'day' && (
           <DayStrip anchor={anchor} items={weekItems} onPick={setAnchor} holidays={holidays} />
@@ -259,6 +265,16 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
       <main className="pb-28 lg:px-8 lg:pb-10 xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start xl:gap-8">
         <div className="min-w-0">
+          {/* Where you are off to next. In the rail instead, on a screen wide
+              enough to have one; and not over the day, which has its own route. */}
+          {view !== 'day' && (
+            <NextTrip
+              schedule={schedule}
+              onOpen={setDetail}
+              onPlan={() => setForm({ item: null })}
+              className="mx-auto mb-4 mt-1 max-w-[calc(100%-2rem)] lg:max-w-none xl:hidden"
+            />
+          )}
           {view === 'day' ? (
             <DayView
               items={dayItems}
@@ -293,6 +309,12 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
           something a phone has no room for and a desktop does.
         */}
         <aside className="hidden xl:block xl:sticky xl:top-4 xl:space-y-6">
+          <NextTrip
+            schedule={schedule}
+            onOpen={setDetail}
+            onPlan={() => setForm({ item: null })}
+          />
+
           {view !== 'month' && (
             <section className="rounded-2xl border border-neutral-100 p-3">
               <MonthGrid
@@ -310,6 +332,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
             <h2 className="pb-2 text-[13px] font-medium text-neutral-400">{tr('Up next', '接下来')}</h2>
             {upNext.length === 0 ? (
               <p className="rounded-2xl bg-neutral-50 px-4 py-5 text-center text-[13px] leading-5 text-neutral-400">
+                <span className="mb-1 block text-[22px]">🗺️</span>
                 {tr('Nothing ahead in the diary.', '接下来没有安排。')}
               </p>
             ) : (
