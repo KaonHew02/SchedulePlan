@@ -26,11 +26,10 @@
   --color-canvas: #dedbf5;
   /* The ground inside the column, behind white cards. */
   --color-page: #f7f7fb;
-  /* What every screen stands on: a pale lavender, so white panels and the
-     tag-tinted cards have something to sit against. The sticky headers use
-     it too (bg-ground/90), or they would be white bars across a coloured
-     page. */
-  --color-ground: #f3f2fb;
+  /* What every screen stands on: a cool, barely-violet grey — the grouped
+     background a phone's own settings use — so white panels and the
+     tag-tinted cards have something to sit against. bg-hero fades into it. */
+  --color-ground: #f4f4f9;
 
   --radius-card: 1.25rem;
 }
@@ -80,16 +79,22 @@
 }
 
 /*
-  The app column's background: the ground colour with a faint grid of dots,
-  like the paper of a travel journal or a map. White was clean, and it was
-  also the reason the app looked like a form rather than a trip planner.
-  The dots are 7% of the accent — there to give the page a texture, not to
-  be looked at.
+  The screens' sticky headers: a soft sky at the top — violet on the left,
+  blue on the right — fading into the ground colour at the bottom edge, so
+  the header and the page meet without a line between them.
+
+  The colour lives in the header and not on the page. A glow painted on the
+  page sat half under a 90% header and half not, and drew a seam along the
+  header's bottom edge the moment the page was scrolled.
+
+  A dotted "journal paper" page was tried before this and looked cheap.
 */
-@utility bg-journey {
-  background-color: var(--color-ground);
-  background-image: radial-gradient(rgb(108 92 231 / 0.08) 1px, transparent 1.4px);
-  background-size: 18px 18px;
+@utility bg-hero {
+  background-color: rgb(244 244 249 / 0.92);
+  background-image:
+    radial-gradient(420px 200px at 100% -40px, rgb(56 189 248 / 0.16), transparent 70%),
+    radial-gradient(460px 220px at 0% -60px, rgb(108 92 231 / 0.16), transparent 70%),
+    linear-gradient(to bottom, rgb(236 235 252 / 0.9), rgb(244 244 249 / 0));
 }
 
 @utility no-scrollbar {

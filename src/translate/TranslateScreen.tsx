@@ -365,7 +365,7 @@ export default function TranslateScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-hero pt-safe backdrop-blur-sm">
         <div className="flex items-center px-5 pb-3 pt-3 lg:px-8 lg:pt-4">
           <ScreenTitle>{tr('Translate', '翻译')}</ScreenTitle>
         </div>

@@ -184,7 +184,7 @@ export default function ScanScreen({
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-ground/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 bg-hero pt-safe backdrop-blur-sm">
         <div className="flex items-center gap-1 px-3 pb-3 pt-4 lg:px-6">
           <button
             onClick={onBack}

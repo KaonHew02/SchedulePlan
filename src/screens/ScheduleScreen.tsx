@@ -228,7 +228,7 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
         A sky behind the title, and a dotted flight path across it: the first
         hint that this is a diary for going places, not an office calendar.
       */}
-      <header className="sticky top-0 z-20 overflow-hidden bg-gradient-to-b from-[#e9e7fd]/95 via-[#eff1fd]/90 to-ground/90 pt-safe backdrop-blur-sm">
+      <header className="sticky top-0 z-20 overflow-hidden bg-hero pt-safe backdrop-blur-sm">
         <FlightPath dot={false} className="absolute -top-1 right-20 h-14 w-40 text-brand-300/60 lg:right-72" />
         <div className="relative flex items-end justify-between gap-3 px-5 pb-3 pt-3 lg:items-center lg:px-8 lg:pt-4">
           <ScreenTitle>{title}</ScreenTitle>

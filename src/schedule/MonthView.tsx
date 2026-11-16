@@ -58,7 +58,7 @@ export default function MonthView({
       <HolidayLines holidays={holidays.get(anchor)} className="px-4 pb-2" />
 
       {selectedItems.length === 0 ? (
-        <p className="mx-4 mb-6 flex items-center gap-2 rounded-2xl border border-dashed border-brand-200 bg-white/60 px-4 py-3 text-[13px] text-neutral-400">
+        <p className="mx-4 mb-6 flex items-center gap-2 rounded-2xl bg-white px-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] py-3 text-[13px] text-neutral-400">
           <span className="text-[16px]">☀️</span>
           {tr('Free day — tap + to plan something', '空闲的一天 — 点 + 安排行程')}
         </p>
