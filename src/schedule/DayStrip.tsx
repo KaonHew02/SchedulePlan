@@ -38,7 +38,11 @@ export default function DayStrip({
             onClick={() => onPick(day)}
             aria-current={selected ? 'date' : undefined}
             className={`flex flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors ${
-              selected ? 'bg-brand-500 text-white' : 'text-neutral-500 hover:bg-neutral-100'
+              selected
+                ? 'bg-brand-500 text-white'
+                : holiday
+                  ? 'bg-rose-100 text-rose-600'
+                  : 'text-neutral-500 hover:bg-neutral-100'
             }`}
           >
             <span className={`text-[10px] font-medium ${selected ? 'text-white/75' : ''}`}>
@@ -51,7 +55,7 @@ export default function DayStrip({
                   : isToday
                     ? 'text-brand-500'
                     : holiday
-                      ? 'text-rose-600'
+                      ? 'text-rose-700'
                       : 'text-neutral-900'
               }`}
             >

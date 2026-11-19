@@ -38,7 +38,8 @@ import type { ScheduleItem } from '../types'
  * month instead of a row of identical dots. A trip tagged Travel wins the
  * band when two overlap, and the banded item gives up its dot.
  *
- * A public holiday turns the date itself red, the way a printed calendar does.
+ * A public holiday turns the date red in a filled pink circle, the way a
+ * printed calendar marks days off — red text alone was too easy to miss.
  * Not a dot: the dots are what you put in the diary, and a holiday is not.
  */
 export default function MonthGrid({
@@ -168,12 +169,19 @@ export default function MonthGrid({
                     'relative flex items-center justify-center rounded-full tabular-nums',
                     compact ? 'h-6 w-6 text-[12px]' : 'h-7 w-7 text-[13px]',
                     selected ? 'bg-brand-500 font-medium text-white' : '',
+                    // A holiday gets a filled pink circle, not only red text:
+                    // red text alone was too easy to miss on a phone.
+                    !selected && holiday
+                      ? thisMonth
+                        ? 'bg-rose-100 ring-1 ring-rose-300'
+                        : 'bg-rose-50'
+                      : '',
                     !selected && day === today ? 'font-semibold text-brand-500' : '',
                     // Today keeps its own colour even on a holiday: which day it
-                    // is matters more, and the line under the grid says the rest.
+                    // is matters more, and the pink circle still says holiday.
                     !selected && day !== today && holiday
                       ? thisMonth
-                        ? 'font-semibold text-rose-600'
+                        ? 'font-bold text-rose-700'
                         : 'text-rose-300'
                       : '',
                     !selected && day !== today && !holiday && thisMonth ? 'text-neutral-900' : '',
