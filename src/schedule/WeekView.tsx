@@ -36,7 +36,7 @@ export default function WeekView({
             >
               <span
                 className={`text-[13px] font-semibold ${
-                  day === today ? 'text-brand-500' : holiday ? 'text-rose-600' : 'text-neutral-900'
+                  day === today ? 'text-brand-500' : holiday ? 'text-amber-700' : 'text-neutral-900'
                 }`}
               >
                 {tr(

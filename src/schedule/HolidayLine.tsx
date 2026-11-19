@@ -10,7 +10,7 @@ import { holidayName, type Holiday } from '../lib/holidays'
  * Not a card. A card is something you put in the diary and can open, edit and
  * delete; a holiday is a fact about the day, and making it look like an item
  * would invite tapping it to find there is nothing to do. So it is a line of
- * red — the red a printed calendar uses for the days off — and nothing more.
+ * gold with a party icon, so it reads as a day off at a glance, and nothing more.
  *
  * Another country's holiday, from a trip, carries that country's badge so it
  * is not mistaken for a day off at home.
@@ -31,13 +31,19 @@ export default function HolidayLine({ holiday }: { holiday: Holiday }) {
   const unsure = holiday.estimated ? tr(' · not confirmed yet', ' · 尚未确认') : ''
 
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2">
-      {abroad && <CountryBadge code={holiday.country} size="sm" />}
+    <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+      {abroad ? (
+        <CountryBadge code={holiday.country} size="sm" />
+      ) : (
+        <span aria-hidden className="text-[18px] leading-none">
+          🎉
+        </span>
+      )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-medium text-rose-700">
+        <span className="block truncate text-[14px] font-semibold text-amber-800">
           {holidayName(holiday.name)}
         </span>
-        <span className="block text-[12px] text-rose-500">
+        <span className="block text-[12px] text-amber-600">
           {said}
           {unsure}
         </span>

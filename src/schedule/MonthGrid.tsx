@@ -38,8 +38,9 @@ import type { ScheduleItem } from '../types'
  * month instead of a row of identical dots. A trip tagged Travel wins the
  * band when two overlap, and the banded item gives up its dot.
  *
- * A public holiday turns the date red in a filled pink circle, the way a
- * printed calendar marks days off — red text alone was too easy to miss.
+ * A public holiday puts the date in a gold circle with a small "PH" (休) tag
+ * at its corner, the way a printed calendar marks days off. Colour alone,
+ * red text at first, was too easy to miss on a phone.
  * Not a dot: the dots are what you put in the diary, and a holiday is not.
  */
 export default function MonthGrid({
@@ -169,20 +170,19 @@ export default function MonthGrid({
                     'relative flex items-center justify-center rounded-full tabular-nums',
                     compact ? 'h-6 w-6 text-[12px]' : 'h-7 w-7 text-[13px]',
                     selected ? 'bg-brand-500 font-medium text-white' : '',
-                    // A holiday gets a filled pink circle, not only red text:
-                    // red text alone was too easy to miss on a phone.
+                    // A holiday gets a filled gold circle, and the PH tag below.
                     !selected && holiday
                       ? thisMonth
-                        ? 'bg-rose-100 ring-1 ring-rose-300'
-                        : 'bg-rose-50'
+                        ? 'bg-amber-100 ring-1 ring-amber-300'
+                        : 'bg-amber-50'
                       : '',
                     !selected && day === today ? 'font-semibold text-brand-500' : '',
                     // Today keeps its own colour even on a holiday: which day it
-                    // is matters more, and the pink circle still says holiday.
+                    // is matters more, and the circle and tag still say holiday.
                     !selected && day !== today && holiday
                       ? thisMonth
-                        ? 'font-bold text-rose-700'
-                        : 'text-rose-300'
+                        ? 'font-bold text-amber-800'
+                        : 'text-amber-400'
                       : '',
                     !selected && day !== today && !holiday && thisMonth ? 'text-neutral-900' : '',
                     !selected && !holiday && !thisMonth ? 'text-neutral-300' : '',
@@ -190,10 +190,23 @@ export default function MonthGrid({
                 >
                   {dayNumber(day)}
                 </span>
+                {holiday && thisMonth && (
+                  <span
+                    aria-hidden
+                    className={`absolute left-1/2 rounded-full bg-amber-500 px-[3px] font-bold leading-[1.35] text-white shadow-sm ${
+                      compact ? '-top-1 ml-1.5 text-[7px]' : '-top-1.5 ml-2 text-[8px]'
+                    }`}
+                  >
+                    {tr('PH', '休')}
+                  </span>
+                )}
                 {band && band.tag === TRAVEL_TAG && band.date === day && !compact && (
                   <span
                     aria-hidden
-                    className="absolute -top-1.5 left-1/2 ml-2 text-[10px] leading-none"
+                    // The PH tag takes the right corner; the plane moves left.
+                    className={`absolute -top-1.5 text-[10px] leading-none ${
+                      holiday && thisMonth ? 'right-1/2 mr-2' : 'left-1/2 ml-2'
+                    }`}
                   >
                     ✈️
                   </span>
