@@ -52,9 +52,10 @@ function rangeFor(view: ViewMode, anchor: string): { start: string; end: string 
     const start = startOfWeek(anchor)
     return { start, end: addDays(start, 6) }
   }
-  // The month grid shows a few days either side of the month.
-  const grid = monthGrid(anchor)
-  return { start: grid[0], end: grid[grid.length - 1] }
+  // The month grid shows a few days either side of the month, and the months
+  // either side are drawn too, off the edge, ready to be swiped in.
+  const after = monthGrid(addMonths(anchor, 1))
+  return { start: monthGrid(addMonths(anchor, -1))[0], end: after[after.length - 1] }
 }
 
 /**
@@ -156,8 +157,13 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
     [schedule, grid],
   )
   // The anchor's month grid holds its week and its day too, so one lookup over
-  // it serves every view, the strip and the rail.
-  const holidays = useHolidays(grid[0], grid[grid.length - 1], monthItems)
+  // it serves every view, the strip and the rail. The month view wants the
+  // months either side as well, for the one being swiped in.
+  const holidays = useHolidays(
+    view === 'month' ? range.start : grid[0],
+    view === 'month' ? range.end : grid[grid.length - 1],
+    view === 'month' ? items : monthItems,
+  )
   const upNext = useMemo(() => upcoming(schedule, 5), [schedule])
 
   function step(direction: 1 | -1) {

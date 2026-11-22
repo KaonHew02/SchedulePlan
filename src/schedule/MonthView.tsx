@@ -1,5 +1,6 @@
 import { ChevronRight } from '../components/Icons'
-import { relativeDay, shortDate } from '../lib/date'
+import SwipePager from '../components/SwipePager'
+import { addMonths, relativeDay, shortDate } from '../lib/date'
 import type { Holiday } from '../lib/holidays'
 import { tr } from '../lib/i18n'
 import { occupies } from '../lib/store'
@@ -13,6 +14,11 @@ import MonthGrid from './MonthGrid'
  *
  * The grid itself lives in MonthGrid, because the desktop rail shows the same
  * calendar beside the day view and two copies of that loop would drift apart.
+ *
+ * Swipe the calendar left or right for the next or last month, as on a
+ * phone's own calendar; the arrows in the header still do the same. `items`
+ * and `holidays` cover the months either side as well, so the one being
+ * pulled in already has its dots.
  */
 export default function MonthView({
   anchor,
@@ -35,7 +41,18 @@ export default function MonthView({
     <div>
       {/* The calendar on a white card of its own, standing on the page. */}
       <div className="mx-3 rounded-[22px] bg-white py-3 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(108,92,231,0.25)] lg:mx-0">
-        <MonthGrid anchor={anchor} items={items} onSelect={onSelect} holidays={holidays} />
+        <SwipePager
+          pageKey={anchor}
+          onTurn={(direction) => onSelect(addMonths(anchor, direction))}
+          render={(offset) => (
+            <MonthGrid
+              anchor={offset ? addMonths(anchor, offset) : anchor}
+              items={items}
+              onSelect={onSelect}
+              holidays={holidays}
+            />
+          )}
+        />
       </div>
 
       <button
