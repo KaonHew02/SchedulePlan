@@ -145,15 +145,6 @@ export const ImageIcon = ({ className = 'w-4 h-4' }: Props) => (
   </svg>
 )
 
-/** Memories: a postage stamp, perforated edge and all, with a picture on it. */
-export const StampIcon = ({ className = 'w-6 h-6' }: Props) => (
-  <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 3.5h2a1.5 1.5 0 0 0 3 0h4a1.5 1.5 0 0 0 3 0h2v4a1.5 1.5 0 0 0 0 3v3a1.5 1.5 0 0 0 0 3v4h-2a1.5 1.5 0 0 0-3 0h-4a1.5 1.5 0 0 0-3 0H5v-4a1.5 1.5 0 0 0 0-3v-3a1.5 1.5 0 0 0 0-3Z" />
-    <path d="m8 16 2.6-2.6a1 1 0 0 1 1.4 0L16 17.3M13.5 14.5l.8-.8a1 1 0 0 1 1.4 0l.8.8" />
-    <circle cx="10" cy="9.5" r="1.3" />
-  </svg>
-)
-
 export const FileIcon = ({ className = 'w-4 h-4' }: Props) => (
   <svg className={`${base} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />

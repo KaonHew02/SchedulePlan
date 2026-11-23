@@ -89,9 +89,9 @@ export default function DataSheet({
     void storageUse().then(setUse)
   }, [])
 
-  // Every kind of row's files — schedule, expenses, the wishlist and memories.
-  // This list is also what the tidy-up keeps, so a kind left off it would
-  // have its pictures deleted as strays.
+  // Every kind of row's files — schedule, expenses and the wishlist. This list
+  // is also what the tidy-up keeps, so a kind left off it would have its
+  // pictures deleted as strays.
   const attachments = storedAttachments()
   const attachmentBytes = attachments.reduce((total, file) => total + file.size, 0)
   const share = use?.quota ? Math.min(1, use.used / use.quota) : 0

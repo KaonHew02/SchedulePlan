@@ -54,31 +54,6 @@ export const positiveId = (value: unknown): number | null =>
 export const finite = (value: unknown, fallback = 0): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback
 
-/** A latitude (limit 90) or longitude (limit 180). A point off the globe is no point, so null. */
-export const coord = (value: unknown, limit: number): number | null =>
-  typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= limit ? value : null
-
-/**
- * Short free-text labels, as a memory's people and tags are: trimmed, blanks
- * dropped, each kept once whatever its case, at most `max` of them and 40
- * characters each — a label is something to find a memory by, not a note.
- */
-export function labels(value: unknown, max = 20): string[] {
-  if (!Array.isArray(value)) return []
-  const seen = new Set<string>()
-  const kept: string[] = []
-  for (const raw of value) {
-    if (typeof raw !== 'string') continue
-    const label = raw.trim().slice(0, 40)
-    const key = label.toLowerCase()
-    if (!label || seen.has(key)) continue
-    seen.add(key)
-    kept.push(label)
-    if (kept.length >= max) break
-  }
-  return kept
-}
-
 /**
  * Rejects 31 February and friends, which a regex alone lets through.
  *

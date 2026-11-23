@@ -8,7 +8,6 @@ import {
   GearIcon,
   GlobeIcon,
   GridIcon,
-  StampIcon,
   SunriseIcon,
   SwapIcon,
   TranslateIcon,
@@ -41,16 +40,10 @@ import {
  * BottomNav was already sized for while Expenses was in. Switching MONEY
  * back on would make eight, which BottomNav says is past what that bar can
  * hold — at that point one of the two belongs behind More.
- *
- * Memories (asked for on 2026-11-23) makes eight, and sits next to Travel:
- * Travel counts where you have been, Memories keeps what happened there — and
- * everywhere else. The sidebar has room for eight. The phone's bar does not,
- * so it is the first tile in the More sheet rather than a tab.
  */
 export const NAV: { id: Screen; label: string; zh: string; Icon: ComponentType<{ className?: string }> }[] = [
   { id: 'schedule', label: 'Schedule', zh: '日程', Icon: CalendarIcon },
   { id: 'travel', label: 'Travel', zh: '旅行', Icon: GlobeIcon },
-  { id: 'memories', label: 'Memories', zh: '回忆', Icon: StampIcon },
   { id: 'seasons', label: 'Seasons', zh: '季节', Icon: SunriseIcon },
   ...(MONEY
     ? [{ id: 'expenses' as const, label: 'Expenses', zh: '支出', Icon: WalletIcon }]
@@ -79,7 +72,7 @@ export const NAV: { id: Screen; label: string; zh: string; Icon: ComponentType<{
  * nothing else needs to change.
  */
 export const TABS: Screen[] = ['schedule', 'travel', 'seasons']
-export const SHEET: Screen[] = ['memories', 'reminders', 'currency', 'translate', ...(MONEY ? ['expenses' as const] : []), 'more']
+export const SHEET: Screen[] = ['reminders', 'currency', 'translate', ...(MONEY ? ['expenses' as const] : []), 'more']
 
 /** The phone's More tab: not a screen, so it is not in NAV. */
 export const MORE_TAB = { label: 'More', zh: '更多', Icon: GridIcon }

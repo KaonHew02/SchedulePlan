@@ -10,10 +10,8 @@
  */
 
 import { SP_DRIVE, driveIsConfigured } from './drive-config'
-import { readFile, storedFileIds, writeFileBlob } from './files'
 import { tr } from './i18n'
-import { isFileId } from './sanitize'
-import { countIn, fullSnapshot, memoryPhotoIds, restore, updateSettings, type Snapshot } from './store'
+import { fullSnapshot, restore, updateSettings, type Snapshot } from './store'
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const GIS_SCRIPT = 'https://accounts.google.com/gsi/client'
@@ -254,138 +252,12 @@ async function findFile(): Promise<string | null> {
   return body.files?.[0]?.id ?? null
 }
 
-// ------------------------------------------------------------ memory photos
-//
-// A memory is mostly photos, and a notebook with a few hundred of them inlined
-// would be a JSON file of hundreds of megabytes — more than a phone can build
-// in memory and send in one request. So memory photos travel as files of their
-// own, one per photo, named by attachment id, in a folder inside the
-// configured one; the notebook file names them and carries no bytes for them.
-// Every other attachment is still inlined, as it always was.
-
-/** Never rename it: a renamed folder is a new, empty one, and the photos in the old one go unseen. */
-const PHOTO_FOLDER = 'Memories photos'
-const FOLDER_TYPE = 'application/vnd.google-apps.folder'
-const EXTENSION: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/heic': 'heic',
-}
-let photoFolderId: string | null = null
-
-/** The photo folder, found — or made, when `create` and there is something to put in it. */
-async function photoFolder(create: boolean): Promise<string | null> {
-  if (photoFolderId) return photoFolderId
-  const query = encodeURIComponent(
-    `'${SP_DRIVE.folderId}' in parents and name = '${PHOTO_FOLDER}' and mimeType = '${FOLDER_TYPE}' and trashed = false`,
-  )
-  const response = await call(`${FILES}?q=${query}&fields=files(id)&pageSize=1`, {})
-  const body = (await response.json()) as { files?: { id: string }[] }
-  photoFolderId = body.files?.[0]?.id ?? null
-  if (photoFolderId || !create) return photoFolderId
-  const made = await call(`${FILES}?fields=id`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: PHOTO_FOLDER, mimeType: FOLDER_TYPE, parents: [SP_DRIVE.folderId] }),
-  })
-  photoFolderId = ((await made.json()) as { id: string }).id
-  return photoFolderId
-}
-
-/** Every photo file in the folder, keyed by the attachment id its name starts with. */
-async function photosInDrive(folder: string): Promise<Map<string, string>> {
-  const found = new Map<string, string>()
-  let page = ''
-  do {
-    const query = encodeURIComponent(`'${folder}' in parents and trashed = false`)
-    const next = page ? `&pageToken=${encodeURIComponent(page)}` : ''
-    const response = await call(`${FILES}?q=${query}&fields=nextPageToken,files(id,name)&pageSize=1000${next}`, {})
-    const body = (await response.json()) as { nextPageToken?: string; files?: { id: string; name: string }[] }
-    for (const file of body.files ?? []) found.set(file.name.split('.')[0], file.id)
-    page = body.nextPageToken ?? ''
-  } while (page)
-  return found
-}
-
-/** Send the memory photos Drive does not have yet. Hands back what was there, for `binPhotos`. */
-async function sendPhotos(ids: string[]): Promise<Map<string, string>> {
-  const folder = await photoFolder(ids.length > 0)
-  if (!folder) return new Map()
-  const inDrive = await photosInDrive(folder)
-  for (const id of ids) {
-    if (inDrive.has(id)) continue
-    const blob = await readFile(id)
-    if (!blob) continue
-    const type = blob.type || 'image/jpeg'
-    const boundary = `scheduleplan-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    const metadata = { name: `${id}.${EXTENSION[type] ?? 'bin'}`, parents: [folder] }
-    await call(`${UPLOAD}?uploadType=multipart&fields=id`, {
-      method: 'POST',
-      headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
-      body: new Blob([
-        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
-          `--${boundary}\r\nContent-Type: ${type}\r\n\r\n`,
-        blob,
-        `\r\n--${boundary}--`,
-      ]),
-    })
-  }
-  return inDrive
-}
-
-/**
- * Photos of memories that are gone go to Drive's bin — recoverable there for
- * 30 days, not deleted outright. Only after the notebook file is written, so
- * the copy in Drive never names a photo that is already in the bin.
- */
-async function binPhotos(inDrive: Map<string, string>, kept: string[]): Promise<void> {
-  const keep = new Set(kept)
-  for (const [id, fileId] of inDrive) {
-    if (keep.has(id)) continue
-    try {
-      await call(`${FILES}/${fileId}?fields=id`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trashed: true }),
-      })
-    } catch {
-      // Tidying only: a photo left in Drive costs space, not data.
-    }
-  }
-}
-
-/** Bring down the memory photos a Drive copy names that this browser does not have. */
-async function bringPhotos(data: Snapshot): Promise<void> {
-  const wanted = new Set<string>()
-  for (const memory of Array.isArray(data.memories) ? data.memories : []) {
-    for (const photo of Array.isArray(memory?.photos) ? memory.photos : []) {
-      if (isFileId(photo?.id)) wanted.add(photo.id)
-    }
-  }
-  for (const file of Array.isArray(data.files) ? data.files : []) wanted.delete(file?.id)
-  if (wanted.size === 0) return
-  for (const id of await storedFileIds()) wanted.delete(id)
-  if (wanted.size === 0) return
-  const folder = await photoFolder(false)
-  if (!folder) return
-  const inDrive = await photosInDrive(folder)
-  for (const id of wanted) {
-    const fileId = inDrive.get(id)
-    if (!fileId) continue
-    const response = await call(`${FILES}/${fileId}?alt=media`, {})
-    await writeFileBlob(id, await response.blob())
-  }
-}
-
 /**
  * Write the whole notebook to Drive, replacing whatever was there.
  *
  * Attachments go too, inlined as data URLs, which is what makes the Drive copy
  * a real second copy rather than a list of records pointing at photos that
- * only ever existed on one device. Memory photos go as files of their own,
- * first — see above.
+ * only ever existed on one device.
  */
 export async function saveToDrive(): Promise<number> {
   // Sign in before gathering the notebook, not after. Safari on an iPhone
@@ -394,11 +266,7 @@ export async function saveToDrive(): Promise<number> {
   // Google's window was blocked without a word, so To Drive did nothing,
   // while From Drive, which signs in first, worked.
   await getToken()
-  const photos = memoryPhotoIds()
-  const data = await fullSnapshot(new Set(photos))
-  // The photos before the notebook: a copy in Drive that names a photo Drive
-  // does not have yet would restore with a hole in it.
-  const inDrive = await sendPhotos(photos)
+  const data = await fullSnapshot()
   const body = JSON.stringify(data, null, 2)
   const existing = await findFile()
 
@@ -422,9 +290,8 @@ export async function saveToDrive(): Promise<number> {
     })
   }
 
-  await binPhotos(inDrive, photos)
   updateSettings({ lastDriveSync: new Date().toISOString() })
-  return countIn(data)
+  return data.schedule.length + data.reminders.length + data.expenses.length
 }
 
 /** Read the Drive copy without applying it, so the user can be told what is in it. */
@@ -442,8 +309,7 @@ export async function peekDrive(): Promise<Snapshot> {
   return (await response.json()) as Snapshot
 }
 
-/** Replace everything on this device with the Drive copy, its memory photos first. */
-export async function applyDrive(data: Snapshot): Promise<number> {
-  await bringPhotos(data)
+/** Replace everything on this device with the Drive copy. */
+export function applyDrive(data: Snapshot): Promise<number> {
   return restore(data)
 }

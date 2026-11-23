@@ -13,7 +13,7 @@
 
 import { tr } from './i18n'
 import { FILES, idbDelete, idbGet, idbKeys, idbPut } from './idb'
-import { isDataUrl, isFileId } from './sanitize'
+import { isDataUrl } from './sanitize'
 import type { Attachment } from '../types'
 
 /** Long edge, in pixels, that a stored photo is reduced to. */
@@ -292,21 +292,6 @@ export async function writeFileFromDataUrl(id: string, dataUrl: string): Promise
   }
   const response = await fetch(dataUrl)
   await idbPut(FILES, id, await response.blob())
-}
-
-/**
- * Bytes brought down from the Drive copy's photo folder, put back under the id
- * the memory knows them by. Only an id the app could have made: the name came
- * off a file in Drive.
- */
-export async function writeFileBlob(id: string, blob: Blob): Promise<void> {
-  if (!isFileId(id)) throw new Error(tr('That photo has a name the app did not give it.', '这张照片的名字不是应用起的。'))
-  await idbPut(FILES, id, blob)
-}
-
-/** The ids that have bytes in this browser. */
-export function storedFileIds(): Promise<string[]> {
-  return idbKeys(FILES)
 }
 
 /**
