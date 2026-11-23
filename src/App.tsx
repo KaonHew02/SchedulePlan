@@ -11,6 +11,7 @@ import ExpensesScreen from './expenses/ExpensesScreen'
 import { MONEY } from './lib/features'
 import { useLang } from './lib/i18n'
 import { withTransition } from './lib/transition'
+import MemoriesScreen from './memories/MemoriesScreen'
 import RemindersScreen from './reminders/RemindersScreen'
 import SeasonsScreen from './seasons/SeasonsScreen'
 import TranslateScreen from './translate/TranslateScreen'
@@ -111,6 +112,7 @@ export default function App() {
           <div className={`min-w-0 flex-1 ${CONTENT}`}>
             {screen === 'schedule' && <ScheduleScreen onToast={setToast} />}
             {screen === 'travel' && <TravelScreen onToast={setToast} />}
+            {screen === 'memories' && <MemoriesScreen onToast={setToast} />}
             {screen === 'seasons' && <SeasonsScreen onToast={setToast} />}
             {MONEY && screen === 'expenses' && <ExpensesScreen onToast={setToast} />}
             {screen === 'reminders' && <RemindersScreen onToast={setToast} />}

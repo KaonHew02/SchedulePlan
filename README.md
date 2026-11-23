@@ -8,14 +8,15 @@ All seven phases are in, plus Travel. Schedule with whole-day and multi-day
 items, Reminders that can run from one date until another, Expenses in any
 currency, a converter, a bill split that works out who owes whom, a scanner
 that reads a receipt or a booking with no account and no API key, a Travel
-screen that counts where you have been, and Seasons — a travel calendar of
-when to go where.
+screen that counts where you have been, Memories — photos, places and stories
+worth keeping, not only from trips — and Seasons, a travel calendar of when
+to go where.
 
-Seven screens — Schedule, Travel, Seasons, Reminders, Currency, Translate,
-Settings. A laptop lists all seven down the sidebar. A phone is laid out like
-an app (see [On a phone](#on-a-phone)): a tab bar of Schedule, Travel,
-Seasons and More, with a **+** in the middle, and the rest one tap further
-in the More sheet.
+Eight screens — Schedule, Travel, Memories, Seasons, Reminders, Currency,
+Translate, Settings. A laptop lists all eight down the sidebar. A phone is
+laid out like an app (see [On a phone](#on-a-phone)): a tab bar of Schedule,
+Travel, Seasons and More, with a **+** in the middle, and the rest one tap
+further in the More sheet, Memories first.
 
 **It goes on the home screen.** iPhone: Safari → Share → *Add to Home Screen*.
 Android: Chrome → ⋮ → *Install app*. It opens full screen with no browser bars,
@@ -254,6 +255,48 @@ beside each line and nothing is added until you say so. The other amounts it
 saw on the slip are offered as one-tap alternatives, because the total is the
 field it is most likely to get wrong and most costly to get wrong quietly.
 
+## Memories
+
+Added 2026-11-23. A memory is a moment worth keeping — a trip, a dinner, a
+birthday, the first day at a job — with up to twelve photos, the day, a kind
+(Travel, Food, People, Milestone, Outdoors, Events, Everyday), a place, the
+story and the people or tags to find it by. Each one is drawn as a postage
+stamp, perforated edge and all, cancelled with a postmark in its kind's
+colour that names the place, the country and the day.
+
+Three views of the same records, because "when was that", "where was that"
+and "what did I do this year" are three different questions:
+
+- **Stamps** — the page of stamps, newest first, grouped by month (by year
+  while there are too few to fill the months). Search reads the title, the
+  story, the place, the country, the tags and the kind; the chips filter by
+  kind and favourites. **On this day** shows memories from today's date in
+  earlier years.
+- **Map** — Seasons' street map (MapLibre, OpenFreeMap tiles, loaded only
+  when the view opens) with a pin per memory in its kind's colour, and the
+  countries beside it; a country opens its stamps.
+- **Year** — memories, countries, places and photos; a calendar of the year
+  with a square for each day; the kinds; and a few highlights.
+
+**A memory is its own record, not a schedule item.** That is a break from the
+rule below, on purpose: a schedule item is a plan with a time on it, and a
+memory is written after the fact and is mostly photos and a story. It does
+not count towards Travel's countries — Travel stays the record of trips.
+
+**The place is looked up, not typed.** The form searches OpenStreetMap (the
+same `searchMap` Seasons uses), which gives the name, the country and the
+point the map needs. A name typed and never looked up is kept as just a name,
+off the map. A photo can fill in the day — and, when the phone kept it, the
+place — by itself: `photoInfo.ts` reads the EXIF with exifr (loaded only when
+a photo is added) *before* `saveFile` shrinks the photo, because the re-encode
+drops the metadata, then asks OpenStreetMap for the name of the place at the
+point. An iPhone's photo picker usually leaves the place out unless told to
+keep it, so the place is a bonus, never something to count on.
+
+Photos are attachments like any other — shrunk to 1800 px, bytes in the files
+store — except in the Drive copy, where they travel as files of their own
+(see [docs/DRIVE.md](docs/DRIVE.md#memory-photos)).
+
 ## Travel has no Trip record, and that is the point
 
 The rule the whole app is built on is that **the schedule item is the only
@@ -491,7 +534,7 @@ SchedulePlan/
   public/                       favicon.svg, logo-mark.svg, splash.css (the
                                 opening screen)
   src/
-    App.tsx                     The responsive shell: the seven screens, the
+    App.tsx                     The responsive shell: the eight screens, the
                                 nav that swaps sides with the viewport, and the
                                 phone's More sheet
     types.ts                    Shared types
@@ -718,6 +761,16 @@ holds. `version` is 2; a version 1 file still imports.
       "attachments": [], "links": []
     }
   ],
+  "memories": [
+    {
+      "id": 1, "title": "Char kway teow on Lorong Selamat", "date": "2025-08-17",
+      "kind": "food", "story": "Forty-minute queue, worth it.", "tags": ["Aiman"],
+      "place": { "name": "George Town", "country": "MY", "lat": 5.4141, "lon": 100.3288 },
+      "photos": [{ "id": "9a3c…", "name": "IMG_2041.jpg", "type": "image/jpeg", "size": 412233,
+                   "kind": "image", "addedAt": "2025-08-17T13:02:11.000Z", "text": null }],
+      "favorite": true, "createdAt": "2025-08-17T13:02:40.000Z"
+    }
+  ],
   "settings": {
     "currency": "MYR", "autoDrive": false, "lastDriveSync": null,
     "manualRates": {}, "travelGoal": 50, "placeGoal": 100
@@ -730,7 +783,8 @@ Attachment **bytes** live in their own IndexedDB store, one per key, so a photo
 is never parsed out of JSON because a row rendered. The record keeps only the
 id, the name and the size. `files` appears in an export or a Drive copy, where
 inlining the bytes is what keeps the promise that one file is the whole
-notebook.
+notebook — except memory photos in the Drive copy, which are files of their
+own beside it (see [docs/DRIVE.md](docs/DRIVE.md#memory-photos)).
 
 Older files read back fine: missing fields are filled in once, on read —
 `end_date` and `place` become null, `all_day` becomes false, missing arrays

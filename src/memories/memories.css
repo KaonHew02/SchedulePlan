@@ -1,0 +1,54 @@
+/*
+ * Memories: every memory is a postage stamp.
+ *
+ * The perforated edge is circles painted in the colour BEHIND the stamp, so
+ * they read as holes; --hole is that colour. The page under the screens is
+ * `ground`, which is the default. `round` spaces the holes so a whole number
+ * of them fits each edge, whatever width the grid gives the stamp.
+ */
+.memory-stamp {
+  --hole: var(--color-ground, #f4f4f9);
+  background:
+    radial-gradient(circle at 50% 0, var(--hole) 4px, #0000 4.6px) top left / 12px 8px round no-repeat,
+    radial-gradient(circle at 50% 100%, var(--hole) 4px, #0000 4.6px) bottom left / 12px 8px round no-repeat,
+    radial-gradient(circle at 0 50%, var(--hole) 4px, #0000 4.6px) top left / 8px 12px no-repeat round,
+    radial-gradient(circle at 100% 50%, var(--hole) 4px, #0000 4.6px) top right / 8px 12px no-repeat round,
+    #ffffff;
+}
+
+/* The postmark crosses the stamp's top corner and runs off it, as a real one does. */
+.memory-postmark {
+  position: absolute;
+  top: 4px;
+  right: -12px;
+  width: 108px;
+  height: auto;
+  pointer-events: none;
+  opacity: 0.9;
+  mix-blend-mode: multiply;
+}
+
+@media (max-width: 420px) {
+  .memory-postmark {
+    width: 90px;
+    right: -9px;
+  }
+}
+
+.memory-postmark-big {
+  width: 140px;
+  flex-shrink: 0;
+  opacity: 0.9;
+  mix-blend-mode: multiply;
+}
+
+.memory-postmark text {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 600;
+  text-anchor: middle;
+}
+.memory-postmark-big text {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 600;
+  text-anchor: middle;
+}

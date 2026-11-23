@@ -23,11 +23,15 @@ import { firstOccurrence, unitName, unroll } from './repeat'
 import * as safe from './sanitize'
 import { divideCents } from './split'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, TRAVEL_TAG, makeTagId } from './tags'
+import { todayISO } from './date'
 import type {
   Attachment,
   BillSplit,
   Expense,
   ExpenseDraft,
+  Memory,
+  MemoryKind,
+  MemoryPlace,
   Phrase,
   Place,
   Reminder,
@@ -75,6 +79,8 @@ export interface Snapshot {
   reminders: Reminder[]
   splits: BillSplit[]
   wishlist: WishPlace[]
+  /** Absent from every backup written before Memories existed, which reads as none. */
+  memories: Memory[]
   phrases: Phrase[]
   settings: Settings
   /** Present in a full export; absent when only the records were wanted. */
@@ -89,6 +95,7 @@ interface DB {
   reminders: Reminder[]
   splits: BillSplit[]
   wishlist: WishPlace[]
+  memories: Memory[]
   phrases: Phrase[]
   settings: Settings
 }
@@ -113,6 +120,7 @@ const EMPTY: DB = {
   reminders: [],
   splits: [],
   wishlist: [],
+  memories: [],
   phrases: [],
   settings: DEFAULT_SETTINGS,
 }
@@ -333,6 +341,41 @@ function fillWish(raw: Partial<WishPlace>, index = 0): WishPlace {
   }
 }
 
+export const MEMORY_KINDS: MemoryKind[] = ['travel', 'food', 'people', 'milestone', 'outdoors', 'event', 'everyday']
+
+/**
+ * A memory's place through the same gate whether it came from the form, the
+ * disk or a file: a point needs both halves on the globe, and a place with no
+ * name, no country and no point is no place.
+ */
+function cleanPlace(raw: unknown): MemoryPlace | null {
+  if (!safe.isRecord(raw)) return null
+  const name = safe.text(raw.name).trim()
+  const country = safe.countryCode(raw.country)
+  const lat = safe.coord(raw.lat, 90)
+  const lon = safe.coord(raw.lon, 180)
+  const point = lat !== null && lon !== null
+  if (!name && !country && !point) return null
+  return { name, country, lat: point ? lat : null, lon: point ? lon : null }
+}
+
+function fillMemory(raw: Partial<Memory>, index = 0): Memory {
+  return {
+    id: safe.positiveId(raw.id) ?? index + 1,
+    title: safe.text(raw.title),
+    // validateSnapshot refuses a file with a date that does not exist, so this
+    // only ever catches a row that has none at all.
+    date: safe.dateOrNull(raw.date) ?? todayISO(),
+    kind: MEMORY_KINDS.includes(raw.kind as MemoryKind) ? (raw.kind as MemoryKind) : 'everyday',
+    story: safe.textOrNull(raw.story),
+    tags: safe.labels(raw.tags),
+    place: cleanPlace(raw.place),
+    photos: safe.attachments(raw.photos),
+    favorite: raw.favorite === true,
+    createdAt: safe.text(raw.createdAt),
+  }
+}
+
 /**
  * Settings field by field. Spreading the file's object over the defaults, as
  * this used to, kept whatever types the file had — a home currency of `{}`
@@ -377,6 +420,7 @@ function coerce(parsed: Partial<Snapshot> | null): DB {
     reminders: rows(parsed?.reminders, fillReminder),
     splits: rows(parsed?.splits, fillSplit),
     wishlist: rows(parsed?.wishlist, fillWish),
+    memories: rows(parsed?.memories, fillMemory),
     // Absent from every backup written before the translator existed, which
     // is the whole reason this reads defensively rather than trusting it.
     // Trimmed here too, so a notebook from when every translation was kept
@@ -438,6 +482,7 @@ function toDocument(db: DB): Snapshot {
     reminders: db.reminders,
     splits: db.splits,
     wishlist: db.wishlist,
+    memories: db.memories,
     phrases: db.phrases,
     settings: db.settings,
   }
@@ -1136,6 +1181,71 @@ export async function deleteWish(id: number, keepFiles = false): Promise<void> {
   if (!keepFiles) void deleteFiles(wishFiles(existing).map((file) => file.id))
 }
 
+// ----------------------------------------------------------------- memories
+
+export function useMemories(): Memory[] {
+  return useSyncExternalStore(subscribe, () => readDb().memories)
+}
+
+/** What the form hands over: everything but the numbers this file gives out. */
+export type MemoryDraft = Omit<Memory, 'id' | 'createdAt'> & { id?: number }
+
+/**
+ * Write a memory down, or change one.
+ *
+ * It needs something to remember it by — a title, a photo or a place — and a
+ * real day. A memory saved with only a photo or a place takes that place's
+ * name as its title, so a card is never blank.
+ */
+export async function saveMemory(draft: MemoryDraft): Promise<Memory> {
+  const db = readDb()
+  const place = cleanPlace(draft.place)
+  const title = draft.title.trim() || place?.name || ''
+  if (!title && draft.photos.length === 0) {
+    throw new Error(tr('Give it a title, a photo or a place.', '请写个标题，或加张照片、填个地点。'))
+  }
+  if (!isRealDate(draft.date)) throw new Error(tr('Pick the day it happened.', '请选择发生的日期。'))
+
+  const existing = draft.id ? db.memories.find((row) => row.id === draft.id) : undefined
+  const saved: Memory = {
+    id: existing?.id ?? nextId(db.memories),
+    title,
+    date: draft.date,
+    kind: MEMORY_KINDS.includes(draft.kind) ? draft.kind : 'everyday',
+    story: draft.story?.trim() || null,
+    tags: safe.labels(draft.tags),
+    place,
+    photos: safe.attachments(draft.photos),
+    favorite: draft.favorite,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+  }
+  await writeDb({
+    ...db,
+    memories: existing
+      ? db.memories.map((row) => (row.id === saved.id ? saved : row))
+      : [...db.memories, saved],
+  })
+  // A photo the edit took out is unreachable now, so let its bytes go.
+  void deleteFiles(orphaned(existing?.photos ?? [], saved.photos))
+  return saved
+}
+
+/** Star it or unstar it, without opening the form. */
+export async function setMemoryFavorite(id: number, favorite: boolean): Promise<void> {
+  const db = readDb()
+  if (!db.memories.some((row) => row.id === id)) return
+  await writeDb({ ...db, memories: db.memories.map((row) => (row.id === id ? { ...row, favorite } : row)) })
+}
+
+/** Delete is delete, as everywhere in the notebook: the photos' bytes go with it. */
+export async function deleteMemory(id: number): Promise<void> {
+  const db = readDb()
+  const existing = db.memories.find((row) => row.id === id)
+  if (!existing) return
+  await writeDb({ ...db, memories: db.memories.filter((row) => row.id !== id) })
+  void deleteFiles(existing.photos.map((file) => file.id))
+}
+
 // ----------------------------------------------------------------- settings
 
 export function useSettings(): Settings {
@@ -1163,18 +1273,32 @@ export function snapshot(): Snapshot {
   }
 }
 
-function attachmentIds(data: Pick<Snapshot, 'schedule' | 'expenses' | 'wishlist'>): string[] {
-  const ids = new Set<string>()
-  for (const item of data.schedule ?? []) {
-    for (const file of item.attachments ?? []) ids.add(file.id)
-  }
-  for (const expense of data.expenses ?? []) {
-    for (const file of expense.attachments ?? []) ids.add(file.id)
-  }
-  for (const wish of data.wishlist ?? []) {
-    for (const file of wishFiles(wish)) ids.add(file.id)
-  }
-  return [...ids]
+/** Every attachment a list of rows points at, each once. */
+function filesOf(data: Partial<Pick<Snapshot, 'schedule' | 'expenses' | 'wishlist' | 'memories'>>): Attachment[] {
+  const found = new Map<string, Attachment>()
+  const add = (files: Attachment[] | undefined) => files?.forEach((file) => found.set(file.id, file))
+  for (const item of data.schedule ?? []) add(item.attachments)
+  for (const expense of data.expenses ?? []) add(expense.attachments)
+  for (const wish of data.wishlist ?? []) add(wishFiles(wish))
+  for (const memory of data.memories ?? []) add(memory.photos)
+  return [...found.values()]
+}
+
+const attachmentIds = (data: Parameters<typeof filesOf>[0]): string[] => filesOf(data).map((file) => file.id)
+
+/**
+ * Every attachment in the notebook, each once: what Your data counts, and the
+ * list the tidy-up keeps. One list for both, built here where every kind of
+ * row is known — the tidy-up used to build its own from schedule and expenses
+ * only, which made the wishlist's pictures look like strays to it.
+ */
+export function storedAttachments(): Attachment[] {
+  return filesOf(readDb())
+}
+
+/** The ids of every memory photo: the Drive copy keeps these as files of their own. */
+export function memoryPhotoIds(): string[] {
+  return readDb().memories.flatMap((memory) => memory.photos.map((file) => file.id))
 }
 
 /**
@@ -1183,11 +1307,17 @@ function attachmentIds(data: Pick<Snapshot, 'schedule' | 'expenses' | 'wishlist'
  * The bytes are inlined as data URLs. That makes the file bigger than the sum
  * of its photos — base64 costs a third — but it keeps the promise a backup
  * makes: one file is the whole notebook, and restoring it needs nothing else.
+ *
+ * `skip` leaves some bytes out. The Drive copy passes the memory photos,
+ * which it keeps as files of their own beside the notebook (drive.ts): a
+ * memory is mostly pictures, and one JSON file holding all of them would grow
+ * past what a phone can build in memory and send in one go.
  */
-export async function fullSnapshot(): Promise<Snapshot> {
+export async function fullSnapshot(skip: ReadonlySet<string> = new Set()): Promise<Snapshot> {
   const data = snapshot()
   const files: FilePayload[] = []
   for (const id of attachmentIds(data)) {
+    if (skip.has(id)) continue
     const dataUrl = await readFileAsDataUrl(id)
     if (dataUrl) files.push({ id, dataUrl })
   }
@@ -1196,11 +1326,16 @@ export async function fullSnapshot(): Promise<Snapshot> {
 
 export function itemCount(): number {
   const db = readDb()
-  return db.schedule.length + db.reminders.length + db.expenses.length
+  return db.schedule.length + db.reminders.length + db.expenses.length + db.memories.length
 }
 
 export function countIn(data: Partial<Snapshot>): number {
-  return (data.schedule?.length ?? 0) + (data.reminders?.length ?? 0) + (data.expenses?.length ?? 0)
+  return (
+    (data.schedule?.length ?? 0) +
+    (data.reminders?.length ?? 0) +
+    (data.expenses?.length ?? 0) +
+    (Array.isArray(data.memories) ? data.memories.length : 0)
+  )
 }
 
 /**
@@ -1257,6 +1392,14 @@ function validateSnapshot(candidate: unknown): Partial<Snapshot> {
     if (safe.isRecord(expense) && !isRealDate(expense.date)) {
       throw new Error(
         tr(`Expense ${index + 1} in that file has no real date.`, `文件里第 ${index + 1} 笔支出的日期无效。`),
+      )
+    }
+  }
+  for (const [index, raw] of (Array.isArray(data.memories) ? data.memories : []).entries()) {
+    const memory = raw as unknown
+    if (safe.isRecord(memory) && !isRealDate(memory.date)) {
+      throw new Error(
+        tr(`Memory ${index + 1} in that file has no real date.`, `文件里第 ${index + 1} 段回忆的日期无效。`),
       )
     }
   }
@@ -1339,6 +1482,7 @@ export async function mergeIn(candidate: unknown): Promise<{ added: number; skip
     db.expenses.length === 0 &&
     db.reminders.length === 0 &&
     db.wishlist.length === 0 &&
+    db.memories.length === 0 &&
     db.phrases.length === 0
 
   let added = 0
@@ -1393,6 +1537,11 @@ export async function mergeIn(candidate: unknown): Promise<{ added: number; skip
       db.wishlist,
       incoming.wishlist,
       (row) => `${row.country}|${row.name.trim().toLowerCase()}`,
+    ),
+    memories: absorb(
+      db.memories,
+      incoming.memories,
+      (row) => `${row.date}|${row.title.trim().toLowerCase()}`,
     ),
     phrases: recentPhrases(
       absorb(

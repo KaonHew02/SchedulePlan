@@ -131,3 +131,33 @@ errors, wait before assuming it is misconfigured.
 file in Drive starts a new one** and orphans the old — the old data is still
 there, but nothing points at it. Same for moving it out of the folder. If you
 want to reorganise, do it by changing `drive-config.ts`, not Drive.
+
+The same goes for the **Memories photos** folder below: rename it and the app
+makes a new, empty one.
+
+## Memory photos
+
+Every other attachment is inlined in `scheduleplan-data.json` as a data URL,
+as it always was. **Memory photos are not** (added 2026-11-23): a memory is
+mostly photos, and a few hundred of them inlined would make one JSON file of
+hundreds of megabytes — more than a phone can build in memory and send in one
+request. So they travel as files of their own:
+
+```
+<the configured folder>/
+  scheduleplan-data.json        the notebook; memories name their photos by id
+  Memories photos/
+    <attachment id>.jpg         one file per memory photo
+```
+
+- **To Drive** sends only the photos Drive does not have yet, then writes the
+  notebook, then moves photos no memory uses any more to Drive's bin
+  (recoverable there for 30 days). Photos first, so the copy in Drive never
+  names a photo it does not hold.
+- **From Drive** brings down the photos this browser does not have, then
+  replaces the notebook as before.
+- The folder is found by name inside the configured folder, and made the
+  first time a memory with a photo is sent. `drive.file` reaches it because
+  the app made it.
+- **Export** still writes one file with everything, memory photos inlined: it
+  is a download you asked for, and a file you can restore with nothing else.

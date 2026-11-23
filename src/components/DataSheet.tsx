@@ -6,7 +6,7 @@ import { prettySize, sweepFiles } from '../lib/files'
 import { driveIsConfigured } from '../lib/drive-config'
 import { locale, tr } from '../lib/i18n'
 import { useOfflineState, type OfflineState } from '../lib/offline'
-import { itemCount, snapshot, useSettings } from '../lib/store'
+import { itemCount, storedAttachments, useSettings } from '../lib/store'
 
 /** Whether the app itself, and not only the notebook, will open with no signal. */
 function offlineLine(state: OfflineState): string {
@@ -89,11 +89,10 @@ export default function DataSheet({
     void storageUse().then(setUse)
   }, [])
 
-  const data = snapshot()
-  const attachments = [
-    ...data.schedule.flatMap((item) => item.attachments),
-    ...data.expenses.flatMap((expense) => expense.attachments),
-  ]
+  // Every kind of row's files — schedule, expenses, the wishlist and memories.
+  // This list is also what the tidy-up keeps, so a kind left off it would
+  // have its pictures deleted as strays.
+  const attachments = storedAttachments()
   const attachmentBytes = attachments.reduce((total, file) => total + file.size, 0)
   const share = use?.quota ? Math.min(1, use.used / use.quota) : 0
 

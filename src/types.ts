@@ -110,6 +110,48 @@ export interface WishPlace {
   links: TripLink[]
 }
 
+/** What sort of memory: the colour of its stamp and the chip it files under. */
+export type MemoryKind = 'travel' | 'food' | 'people' | 'milestone' | 'outdoors' | 'event' | 'everyday'
+
+/**
+ * Where a memory happened. A name to read, and a point on the map when one is
+ * known — from a search, a pin on the map or the photo itself. Unlike `Place`
+ * it carries the point, because a memory's map is pins, not countries.
+ */
+export interface MemoryPlace {
+  /** Free text: 'Lorong Selamat', 'Grandma's house'. May be empty when only the point is known. */
+  name: string
+  /** ISO 3166-1 alpha-2, or null when nobody said. */
+  country: string | null
+  /** Both or neither: a point needs the two. */
+  lat: number | null
+  lon: number | null
+}
+
+/**
+ * A moment worth keeping — not only a trip. A dinner, a birthday, the first
+ * day at a job. Its own record rather than a schedule item, because a memory
+ * is written after the fact and is mostly photos and a story, where an item
+ * is a plan with a time on it.
+ */
+export interface Memory {
+  id: number
+  title: string
+  /** The day it happened, YYYY-MM-DD. */
+  date: string
+  kind: MemoryKind
+  /** What happened, in as many words as it takes. */
+  story: string | null
+  /** Who was there and anything else to find it by: 'Mum', 'birthday'. */
+  tags: string[]
+  place: MemoryPlace | null
+  /** The pictures, the first one the cover. Bytes in the files store, as every attachment's are. */
+  photos: Attachment[]
+  favorite: boolean
+  /** When it was written down, ISO time. Breaks ties between memories of one day. */
+  createdAt: string
+}
+
 export interface ScheduleItem {
   id: number
   /** YYYY-MM-DD — the first day. */
@@ -376,6 +418,7 @@ export type ViewMode = 'day' | 'week' | 'month'
 export type Screen =
   | 'schedule'
   | 'travel'
+  | 'memories'
   | 'seasons'
   | 'expenses'
   | 'reminders'

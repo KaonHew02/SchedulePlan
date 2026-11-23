@@ -13,6 +13,7 @@ import Sheet from './Sheet'
  * in read as an empty box.
  */
 const TINT: Partial<Record<Screen, string>> = {
+  memories: 'bg-rose-100 text-rose-600',
   reminders: 'bg-amber-100 text-amber-600',
   seasons: 'bg-amber-100 text-amber-600',
   currency: 'bg-emerald-100 text-emerald-600',
