@@ -11,7 +11,7 @@ const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 
 /**
  * Swipe sideways to turn the page, the way a phone's calendar goes to the
- * next month.
+ * next month, week or day.
  *
  * The pages either side are drawn next to this one, so the finger pulls the
  * next month into view instead of dragging a blank edge, and letting go
@@ -52,6 +52,8 @@ export default function SwipePager({
     speed: number
   } | null>(null)
   const turning = useRef(false)
+  /** The slide under way, so a page changed some other way can call it off. */
+  const timer = useRef<number | undefined>(undefined)
   /** A drag that turned or moved the page ends in a click; that click is not a tap. */
   const swallowClick = useRef(false)
 
@@ -62,8 +64,11 @@ export default function SwipePager({
     el.style.transform = x ? `translate3d(${x}px, 0, 0)` : ''
   }
 
-  // The new page is in the middle now; put the strip back under it.
+  // The new page is in the middle now; put the strip back under it. If it
+  // got there some other way mid-slide (an arrow, Today), the slide is
+  // dropped rather than turning a page from where it no longer is.
   useLayoutEffect(() => {
+    window.clearTimeout(timer.current)
     turning.current = false
     move(0, false)
     if (frame.current) {
@@ -157,7 +162,7 @@ export default function SwipePager({
     }
     // A timer rather than transitionend, which never comes if the strip was
     // already there, and would leave the page stuck.
-    window.setTimeout(() => onTurn(direction), DURATION)
+    timer.current = window.setTimeout(() => onTurn(direction), DURATION)
   }
 
   return (

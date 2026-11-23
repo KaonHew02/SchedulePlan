@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import Fab from '../components/Fab'
 import ScreenTitle from '../components/ScreenTitle'
+import SwipePager from '../components/SwipePager'
 import { ChevronLeft, ChevronRight } from '../components/Icons'
 import ExpenseForm from '../expenses/ExpenseForm'
 import { MONEY } from '../lib/features'
@@ -45,12 +46,15 @@ const VIEWS: ViewMode[] = ['day', 'week', 'month']
 const viewLabel = (mode: ViewMode): string =>
   tr(mode, mode === 'day' ? '日' : mode === 'week' ? '周' : '月')
 
-/** The dates a view needs. */
+/**
+ * The dates a view needs: its own, and the page either side of it, drawn off
+ * the edge ready to be swiped in.
+ */
 function rangeFor(view: ViewMode, anchor: string): { start: string; end: string } {
-  if (view === 'day') return { start: anchor, end: anchor }
+  if (view === 'day') return { start: addDays(anchor, -1), end: addDays(anchor, 1) }
   if (view === 'week') {
     const start = startOfWeek(anchor)
-    return { start, end: addDays(start, 6) }
+    return { start: addDays(start, -7), end: addDays(start, 13) }
   }
   // The month grid shows a few days either side of the month, and the months
   // either side are drawn too, off the edge, ready to be swiped in.
@@ -144,10 +148,11 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
   )
   const dayItems = useMemo(() => onDay(schedule, anchor), [schedule, anchor])
   // The strip marks every day of the week that has something on it, so it
-  // needs the week regardless of which view is showing.
+  // needs the week regardless of which view is showing — and the weeks
+  // either side, for swiping the strip.
   const weekItems = useMemo(() => {
     const start = startOfWeek(anchor)
-    return inRange(schedule, start, addDays(start, 6))
+    return inRange(schedule, addDays(start, -7), addDays(start, 13))
   }, [schedule, anchor])
   // The rail's calendar shows the anchor's whole month, which is a wider range
   // than the day view alone ever loads.
@@ -156,14 +161,22 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
     () => inRange(schedule, grid[0], grid[grid.length - 1]),
     [schedule, grid],
   )
-  // The anchor's month grid holds its week and its day too, so one lookup over
-  // it serves every view, the strip and the rail. The month view wants the
-  // months either side as well, for the one being swiped in.
-  const holidays = useHolidays(
-    view === 'month' ? range.start : grid[0],
-    view === 'month' ? range.end : grid[grid.length - 1],
-    view === 'month' ? items : monthItems,
+  // One lookup serves every view, the strip and the rail: the anchor's month
+  // grid, stretched to take in the pages either side of the view — a week
+  // at the end of the month swipes into one the grid does not show.
+  const span = useMemo(() => {
+    const first = grid[0]
+    const last = grid[grid.length - 1]
+    return {
+      start: range.start < first ? range.start : first,
+      end: range.end > last ? range.end : last,
+    }
+  }, [grid, range.start, range.end])
+  const spanItems = useMemo(
+    () => inRange(schedule, span.start, span.end),
+    [schedule, span.start, span.end],
   )
+  const holidays = useHolidays(span.start, span.end, spanItems)
   const upNext = useMemo(() => upcoming(schedule, 5), [schedule])
 
   function step(direction: 1 | -1) {
@@ -264,8 +277,23 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
 
         <ViewToggle view={view} onChange={setView} className="relative mx-5 mb-3 lg:hidden" />
 
+        {/* Swiping the strip turns the week, as a phone calendar's does. The
+            padding above, pulled back by the margin, is room for the PH tags
+            that sit over the pills' top edge. */}
         {view === 'day' && (
-          <DayStrip anchor={anchor} items={weekItems} onPick={setAnchor} holidays={holidays} />
+          <SwipePager
+            pageKey={anchor}
+            onTurn={(direction) => setAnchor(addDays(anchor, 7 * direction))}
+            className="-mt-2 pt-2"
+            render={(offset) => (
+              <DayStrip
+                anchor={offset ? addDays(anchor, 7 * offset) : anchor}
+                items={weekItems}
+                onPick={setAnchor}
+                holidays={holidays}
+              />
+            )}
+          />
         )}
       </header>
 
@@ -281,20 +309,39 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
               className="mx-auto mb-4 mt-1 max-w-[calc(100%-2rem)] lg:max-w-none xl:hidden"
             />
           )}
+          {/* Swipe the day for the next day, the week for the next week. The
+              day takes most of the screen even when it is free, so a swipe
+              across the empty part below still lands. */}
           {view === 'day' ? (
-            <DayView
-              items={dayItems}
-              day={anchor}
-              onOpen={setDetail}
-              holidays={holidays.get(anchor)}
+            <SwipePager
+              pageKey={anchor}
+              onTurn={(direction) => setAnchor(addDays(anchor, direction))}
+              className="min-h-[55vh]"
+              render={(offset) => {
+                const day = offset ? addDays(anchor, offset) : anchor
+                return (
+                  <DayView
+                    items={offset ? onDay(items, day) : dayItems}
+                    day={day}
+                    onOpen={setDetail}
+                    holidays={holidays.get(day)}
+                  />
+                )
+              }}
             />
           ) : view === 'week' ? (
-            <WeekView
-              anchor={anchor}
-              items={items}
-              onOpen={setDetail}
-              onPickDay={openDay}
-              holidays={holidays}
+            <SwipePager
+              pageKey={anchor}
+              onTurn={(direction) => setAnchor(addDays(anchor, 7 * direction))}
+              render={(offset) => (
+                <WeekView
+                  anchor={offset ? addDays(anchor, 7 * offset) : anchor}
+                  items={items}
+                  onOpen={setDetail}
+                  onPickDay={openDay}
+                  holidays={holidays}
+                />
+              )}
             />
           ) : (
             <MonthView
