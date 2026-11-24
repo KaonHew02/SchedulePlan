@@ -79,6 +79,11 @@ a Sunday (Friday in Kedah, Kelantan and Terengganu) shows as a replacement
 holiday. On a trip abroad — any item with a place in another country — that
 country's holidays show on the trip's days too, with its badge.
 
+**Holiday countdown.** Under the month (in the side rail on a laptop) a card
+counts the days to the next holiday — Christmas, New Year, Chinese New Year —
+and lists the three after it. A holiday of several days counts once, and New
+Year and Christmas are always in it, even in a state where they are not a day off.
+
 **Malaysia's holidays keep themselves up to date.** They come from the
 government's own list — the Prime Minister's Department publishes each year's,
 federal and state, as a PDF — and a GitHub workflow reads it every morning.

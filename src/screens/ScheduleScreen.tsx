@@ -31,6 +31,7 @@ import {
 } from '../lib/store'
 import DayStrip from '../schedule/DayStrip'
 import DayView from '../schedule/DayView'
+import HolidayCountdown from '../schedule/HolidayCountdown'
 import ItemCard from '../schedule/ItemCard'
 import MonthGrid from '../schedule/MonthGrid'
 import MonthView from '../schedule/MonthView'
@@ -353,6 +354,10 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
               holidays={holidays}
             />
           )}
+          {/* Under the calendar on a phone, so the month stays at the top. */}
+          {view !== 'day' && (
+            <HolidayCountdown className="mx-auto mb-4 mt-4 max-w-[calc(100%-2rem)] lg:max-w-none xl:hidden" />
+          )}
         </div>
 
         {/*
@@ -367,6 +372,8 @@ export default function ScheduleScreen({ onToast }: { onToast: (message: string)
             onOpen={setDetail}
             onPlan={() => setForm({ item: null })}
           />
+
+          <HolidayCountdown />
 
           {view !== 'month' && (
             <section className="rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-14px_rgba(108,92,231,0.25)]">
